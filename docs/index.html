@@ -47,7 +47,7 @@
 <body>
 <header>
   <h1>Renta Fija de Panamá — Niveles actuales vs historia</h1>
-  <div class="sub">Datos Latinex · 2026-05-26 04:31 UTC · Cobertura 2019-01-21 a 2026-05-25</div>
+  <div class="sub">Datos Latinex · 2026-05-26 14:56 UTC · Cobertura 2019-01-21 a 2026-05-25</div>
 </header>
 <main>
   <nav class="tabs">
@@ -91,8 +91,17 @@
     <section>
       <h2>Descargas</h2>
       <p><a class="download" href="estudio_renta_fija_panama.pdf">📄 Bajar PDF del estudio</a></p>
-      <p><a href="_data/curva_actual.csv">curva_actual.csv</a> · <a href="_data/percentil_5y.csv">percentil_5y.csv</a></p>
-      <p class="note">La base completa SQLite + Parquet vive en el repo bajo <code>data/</code>.</p>
+      <h3 style="margin-bottom:6px;font-size:0.95rem">Base de datos completa (con calificación)</h3>
+      <ul style="margin-top:4px;font-size:0.88rem">
+        <li><a href="_data/trades_con_rating.csv.gz">trades_con_rating.csv.gz</a> — toda la tape de operaciones (84k filas) con tier T1..T5, rating proxy, spread vs Tesoro, YTM, plazo residual, etc.</li>
+        <li><a href="_data/instruments_con_rating.csv.gz">instruments_con_rating.csv.gz</a> — universo de 2,573 emisiones vigentes con tier y rating proxy por emisor.</li>
+      </ul>
+      <h3 style="margin-bottom:6px;font-size:0.95rem">Cortes analíticos</h3>
+      <ul style="margin-top:4px;font-size:0.88rem">
+        <li><a href="_data/curva_actual.csv">curva_actual.csv</a> · <a href="_data/percentil_5y.csv">percentil_5y.csv</a></li>
+        <li><a href="_data/bancos_curva_tier.csv">bancos_curva_tier.csv</a> · <a href="_data/bancos_cross_ref.csv">bancos_cross_ref.csv</a> · <a href="_data/bancos_spread_percentil_tier.csv">bancos_spread_percentil_tier.csv</a></li>
+      </ul>
+      <p class="note">La base SQLite + Parquet (más eficiente para análisis programático) vive en el repo bajo <code>data/</code>.</p>
     </section>
     
 </main>

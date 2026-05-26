@@ -739,6 +739,33 @@ def main():
     df_curva.to_csv(DOCS / "_data" / "curva_actual.csv", index=False)
     df_pc.to_csv(DOCS / "_data" / "percentil_5y.csv", index=False)
 
+    # CSV completo de trades con rating — comprimido para que pese poco
+    trades_full = c.execute(
+        """
+        SELECT fecha_d, nemotecnico, emisor, sector, instrumento_clase,
+               rating_tier, rating_proxy,
+               plazo_residual_anos, bucket_plazo,
+               ytm_calc, spread_bp, precio, nominal, monto,
+               cupon_decimal, freq_int, base_days, fechaVencimiento_d
+        FROM trades
+        WHERE es_tasa_fija = TRUE
+        ORDER BY fecha_d DESC
+        """
+    ).df()
+    trades_full.to_csv(DOCS / "_data" / "trades_con_rating.csv.gz", index=False, compression="gzip")
+
+    # CSV de universo de emisiones con rating asignado
+    instr_full = c.execute("SELECT * FROM instruments").df()
+    # Asignar rating al universo de instrumentos
+    from src.analytics.ratings import assign_rating as _ar
+    rt = instr_full.apply(
+        lambda r: _ar(r.get("emisor"), r.get("sector"), r.get("instrumento")),
+        axis=1,
+    )
+    instr_full["rating_tier"] = rt.apply(lambda x: x[0])
+    instr_full["rating_proxy"] = rt.apply(lambda x: x[1])
+    instr_full.to_csv(DOCS / "_data" / "instruments_con_rating.csv.gz", index=False, compression="gzip")
+
     # ============== PAGE 1: HOME / RESUMEN ==============
     stats_html = f"""
     <div class="stats">
@@ -794,8 +821,17 @@ def main():
     <section>
       <h2>Descargas</h2>
       <p><a class="download" href="estudio_renta_fija_panama.pdf">📄 Bajar PDF del estudio</a></p>
-      <p><a href="_data/curva_actual.csv">curva_actual.csv</a> · <a href="_data/percentil_5y.csv">percentil_5y.csv</a></p>
-      <p class="note">La base completa SQLite + Parquet vive en el repo bajo <code>data/</code>.</p>
+      <h3 style="margin-bottom:6px;font-size:0.95rem">Base de datos completa (con calificación)</h3>
+      <ul style="margin-top:4px;font-size:0.88rem">
+        <li><a href="_data/trades_con_rating.csv.gz">trades_con_rating.csv.gz</a> — toda la tape de operaciones (84k filas) con tier T1..T5, rating proxy, spread vs Tesoro, YTM, plazo residual, etc.</li>
+        <li><a href="_data/instruments_con_rating.csv.gz">instruments_con_rating.csv.gz</a> — universo de 2,573 emisiones vigentes con tier y rating proxy por emisor.</li>
+      </ul>
+      <h3 style="margin-bottom:6px;font-size:0.95rem">Cortes analíticos</h3>
+      <ul style="margin-top:4px;font-size:0.88rem">
+        <li><a href="_data/curva_actual.csv">curva_actual.csv</a> · <a href="_data/percentil_5y.csv">percentil_5y.csv</a></li>
+        <li><a href="_data/bancos_curva_tier.csv">bancos_curva_tier.csv</a> · <a href="_data/bancos_cross_ref.csv">bancos_cross_ref.csv</a> · <a href="_data/bancos_spread_percentil_tier.csv">bancos_spread_percentil_tier.csv</a></li>
+      </ul>
+      <p class="note">La base SQLite + Parquet (más eficiente para análisis programático) vive en el repo bajo <code>data/</code>.</p>
     </section>
     """
     (DOCS / "index.html").write_text(

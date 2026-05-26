@@ -401,15 +401,26 @@ with tab4:
 with tab5:
     show = df.sort_values("fecha_d", ascending=False).head(500)[
         ["fecha_d", "nemotecnico", "emisor", "sector", "instrumento_clase",
-         "plazo_residual_anos", "ytm_calc", "precio", "monto"]
+         "rating_tier", "rating_proxy",
+         "plazo_residual_anos", "bucket_plazo",
+         "ytm_calc", "spread_bp", "precio", "monto"]
     ].copy()
     show["ytm_calc"] = (show["ytm_calc"] * 100).round(3)
+    show["spread_bp"] = show["spread_bp"].round(0)
     show["plazo_residual_anos"] = show["plazo_residual_anos"].round(2)
+    show = show.rename(columns={
+        "ytm_calc": "ytm_%",
+        "spread_bp": "spread_pb",
+        "rating_tier": "tier",
+        "rating_proxy": "rating",
+        "instrumento_clase": "instrumento",
+    })
     st.dataframe(show, use_container_width=True)
+    st.caption("Mostrando 500 más recientes. El CSV incluye TODOS los trades filtrados con columnas tier, rating, spread_pb, etc.")
     st.download_button(
-        "Bajar CSV (filtrado)",
+        "📥 Bajar CSV (filtrado, con rating)",
         data=df.to_csv(index=False).encode(),
-        file_name="trades_filtrados.csv",
+        file_name=f"trades_filtrados_{date.today().isoformat()}.csv",
         mime="text/csv",
     )
 
