@@ -22,13 +22,16 @@ from src.analytics.curves import (  # noqa: E402
     BUCKET_ORDER,
     INSTR_GROUPS,
     con,
+    cross_ref_matrix,
     latest_curve,
     monthly_yields,
     percentile_position,
+    percentile_position_spread,
     quarterly_yields,
     universe_summary,
     ust_monthly,
 )
+from src.analytics.ratings import TIER_DESC, TIER_ORDER  # noqa: E402
 
 DOCS = ROOT / "docs"
 DOCS.mkdir(parents=True, exist_ok=True)
@@ -277,6 +280,266 @@ def build_volumen(c) -> tuple[go.Figure, pd.DataFrame]:
     return fig, df
 
 
+# ====================== SECCIÓN BANCOS ======================================= #
+def _compute_percentile_position(df: pd.DataFrame, val_col: str) -> pd.DataFrame:
+    """Calcula columna 'percentil' por interpolación lineal entre p10..p90."""
+    out = df.copy()
+    breaks = [0.10, 0.25, 0.50, 0.75, 0.90]
+    p_cols = ["p10", "p25", "p50", "p75", "p90"]
+
+    def pos(row):
+        vals = [row[c] for c in p_cols]
+        y = row[val_col]
+        if y <= vals[0]:
+            return 0.05
+        if y >= vals[-1]:
+            return 0.95
+        for i in range(len(vals) - 1):
+            if vals[i] <= y <= vals[i + 1]:
+                denom = vals[i + 1] - vals[i]
+                frac = (y - vals[i]) / denom if denom != 0 else 0
+                return breaks[i] + frac * (breaks[i + 1] - breaks[i])
+        return 0.5
+
+    out["percentil"] = out.apply(pos, axis=1)
+    return out
+
+
+def build_curva_bancos_por_tier(c, window_days: int = 90) -> tuple[go.Figure, pd.DataFrame]:
+    """Curva yield del sector Financiero separada por rating tier."""
+    q = f"""
+    SELECT rating_tier, bucket_plazo,
+           COUNT(*) n,
+           MEDIAN(ytm_calc) yld,
+           MEDIAN(spread_bp) spread
+    FROM trades
+    WHERE sector = 'Financiero'
+      AND es_tasa_fija = TRUE
+      AND ytm_calc IS NOT NULL
+      AND ytm_calc BETWEEN 0.005 AND 0.4
+      AND fecha_d >= (SELECT MAX(fecha_d) - INTERVAL '{window_days}' DAY FROM trades)
+    GROUP BY 1, 2
+    HAVING COUNT(*) >= 3
+    """
+    df = c.execute(q).df()
+    df["x_years"] = df["bucket_plazo"].map(BUCKET_MIDPOINTS)
+    df["yld_pct"] = df["yld"] * 100
+    df = df.dropna(subset=["x_years"]).sort_values(["rating_tier", "x_years"])
+
+    fig = px.line(
+        df,
+        x="x_years",
+        y="yld_pct",
+        color="rating_tier",
+        category_orders={"rating_tier": TIER_ORDER},
+        markers=True,
+        hover_data={"bucket_plazo": True, "n": True, "yld_pct": ":.2f", "spread": ":.0f", "x_years": False},
+        labels={
+            "x_years": "Plazo residual (años)",
+            "yld_pct": "Yield mediano (%)",
+            "rating_tier": "Rating tier",
+            "spread": "Spread (pb)",
+        },
+    )
+    style_fig(fig, title=f"Sector bancario — curva por tier de calificación (últimos {window_days} días)")
+    return fig, df
+
+
+def build_spread_percentil_bancos(c) -> tuple[go.Figure, pd.DataFrame]:
+    """Versión SPREAD del gráfico 7: percentil 5y por (rating_tier × bucket) en bancos."""
+    df = percentile_position_spread(c, sector="Financiero", by="rating_tier")
+    if df.empty:
+        return go.Figure(), df
+    df = _compute_percentile_position(df, "spread_now")
+    df["label"] = df["rating_tier"] + " · " + df["bucket_plazo"].astype(str)
+    df = df.sort_values("percentil")
+    fig = px.bar(
+        df,
+        x="percentil",
+        y="label",
+        color="percentil",
+        color_continuous_scale="RdYlGn",
+        range_color=[0, 1],
+        orientation="h",
+        hover_data={
+            "spread_now": ":.0f",
+            "p50": ":.0f",
+            "p25": ":.0f",
+            "p75": ":.0f",
+            "n_hist": True,
+            "percentil": ":.0%",
+        },
+        labels={
+            "percentil": "Percentil del SPREAD vs últimos 5 años",
+            "label": "Rating × Plazo",
+            "spread_now": "Spread actual (pb)",
+            "p50": "Mediana 5y (pb)",
+        },
+    )
+    fig.add_vline(x=0.5, line_dash="dash", line_color="gray")
+    style_fig(fig, title="Bancos — percentil del SPREAD vs Tesoro (verde = barato, rojo = caro)", ylabel="")
+    fig.update_layout(height=max(380, 26 * len(df)), coloraxis_showscale=False)
+    return fig, df
+
+
+def build_spread_percentil_instrumento_bancos(c) -> tuple[go.Figure, pd.DataFrame]:
+    """Mismo gráfico pero por (instrumento × bucket) dentro de bancos — útil para ver
+    Bonos Hipotecarios vs VCN vs Bonos corporativos por separado."""
+    df = percentile_position_spread(c, sector="Financiero", by="instrumento_clase")
+    if df.empty:
+        return go.Figure(), df
+    df = _compute_percentile_position(df, "spread_now")
+    df["label"] = (
+        df["instrumento_clase"].str.replace("VALORES COMERCIALES NEGOCIABLES", "VCN")
+        + " · " + df["bucket_plazo"].astype(str)
+    )
+    df = df.sort_values("percentil")
+    fig = px.bar(
+        df, x="percentil", y="label", color="percentil",
+        color_continuous_scale="RdYlGn", range_color=[0, 1], orientation="h",
+        hover_data={"spread_now": ":.0f", "p50": ":.0f", "n_hist": True, "percentil": ":.0%"},
+        labels={"percentil": "Percentil del SPREAD vs 5y", "label": ""},
+    )
+    fig.add_vline(x=0.5, line_dash="dash", line_color="gray")
+    style_fig(fig, title="Bancos — percentil del SPREAD por instrumento × plazo", ylabel="")
+    fig.update_layout(height=max(380, 26 * len(df)), coloraxis_showscale=False)
+    return fig, df
+
+
+def build_heatmap_cross_ref(c) -> tuple[go.Figure, go.Figure, pd.DataFrame]:
+    """Dos heatmaps en bancos: (1) spread actual y (2) percentil 5y, ambos por
+    rating_tier × bucket_plazo."""
+    df = cross_ref_matrix(c, lookback_days=90)
+    if df.empty:
+        return go.Figure(), go.Figure(), df
+
+    # Spread con percentil
+    perc = percentile_position_spread(c, sector="Financiero", by="rating_tier")
+    perc = _compute_percentile_position(perc, "spread_now")
+    df = df.merge(
+        perc[["rating_tier", "bucket_plazo", "percentil", "p50", "n_hist"]],
+        on=["rating_tier", "bucket_plazo"],
+        how="left",
+    )
+
+    # Pivot para heatmap de spread
+    sp_pivot = df.pivot(index="rating_tier", columns="bucket_plazo", values="spread")
+    sp_pivot = sp_pivot.reindex(TIER_ORDER)
+    sp_pivot = sp_pivot[[b for b in BUCKET_ORDER if b in sp_pivot.columns]]
+
+    fig_sp = go.Figure(
+        data=go.Heatmap(
+            z=sp_pivot.values,
+            x=sp_pivot.columns,
+            y=sp_pivot.index,
+            colorscale="YlOrRd",
+            text=[[f"{v:.0f} pb" if pd.notna(v) else "" for v in row] for row in sp_pivot.values],
+            texttemplate="%{text}",
+            hovertemplate="Tier %{y} · %{x}<br>Spread: %{z:.0f} pb<extra></extra>",
+            colorbar=dict(title="pb"),
+        )
+    )
+    fig_sp.update_layout(
+        template="plotly_white",
+        title="Spread actual (pb) — sector bancario · rating × plazo",
+        margin=dict(l=10, r=10, t=50, b=10),
+        height=380,
+        xaxis_title="Bucket de plazo",
+        yaxis_title="Rating tier",
+        font=dict(family="-apple-system, system-ui, sans-serif", size=12),
+    )
+
+    # Pivot percentil
+    pc_pivot = df.pivot(index="rating_tier", columns="bucket_plazo", values="percentil")
+    pc_pivot = pc_pivot.reindex(TIER_ORDER)
+    pc_pivot = pc_pivot[[b for b in BUCKET_ORDER if b in pc_pivot.columns]]
+
+    fig_pc = go.Figure(
+        data=go.Heatmap(
+            z=pc_pivot.values,
+            x=pc_pivot.columns,
+            y=pc_pivot.index,
+            colorscale="RdYlGn",
+            zmin=0, zmax=1,
+            text=[[f"{v*100:.0f}%" if pd.notna(v) else "" for v in row] for row in pc_pivot.values],
+            texttemplate="%{text}",
+            hovertemplate="Tier %{y} · %{x}<br>Percentil 5y: %{z:.0%}<extra></extra>",
+            colorbar=dict(title="%ile", tickformat=".0%"),
+        )
+    )
+    fig_pc.update_layout(
+        template="plotly_white",
+        title="Percentil del SPREAD vs 5y — sector bancario (verde = barato)",
+        margin=dict(l=10, r=10, t=50, b=10),
+        height=380,
+        xaxis_title="Bucket de plazo",
+        yaxis_title="Rating tier",
+        font=dict(family="-apple-system, system-ui, sans-serif", size=12),
+    )
+
+    return fig_sp, fig_pc, df
+
+
+def build_serie_bancos_por_tier(c) -> tuple[go.Figure, pd.DataFrame]:
+    """Evolución trimestral del spread por rating tier (sector Financiero)."""
+    q = """
+    SELECT DATE_TRUNC('quarter', fecha_d) AS quarter_dt,
+           rating_tier,
+           MEDIAN(spread_bp) spread,
+           COUNT(*) n
+    FROM trades
+    WHERE sector = 'Financiero'
+      AND es_tasa_fija = TRUE
+      AND spread_bp IS NOT NULL
+      AND spread_bp BETWEEN -200 AND 3000
+    GROUP BY 1, 2
+    HAVING COUNT(*) >= 5
+    """
+    df = c.execute(q).df()
+    fig = px.line(
+        df,
+        x="quarter_dt", y="spread", color="rating_tier",
+        category_orders={"rating_tier": TIER_ORDER},
+        markers=True,
+        labels={"quarter_dt": "Trimestre", "spread": "Spread (pb)", "rating_tier": "Rating"},
+    )
+    style_fig(fig, title="Bancos — evolución trimestral del spread mediano por rating tier", ylabel="Spread (pb)")
+    return fig, df
+
+
+# -------------------------------------------------------------------------- #
+def derive_conclusions_bancos(curva_tier: pd.DataFrame, heat: pd.DataFrame) -> list[str]:
+    """Conclusiones específicas del sector bancario."""
+    out = []
+    if not curva_tier.empty:
+        for tier in ["T1", "T2", "T3", "T4", "T5"]:
+            sub = curva_tier[curva_tier["rating_tier"] == tier]
+            if not sub.empty:
+                yld = sub["yld_pct"].mean()
+                sp = sub["spread"].dropna().mean()
+                out.append(
+                    f"**{tier}** ({TIER_DESC[tier].split(' — ')[0]}): yield medio {yld:.2f}%"
+                    + (f", spread medio ~{sp:.0f} pb sobre Tesoro" if pd.notna(sp) else "")
+                    + f" (n={int(sub['n'].sum())} trades)."
+                )
+    if not heat.empty:
+        h = heat.dropna(subset=["percentil"])
+        if not h.empty:
+            barato = h.sort_values("percentil", ascending=False).head(1).iloc[0]
+            caro = h.sort_values("percentil", ascending=True).head(1).iloc[0]
+            out.append(
+                f"**Más barato en bancos vs su historia 5y**: {barato['rating_tier']} · {barato['bucket_plazo']} "
+                f"— spread {barato['spread']:.0f} pb vs mediana 5y {barato['p50']:.0f} pb "
+                f"(percentil {barato['percentil']*100:.0f})."
+            )
+            out.append(
+                f"**Más caro en bancos vs su historia 5y**: {caro['rating_tier']} · {caro['bucket_plazo']} "
+                f"— spread {caro['spread']:.0f} pb vs mediana 5y {caro['p50']:.0f} pb "
+                f"(percentil {caro['percentil']*100:.0f})."
+            )
+    return out
+
+
 # -------------------------------------------------------------------------- #
 def derive_conclusions(curva: pd.DataFrame, perc: pd.DataFrame, spread: pd.DataFrame) -> list[str]:
     conclusions = []
@@ -400,6 +663,7 @@ PAGE_TPL = """<!doctype html>
 <main>
   <nav class="tabs">
     <a href="index.html" class="{cls_home}">Resumen</a>
+    <a href="bancos.html" class="{cls_bancos}">Bancos</a>
     <a href="curvas.html" class="{cls_curvas}">Curvas</a>
     <a href="historia.html" class="{cls_historia}">Historia</a>
     <a href="universo.html" class="{cls_universo}">Universo</a>
@@ -415,7 +679,7 @@ PAGE_TPL = """<!doctype html>
 
 
 def render_page(slug: str, title: str, body: str, snapshot: str, date_min: str, date_max: str) -> str:
-    cls = {k: "" for k in ["home", "curvas", "historia", "universo", "metod"]}
+    cls = {k: "" for k in ["home", "bancos", "curvas", "historia", "universo", "metod"]}
     cls[slug] = "active"
     return PAGE_TPL.format(
         title=title,
@@ -425,6 +689,7 @@ def render_page(slug: str, title: str, body: str, snapshot: str, date_min: str, 
         body=body,
         plotly_cdn=PLOTLY_CDN,
         cls_home=cls["home"],
+        cls_bancos=cls["bancos"],
         cls_curvas=cls["curvas"],
         cls_historia=cls["historia"],
         cls_universo=cls["universo"],
@@ -648,6 +913,83 @@ def main():
     (DOCS / "metodologia.html").write_text(
         render_page("metod", "Metodología — Renta Fija Panamá", body_metod, snapshot, summary["date_min"], summary["date_max"])
     )
+
+    # ============== PAGE 6: BANCOS ==============
+    print(">> Sección bancos...")
+    fig_curva_tier, df_curva_tier = build_curva_bancos_por_tier(c)
+    fig_perc_sp_tier, df_perc_sp_tier = build_spread_percentil_bancos(c)
+    fig_perc_sp_inst, df_perc_sp_inst = build_spread_percentil_instrumento_bancos(c)
+    fig_heat_sp, fig_heat_pc, df_heat = build_heatmap_cross_ref(c)
+    fig_serie_tier, df_serie_tier = build_serie_bancos_por_tier(c)
+    bancos_findings = derive_conclusions_bancos(df_curva_tier, df_heat)
+
+    df_curva_tier.to_csv(DOCS / "_data" / "bancos_curva_tier.csv", index=False)
+    df_heat.to_csv(DOCS / "_data" / "bancos_cross_ref.csv", index=False)
+    df_perc_sp_tier.to_csv(DOCS / "_data" / "bancos_spread_percentil_tier.csv", index=False)
+
+    tier_legend_html = "<ul style='font-size:0.85rem;color:#555;margin:6px 0 14px;padding-left:18px;'>" + "".join(
+        f"<li><b>{t}</b> · {TIER_DESC[t]}</li>" for t in TIER_ORDER
+    ) + "</ul>"
+
+    import re as _re
+
+    def _md(s: str) -> str:
+        return _re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
+
+    bancos_findings_html = (
+        "<ul class='findings'>" + "".join(f"<li>{_md(f)}</li>" for f in bancos_findings) + "</ul>"
+    )
+
+    body_bancos = f"""
+    <section>
+      <h2>Foco: sector bancario</h2>
+      <p class="note">Universo = sector "Financiero" (bancos, hipotecarias, financieras especializadas, fideicomisos). Cada trade se etiqueta con un <b>rating tier</b> proxy basado en mapeo manual + fallback por tipo de emisor. Las calificaciones oficiales pendientes serán cargadas desde Bloomberg.</p>
+      {tier_legend_html}
+    </section>
+
+    <section>
+      <h2>Curva por rating tier</h2>
+      <p class="note">Yield mediano por bucket de plazo, separado por tier de calificación. Mismos plazos comparados entre tiers permiten leer el premium de crédito directamente.</p>
+      {fig_html(fig_curva_tier, "fig_curva_tier")}
+    </section>
+
+    <section>
+      <h2>Percentil del SPREAD vs historia 5y — por rating</h2>
+      <p class="note">El gráfico de percentiles que te interesó, pero usando <b>spread vs Tesoro Panamá mismo bucket-trimestre</b> en lugar de yield. Aísla el riesgo de crédito del nivel general de tasas. Verde = spread amplio vs su historia → barato. Rojo = spread comprimido → caro.</p>
+      {fig_html(fig_perc_sp_tier, "fig_pc_sp_tier")}
+    </section>
+
+    <section>
+      <h2>Cross-reference: rating × plazo</h2>
+      <p class="note">Matriz de doble entrada. Heatmap 1 = spread actual en pb. Heatmap 2 = en qué percentil de su distribución 5y está ese spread (verde = barato vs historia, rojo = caro).</p>
+      {fig_html(fig_heat_sp, "fig_heat_sp")}
+      {fig_html(fig_heat_pc, "fig_heat_pc")}
+    </section>
+
+    <section>
+      <h2>Percentil del SPREAD por instrumento × plazo</h2>
+      <p class="note">Misma idea pero abriendo por tipo de instrumento (VCN, Bonos Hipotecarios, Bonos Corp.) en lugar de tier. Útil para detectar dónde el premio de plazo se desvía.</p>
+      {fig_html(fig_perc_sp_inst, "fig_pc_sp_inst")}
+    </section>
+
+    <section>
+      <h2>Evolución histórica del spread por rating tier</h2>
+      <p class="note">Spread mediano trimestral, sector bancario, separado por tier de calificación. Muestra cómo se mueve el premio de crédito en el tiempo.</p>
+      {fig_html(fig_serie_tier, "fig_serie_tier")}
+    </section>
+
+    <section>
+      <h2>Conclusiones — bancos</h2>
+      {bancos_findings_html}
+    </section>
+    """
+    (DOCS / "bancos.html").write_text(
+        render_page("bancos", "Bancos — Renta Fija Panamá", body_bancos, snapshot, summary["date_min"], summary["date_max"])
+    )
+
+    # Mostrar findings de bancos en consola
+    for f in bancos_findings:
+        print(f"   [banco] {f}")
 
     # === GH Pages support files ===
     (DOCS / ".nojekyll").write_text("")

@@ -23,6 +23,7 @@ from src.analytics.ytm import (  # noqa: E402
     parse_fecha,
     ytm_from_price,
 )
+from src.analytics.ratings import assign_rating  # noqa: E402
 
 RAW = ROOT / "data" / "raw"
 PROC = ROOT / "data" / "processed"
@@ -155,6 +156,33 @@ def build_trades(instruments: pd.DataFrame) -> pd.DataFrame:
     )
     df["year"] = df["fecha_d"].apply(lambda d: d.year if d else np.nan)
     df["yyyymm"] = df["fecha_d"].apply(lambda d: d.strftime("%Y-%m") if d else None)
+    df["quarter"] = df["fecha_d"].apply(
+        lambda d: f"{d.year}Q{(d.month-1)//3 + 1}" if d else None
+    )
+
+    # Inject rating proxy
+    ratings = df.apply(
+        lambda r: assign_rating(r.get("emisor"), r.get("sector"), r.get("instrumento_clase")),
+        axis=1,
+    )
+    df["rating_tier"] = ratings.apply(lambda x: x[0])
+    df["rating_proxy"] = ratings.apply(lambda x: x[1])
+
+    # Spread vs Tesoro Panamá mismo (quarter, bucket_plazo)
+    govt = df[
+        df["instrumento_clase"].isin({"BONOS DEL TESORO", "NOTAS DEL TESORO", "LETRAS DEL TESORO"})
+        & df["ytm_calc"].notna()
+        & (df["ytm_calc"] > 0)
+        & (df["ytm_calc"] < 0.4)
+    ]
+    govt_med = (
+        govt.groupby(["quarter", "bucket_plazo"], observed=True)["ytm_calc"]
+        .median()
+        .rename("govt_ytm_q")
+        .reset_index()
+    )
+    df = df.merge(govt_med, on=["quarter", "bucket_plazo"], how="left")
+    df["spread_bp"] = (df["ytm_calc"] - df["govt_ytm_q"]) * 10000
 
     return df
 

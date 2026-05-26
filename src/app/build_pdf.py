@@ -20,13 +20,19 @@ sys.path.insert(0, str(ROOT))
 from src.analytics.curves import con, universe_summary  # noqa: E402
 from src.app.build_site import (  # noqa: E402
     build_curva_actual,
+    build_curva_bancos_por_tier,
     build_dispersion_actual,
+    build_heatmap_cross_ref,
     build_percentil_actual,
+    build_serie_bancos_por_tier,
     build_serie_sectores,
     build_serie_tesoro,
+    build_spread_percentil_bancos,
+    build_spread_percentil_instrumento_bancos,
     build_spread_vs_ust,
     build_volumen,
     derive_conclusions,
+    derive_conclusions_bancos,
 )
 
 DOCS = ROOT / "docs"
@@ -63,8 +69,16 @@ def main():
     fig_disp, _ = build_dispersion_actual(c)
     fig_vol, _ = build_volumen(c)
 
+    # Sección bancos
+    fig_bank_curve, df_bank_curve = build_curva_bancos_por_tier(c)
+    fig_bank_pc_sp, _ = build_spread_percentil_bancos(c)
+    fig_bank_pc_inst, _ = build_spread_percentil_instrumento_bancos(c)
+    fig_bank_heat_sp, fig_bank_heat_pc, df_bank_heat = build_heatmap_cross_ref(c)
+    fig_bank_serie, _ = build_serie_bancos_por_tier(c)
+
     print(">> Conclusiones...")
     findings = derive_conclusions(df_curva, df_pc, df_sp)
+    findings_bancos = derive_conclusions_bancos(df_bank_curve, df_bank_heat)
 
     print(">> Salvando PNGs...")
     figs = {
@@ -75,6 +89,12 @@ def main():
         "percentil": fig_pc,
         "disp": fig_disp,
         "vol": fig_vol,
+        "bank_curve": fig_bank_curve,
+        "bank_pc_sp": fig_bank_pc_sp,
+        "bank_pc_inst": fig_bank_pc_inst,
+        "bank_heat_sp": fig_bank_heat_sp,
+        "bank_heat_pc": fig_bank_heat_pc,
+        "bank_serie": fig_bank_serie,
     }
     paths = {k: save_png(v, k) for k, v in figs.items()}
     use_html_fallback = any(p.suffix == ".html" for p in paths.values())
@@ -98,6 +118,7 @@ def main():
     def md_to_html(s: str) -> str:
         return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
     findings_li = "".join(f"<li>{md_to_html(f)}</li>" for f in findings)
+    findings_bancos_li = "".join(f"<li>{md_to_html(f)}</li>" for f in findings_bancos)
 
     html = f"""<!doctype html>
 <html lang="es">
@@ -182,17 +203,59 @@ mercado dolarizado que sigue de cerca la curva UST.</p>
 
 <div class="page-break"></div>
 
-<h2>7. Posición actual vs historia 5 años</h2>
+<div class="page-break"></div>
+
+<h2>7a. Foco: sector bancario — curva por rating tier</h2>
+<p>El sector "Financiero" en Latinex agrupa bancos, hipotecarias, financieras especializadas y
+fideicomisos. Cada trade se etiquetó con un <b>rating tier</b> proxy (T1 = AAA(pan) soberano + bancos
+sistémicos top, hasta T5 = BB(pan)/Unrated). El mapeo base se sustituirá por calificaciones reales
+cuando ingrese el dump de Bloomberg.</p>
+{img("bank_curve")}
+<div class="figcap">Curva yield del sector bancario separada por rating tier — últimos 90 días.</div>
+
+<div class="box">
+  <h3 style="margin-top:0">Hallazgos sector bancario</h3>
+  <ul>{findings_bancos_li}</ul>
+</div>
+
+<h2>7b. Spread por rating × plazo — percentil 5y</h2>
+{img("bank_pc_sp")}
+<div class="figcap">Igual al gráfico 7 pero usando SPREAD vs Tesoro Panamá en vez de yield absoluto.
+Aísla el riesgo de crédito del nivel general de tasas. Verde = spread amplio vs su historia →
+bono BARATO en términos de crédito. Rojo = spread comprimido → CARO.</div>
+
+<div class="page-break"></div>
+
+<h2>7c. Cross-reference: rating × plazo</h2>
+{img("bank_heat_sp")}
+<div class="figcap">Spread mediano actual (pb) en sector bancario por rating tier × bucket de plazo.</div>
+
+{img("bank_heat_pc")}
+<div class="figcap">Mismo eje pero coloreado por percentil del spread vs su historia 5y (verde = barato vs propia historia).</div>
+
+<h2>7d. Spread por instrumento × plazo en bancos</h2>
+{img("bank_pc_inst")}
+<div class="figcap">Mismo análisis abriendo por tipo de instrumento (Bonos, VCN, Bonos Hipotecarios, Notas Corp.) dentro del sector bancario.</div>
+
+<div class="page-break"></div>
+
+<h2>7e. Evolución histórica del spread bancario por rating</h2>
+{img("bank_serie")}
+<div class="figcap">Spread mediano trimestral por tier de calificación. Permite ver compresión y ampliación de premios de crédito en el tiempo.</div>
+
+<div class="page-break"></div>
+
+<h2>8. Posición actual vs historia 5 años — mercado total</h2>
 {img("percentil")}
 <div class="figcap">Cada barra es (instrumento × bucket de plazo). Percentil ALTO (verde) = yield negociado hoy es alto vs su distribución 5y → instrumento BARATO. Percentil BAJO (rojo) = yield comprimido → CARO.</div>
 
-<h2>8. Liquidez del mercado</h2>
+<h2>9. Liquidez del mercado</h2>
 {img("vol")}
 <div class="figcap">Volumen anual negociado (USD miles de millones).</div>
 
 <div class="page-break"></div>
 
-<h2>9. Metodología</h2>
+<h2>10. Metodología</h2>
 
 <h3>Cobertura de datos</h3>
 <p>Universo: 100% de emisiones vigentes registradas en Latinex (2,573) más toda la tape
@@ -209,11 +272,22 @@ soportadas: 30/360, ACT/360, 365/360, ACT/365, ACT/ACT.</p>
 <p>Plazo residual agrupado en 0-1y, 1-3y, 3-5y, 5-7y, 7-10y, 10y+. Para series
 históricas se usa frecuencia trimestral con mínimo 3 trades por celda.</p>
 
-<h3>Proxy de crédito</h3>
-<p>Sin acceso a feed licenciado de calificaciones, se construye un proxy por sector +
-tipo de instrumento (AAA-PAN-Sov para Tesoro, BBB-Bank para Financiero, etc.).
-Adicionalmente, el spread negociado vs Tesoro mismo bucket actúa como medida
-<i>revealed-market</i> del riesgo crediticio.</p>
+<h3>Proxy de crédito y rating tiers</h3>
+<p>Sin acceso a feed licenciado de calificaciones, se construye un proxy en dos niveles:</p>
+<ul>
+  <li><b>Mapeo manual</b> de los ~50 emisores más activos basado en su perfil
+  (soberano, banco sistémico, banco mediano, hipotecaria establecida, real estate,
+  VCN sin rating público) → cinco tiers <code>T1..T5</code> en escala nacional Panamá
+  (AAA(pan) → BB(pan)/NR).</li>
+  <li><b>Fallback por sector</b> para emisores no mapeados manualmente
+  (se etiquetan con sufijo <code>[sector-proxy]</code>).</li>
+</ul>
+<p><b>El spread negociado vs Tesoro mismo bucket-trimestre</b> actúa como medida
+<i>revealed-market</i> del riesgo crediticio — es el componente del yield que el
+mercado le exige al emisor por encima de la curva soberana, y por construcción no
+depende de la calidad del proxy.</p>
+<p>Esta versión se reemplazará por calificaciones oficiales (Equilibrium, Fitch CA,
+Moody's Local, S&amp;P, etc.) cuando ingrese el dump de Bloomberg.</p>
 
 <h3>Limitaciones declaradas</h3>
 <ul>

@@ -164,6 +164,70 @@ def percentile_position(c, sector: str | None = None, lookback_days: int = 1825)
     return c.execute(q).df()
 
 
+def percentile_position_spread(
+    c,
+    sector: str | None = None,
+    lookback_days: int = 1825,
+    by: str = "rating_tier",  # 'rating_tier' o 'instrumento_clase'
+    extra_dim: str = "bucket_plazo",
+) -> pd.DataFrame:
+    """Versión spread: percentil del SPREAD actual vs distribución 5y."""
+    where_sector = f"AND sector = '{sector.replace(chr(39), chr(39)*2)}'" if sector else ""
+    q = f"""
+    WITH hist AS (
+        SELECT {extra_dim}, {by}, spread_bp, fecha_d
+        FROM trades
+        WHERE spread_bp IS NOT NULL
+          AND spread_bp BETWEEN -200 AND 3000
+          AND es_tasa_fija = TRUE
+          AND fecha_d >= (SELECT MAX(fecha_d) - INTERVAL '{lookback_days}' DAY FROM trades)
+          {where_sector}
+    ),
+    current AS (
+        SELECT {extra_dim}, {by}, MEDIAN(spread_bp) AS spread_now
+        FROM trades
+        WHERE spread_bp IS NOT NULL
+          AND spread_bp BETWEEN -200 AND 3000
+          AND es_tasa_fija = TRUE
+          AND fecha_d >= (SELECT MAX(fecha_d) - INTERVAL '90' DAY FROM trades)
+          {where_sector}
+        GROUP BY 1, 2
+    )
+    SELECT c.{extra_dim}, c.{by}, c.spread_now,
+           QUANTILE_CONT(h.spread_bp, 0.10) p10,
+           QUANTILE_CONT(h.spread_bp, 0.25) p25,
+           QUANTILE_CONT(h.spread_bp, 0.50) p50,
+           QUANTILE_CONT(h.spread_bp, 0.75) p75,
+           QUANTILE_CONT(h.spread_bp, 0.90) p90,
+           COUNT(*) n_hist
+    FROM current c
+    JOIN hist h USING ({extra_dim}, {by})
+    GROUP BY 1, 2, 3
+    HAVING COUNT(*) >= 20
+    """
+    return c.execute(q).df()
+
+
+def cross_ref_matrix(c, lookback_days: int = 90) -> pd.DataFrame:
+    """Matriz (rating_tier × bucket_plazo) → spread y yield actuales para bancos."""
+    q = f"""
+    SELECT rating_tier, bucket_plazo,
+           COUNT(*) n,
+           MEDIAN(ytm_calc) yld,
+           MEDIAN(spread_bp) spread,
+           COUNT(DISTINCT emisor) n_emisores
+    FROM trades
+    WHERE sector = 'Financiero'
+      AND es_tasa_fija = TRUE
+      AND ytm_calc IS NOT NULL
+      AND ytm_calc BETWEEN {YIELD_FLOOR} AND {YIELD_CEILING}
+      AND fecha_d >= (SELECT MAX(fecha_d) - INTERVAL '{lookback_days}' DAY FROM trades)
+    GROUP BY 1, 2
+    HAVING COUNT(*) >= 3
+    """
+    return c.execute(q).df()
+
+
 def universe_summary(c) -> dict:
     n_inst = c.execute("SELECT COUNT(*) FROM instruments").fetchone()[0]
     n_trades = c.execute("SELECT COUNT(*) FROM trades").fetchone()[0]

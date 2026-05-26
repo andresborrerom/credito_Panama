@@ -1,0 +1,129 @@
+"""Mapeo de calificación crediticia por emisor — PROXY V0.
+
+ADVERTENCIA: este archivo es un proxy curado basado en:
+  (a) tipo de emisor (soberano, banco, real estate, etc.),
+  (b) reputación de mercado en Panamá,
+  (c) sponsor/grupo económico cuando es claramente identificable.
+
+NO sustituye una calificación oficial de Equilibrium / Fitch CA / PCR / Moody's Local.
+Se reemplazará por ratings reales cuando llegue el dump de Bloomberg.
+
+Escala usada: nacional Panamá (sufijo (pan)):
+  T1: AAA(pan)         — soberano local y bancos sistémicos top
+  T2: AA(pan)          — bancos grandes establecidos, utilities reguladas
+  T3: A(pan)           — bancos medianos, corporates establecidos
+  T4: BBB(pan)         — fideicomisos hipotecarios, real estate con track record
+  T5: BB(pan)/Unrated  — VCN pequeños, corporativos sin rating público claro
+
+La asignación 'tier' se usa para análisis. Los emisores no listados aquí
+caen al proxy basado en sector (curves.CREDIT_TIERS).
+"""
+
+# Top emisores por volumen de trades (top 50 cubren ~85% del mercado)
+# Formato: NOMBRE_EXACTO_EN_LATINEX -> ("tier", "rating_proxy")
+ISSUER_RATING_PROXY = {
+    # T1 — soberano y top bancos sistémicos
+    "REPÚBLICA DE PANAMÁ":                              ("T1", "AAA(pan)"),
+    "REPUBLICA DE PANAMA":                              ("T1", "AAA(pan)"),
+    "BANCO GENERAL, S.A.":                              ("T1", "AAA(pan)"),
+    "GRUPO FINANCIERO BG, S.A.":                        ("T1", "AAA(pan)"),
+    "EMPRESA GENERAL DE INVERSIONES, S.A.":             ("T1", "AAA(pan)"),
+
+    # T2 — bancos grandes y utilities
+    "BANISTMO, S.A.":                                   ("T2", "AA(pan)"),
+    "GLOBAL BANK CORPORATION":                          ("T2", "AA(pan)"),
+    "BAC INTERNATIONAL BANK, INC.":                     ("T2", "AA(pan)"),
+    "MERCANTIL BANCO, S.A.":                            ("T2", "AA(pan)"),
+    "MULTIBANK INC.":                                   ("T2", "AA(pan)"),
+    "BANCO ALIADO, S.A.":                               ("T2", "AA(pan)"),
+    "BANCO LAFISE PANAMA, S.A.":                        ("T2", "AA(pan)"),
+    "MERCANTIL HOLDING FINANCIERO INTERNACIONAL, S.A.": ("T2", "AA(pan)"),
+    "MERCANTIL SERVICIOS FINANCIEROS INTERNACIONAL, S.A.": ("T2", "AA(pan)"),
+    "ENA NORTE TRUST":                                  ("T2", "AA(pan)"),  # autopista cobro peaje
+    "ENA SUR, S.A.":                                    ("T2", "AA(pan)"),
+    "ELEKTRA NORESTE, S.A.":                            ("T2", "AA(pan)"),
+    "AES PANAMA, S.R.L.":                               ("T2", "AA(pan)"),
+    "ETESA":                                            ("T2", "AA(pan)"),
+
+    # T3 — bancos medianos, corporativos establecidos
+    "BANCO INTERNACIONAL DE COSTA RICA, S.A.":          ("T3", "A(pan)"),
+    "BANCO PANAMA, S.A.":                               ("T3", "A(pan)"),
+    "PRIVAL BANK, S.A.":                                ("T3", "A(pan)"),
+    "CREDICORP BANK, S.A.":                             ("T3", "A(pan)"),
+    "METROBANK, S.A.":                                  ("T3", "A(pan)"),
+    "TOWERBANK INTERNATIONAL, INC.":                    ("T3", "A(pan)"),
+    "ST. GEORGES BANK & COMPANY INC.":                  ("T3", "A(pan)"),
+    "BANCO PICHINCHA PANAMA, S.A.":                     ("T3", "A(pan)"),
+    "BANISI, S.A.":                                     ("T3", "A(pan)"),
+    "PETROLEOS DELTA, S.A.":                            ("T3", "A(pan)"),
+    "COCHEZ Y COMPAÑIA, S.A.":                          ("T3", "A(pan)"),
+    "GRUPO ASSA, S.A.":                                 ("T3", "A(pan)"),
+
+    # T4 — fideicomisos hipotecarios, financieras especializadas
+    "BANCO LA HIPOTECARIA, S.A.":                       ("T4", "BBB(pan)"),
+    "HIPOTECARIA METROCREDIT, S.A.":                    ("T4", "BBB(pan)"),
+    "PRIMER FIDEICOMISO DE BONOS DE PRESTAMOS PERSONALES CCB": ("T4", "BBB(pan)"),
+    "CORPORACION DE FINANZAS DEL PAIS,S.A. (PANACREDIT)": ("T4", "BBB(pan)"),
+    "FONDO GENERAL DE INVERSIONES, S.A.":               ("T4", "BBB(pan)"),
+    "ARROW CAPITAL CORP.":                              ("T4", "BBB(pan)"),
+    "FINANCIA CREDIT, S.A.":                            ("T4", "BBB(pan)"),
+    "UNION NACIONAL DE EMPRESAS, S.A.":                 ("T4", "BBB(pan)"),
+    "CORPORACION INTERAMERICANA PARA EL FINANCIAMIENTO DE INFRAESTRUCTRURA, S.A. (CIFI)": ("T4", "BBB(pan)"),
+    "PANAMA POWER HOLDINGS, INC":                       ("T4", "BBB(pan)"),
+    "HYDRO CAISAN, S.A.":                               ("T4", "BBB(pan)"),
+
+    # T5 — small, real estate developers, VCN pequeños, unrated
+    "SOCIEDAD URBANIZADORA DEL CARIBE, S.A.":           ("T5", "BB(pan)/NR"),
+    "LOS CASTILLOS REAL ESTATE, INC.":                  ("T5", "BB(pan)/NR"),
+    "INMOBILIARIA PANAMA CAR RENTAL, S.A.":             ("T5", "BB(pan)/NR"),
+    "CM REALTY, S.A.":                                  ("T5", "BB(pan)/NR"),
+    "MAREVALLEY CORPORATION":                           ("T5", "BB(pan)/NR"),
+    "DESARROLLOS COMERCIALES, S.A.":                    ("T5", "BB(pan)/NR"),
+    "PARQUE INDUSTRIAL Y CORPORATIVO SUR, S.A.":        ("T5", "BB(pan)/NR"),
+    "INVERSIONES LEINA, S.A.":                          ("T5", "BB(pan)/NR"),
+    "LATIN AMERICAN KRAFT INVESTMENTS, INC. Y SUBSIDIARIAS": ("T5", "BB(pan)/NR"),
+}
+
+# Fallback por sector (cuando emisor no está en mapeo manual)
+SECTOR_FALLBACK_TIER = {
+    "Gobierno":       ("T1", "AAA(pan) [sector-proxy]"),
+    "Financiero":     ("T3", "A(pan) [sector-proxy]"),
+    "Utilidades":     ("T2", "AA(pan) [sector-proxy]"),
+    "Energía":        ("T3", "A(pan) [sector-proxy]"),
+    "Comunicaciones": ("T3", "A(pan) [sector-proxy]"),
+    "Industriales":   ("T4", "BBB(pan) [sector-proxy]"),
+    "Consumo Básico": ("T4", "BBB(pan) [sector-proxy]"),
+    "Consumo Discresional": ("T4", "BBB(pan) [sector-proxy]"),
+    "Bienes Raíces":  ("T5", "BB(pan)/NR [sector-proxy]"),
+    "Materiales":     ("T4", "BBB(pan) [sector-proxy]"),
+    "Salud":          ("T4", "BBB(pan) [sector-proxy]"),
+    "Tecnología":     ("T4", "BBB(pan) [sector-proxy]"),
+    "Servicios":      ("T4", "BBB(pan) [sector-proxy]"),
+}
+
+# Bonos del Tesoro siempre T1 sin importar sector
+GOVT_INSTRUMENTS = {"BONOS DEL TESORO", "NOTAS DEL TESORO", "LETRAS DEL TESORO"}
+
+
+def assign_rating(emisor: str | None, sector: str | None, instrumento: str | None) -> tuple[str, str]:
+    """Devuelve (tier, rating_proxy_label) para un trade/instrumento."""
+    if instrumento in GOVT_INSTRUMENTS:
+        return ("T1", "AAA(pan)")
+    if emisor and isinstance(emisor, str):
+        em_clean = emisor.strip().upper()
+        for key, val in ISSUER_RATING_PROXY.items():
+            if em_clean == key.upper():
+                return val
+    if sector and isinstance(sector, str):
+        return SECTOR_FALLBACK_TIER.get(sector, ("T5", "Unrated [no-sector]"))
+    return ("T5", "Unrated")
+
+
+TIER_ORDER = ["T1", "T2", "T3", "T4", "T5"]
+TIER_DESC = {
+    "T1": "AAA(pan) — soberano + bancos sistémicos top",
+    "T2": "AA(pan)  — bancos grandes, utilities",
+    "T3": "A(pan)   — bancos medianos, corporativos establecidos",
+    "T4": "BBB(pan) — hipotecarios, financieras",
+    "T5": "BB(pan)/NR — small caps, real estate, VCN pequeños, unrated",
+}
