@@ -6,8 +6,9 @@ Ejecutar: streamlit run src/app/streamlit_app.py
 from __future__ import annotations
 
 import pathlib
+import subprocess
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pandas as pd
 import plotly.express as px
@@ -20,6 +21,19 @@ from src.analytics.curves import BUCKET_MIDPOINTS, BUCKET_ORDER, con, ust_monthl
 from src.analytics.ratings import TIER_DESC, TIER_ORDER  # noqa: E402
 
 st.set_page_config(page_title="Renta Fija Panamá", layout="wide", page_icon="📊")
+
+
+def _git_short() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, text=True, timeout=2
+        ).strip()
+    except Exception:
+        return "unknown"
+
+
+COMMIT = _git_short()
+BOOT_TS = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
 
 @st.cache_resource
@@ -61,7 +75,10 @@ trades = load_trades()
 instruments = load_instruments()
 
 st.title("📊 Renta Fija de Panamá — Niveles actuales vs historia")
-st.caption(f"Latinex · {len(trades):,} trades con YTM · ventana {trades['fecha_d'].min()} → {trades['fecha_d'].max()}")
+st.caption(
+    f"Latinex · {len(trades):,} trades con YTM · ventana {trades['fecha_d'].min()} → {trades['fecha_d'].max()} "
+    f"· **commit `{COMMIT}` · boot {BOOT_TS}**"
+)
 
 # ============ SIDEBAR ============
 with st.sidebar:
@@ -105,6 +122,12 @@ with st.sidebar:
     with st.expander("Leyenda de rating tiers"):
         for t in TIER_ORDER:
             st.markdown(f"**{t}** · {TIER_DESC[t]}")
+
+    st.divider()
+    if st.button("🔄 Limpiar cache y recargar", use_container_width=True):
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.rerun()
 
 # ============ FILTRO ============
 df = trades.copy()
