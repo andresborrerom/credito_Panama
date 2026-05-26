@@ -224,7 +224,7 @@ with tab_sp:
             st.plotly_chart(fig, use_container_width=True)
 
 with tab_cx:
-    st.markdown("**Cross-reference rating × plazo.** Heatmap 1 = spread mediano actual (pb). Heatmap 2 = percentil 5y de ese spread.")
+    st.markdown("**Cross-reference rating × plazo.** Heatmap 1 = spread mediano actual (pb). Heatmap 2 = percentil 5y de ese spread (verde = barato vs su historia).")
     cur_w = df[(df["fecha_d"] >= df["fecha_d"].max() - timedelta(days=90)) & df["spread_bp"].between(-200, 3000)]
     if cur_w.empty:
         st.info("No hay trades con spread en los últimos 90 días bajo los filtros.")
@@ -249,6 +249,80 @@ with tab_cx:
         fig_h.update_layout(template="plotly_white", height=380, title="Spread mediano actual (pb)",
                             xaxis_title="Plazo", yaxis_title="Rating tier")
         st.plotly_chart(fig_h, use_container_width=True)
+
+        # ----- Heatmap 2: percentil 5y -----
+        # Histórico SIN respetar filtro de fechas para tener base estadística (5y atrás desde el max global)
+        hist_max = trades["fecha_d"].max()
+        hist_min = hist_max - timedelta(days=1825)
+        hist_base = trades.copy()
+        # Aplicar mismos filtros que df EXCEPTO fechas
+        if sector_sel != "(todos)":
+            hist_base = hist_base[hist_base["sector"] == sector_sel]
+        if "(todos)" not in instr_sel and instr_sel:
+            hist_base = hist_base[hist_base["instrumento_clase"].isin(instr_sel)]
+        if ratings_sel and len(ratings_sel) < len(TIER_ORDER):
+            hist_base = hist_base[hist_base["rating_tier"].isin(ratings_sel)]
+        if buckets:
+            hist_base = hist_base[hist_base["bucket_plazo"].isin(buckets)]
+        if emisor_sel != "(todos)":
+            hist_base = hist_base[hist_base["emisor"] == emisor_sel]
+        hist = hist_base[
+            (hist_base["fecha_d"] >= hist_min)
+            & hist_base["spread_bp"].between(-200, 3000)
+        ]
+        if hist.empty:
+            st.info("No hay historia 5y suficiente para computar percentiles bajo los filtros.")
+        else:
+            hist_q = (
+                hist.groupby(["rating_tier", "bucket_plazo"], observed=True)["spread_bp"]
+                .agg(
+                    p10=lambda s: s.quantile(0.10),
+                    p25=lambda s: s.quantile(0.25),
+                    p50=lambda s: s.quantile(0.50),
+                    p75=lambda s: s.quantile(0.75),
+                    p90=lambda s: s.quantile(0.90),
+                    n_hist="count",
+                ).reset_index()
+            )
+            merged = mat[["rating_tier", "bucket_plazo", "spread"]].rename(columns={"spread": "spread_now"})
+            merged = merged.merge(hist_q, on=["rating_tier", "bucket_plazo"])
+            merged = merged[merged["n_hist"] >= 20]
+
+            if merged.empty:
+                st.info("No hay celdas con n>=20 en la ventana 5y.")
+            else:
+                def _pos(row):
+                    breaks = [0.10, 0.25, 0.50, 0.75, 0.90]
+                    vals = [row["p10"], row["p25"], row["p50"], row["p75"], row["p90"]]
+                    y = row["spread_now"]
+                    if y <= vals[0]: return 0.05
+                    if y >= vals[-1]: return 0.95
+                    for i in range(4):
+                        if vals[i] <= y <= vals[i+1]:
+                            denom = vals[i+1] - vals[i]
+                            frac = (y - vals[i]) / denom if denom else 0
+                            return breaks[i] + frac * (breaks[i+1] - breaks[i])
+                    return 0.5
+                merged["percentil"] = merged.apply(_pos, axis=1)
+
+                pivot_pc = merged.pivot(index="rating_tier", columns="bucket_plazo", values="percentil")
+                pivot_pc = pivot_pc.reindex([t for t in TIER_ORDER if t in pivot_pc.index])
+                pivot_pc = pivot_pc[[b for b in BUCKET_ORDER if b in pivot_pc.columns]]
+                fig_h2 = go.Figure(
+                    data=go.Heatmap(
+                        z=pivot_pc.values, x=pivot_pc.columns, y=pivot_pc.index,
+                        colorscale="RdYlGn",
+                        zmin=0, zmax=1,
+                        text=[[f"{v*100:.0f}%" if pd.notna(v) else "" for v in row] for row in pivot_pc.values],
+                        texttemplate="%{text}",
+                        hovertemplate="Tier %{y} · %{x}<br>Percentil 5y: %{z:.0%}<extra></extra>",
+                        colorbar=dict(tickformat=".0%"),
+                    )
+                )
+                fig_h2.update_layout(template="plotly_white", height=380,
+                                     title="Percentil 5y del spread (verde = barato vs su propia historia)",
+                                     xaxis_title="Plazo", yaxis_title="Rating tier")
+                st.plotly_chart(fig_h2, use_container_width=True)
 
         # Datos de la tabla
         st.markdown("**Tabla cruzada (90 días)**")
