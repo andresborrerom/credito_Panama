@@ -30,7 +30,7 @@ def get_con():
 @st.cache_data
 def load_trades() -> pd.DataFrame:
     c = get_con()
-    return c.execute(
+    df = c.execute(
         """
         SELECT fecha_d, nemotecnico, emisor, sector, instrumento_clase,
                plazo_residual_anos, bucket_plazo, ytm_calc, precio, monto, es_tasa_fija,
@@ -41,6 +41,9 @@ def load_trades() -> pd.DataFrame:
           AND plazo_residual_anos BETWEEN 0 AND 30
         """
     ).df()
+    # Normalizar fecha a datetime.date (Streamlit slider no acepta pd.Timestamp)
+    df["fecha_d"] = pd.to_datetime(df["fecha_d"]).dt.date
+    return df
 
 
 @st.cache_data
@@ -85,6 +88,8 @@ with st.sidebar:
         min_value=fmin,
         max_value=fmax,
         value=(fmax - timedelta(days=365), fmax),
+        step=timedelta(days=1),
+        format="YYYY-MM-DD",
     )
 
     buckets = st.multiselect("Buckets de plazo", BUCKET_ORDER, default=BUCKET_ORDER)
@@ -252,7 +257,7 @@ with tab_cx:
 
 with tab2:
     df_m = df.copy()
-    df_m["quarter"] = df_m["fecha_d"].apply(lambda d: pd.Timestamp(d).to_period("Q").to_timestamp())
+    df_m["quarter"] = pd.to_datetime(df_m["fecha_d"]).dt.to_period("Q").dt.to_timestamp()
     s = df_m.groupby(["quarter", "bucket_plazo"], observed=True)["ytm_calc"].median().reset_index()
     s["yld_pct"] = s["ytm_calc"] * 100
     fig = px.line(s, x="quarter", y="yld_pct", color="bucket_plazo",
