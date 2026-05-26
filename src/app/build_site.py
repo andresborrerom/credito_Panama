@@ -44,7 +44,10 @@ PLOTLY_CDN = f"https://cdn.plot.ly/plotly-{PLOTLY_VERSION}.min.js"
 # URL de la app Streamlit cuando esté deployada en share.streamlit.io.
 # Edita este valor o pásalo por env var STREAMLIT_APP_URL.
 import os as _os
-STREAMLIT_APP_URL = _os.environ.get("STREAMLIT_APP_URL", "").strip()
+STREAMLIT_APP_URL = _os.environ.get(
+    "STREAMLIT_APP_URL",
+    "https://creditopanama-de6cpxaxkjphqlh8xgnx2x.streamlit.app",
+).strip()
 
 
 def fig_html(fig: go.Figure, div_id: str) -> str:
