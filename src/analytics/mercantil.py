@@ -532,3 +532,316 @@ def mercantil_pricing_recommendation_v2(
         "mercantil_5y_recomendado_final": (6.50, 7.00),  # consenso teórico + observado
     }
 
+
+# =================== TIER 2 SUB 10Y — NUEVO ANÁLISIS PARA v3 ============== #
+
+def t2_premium_components_estimate() -> dict:
+    """Componentes del premium Tier 2 sub 10y vs senior bullet en mercados emergentes.
+
+    Tier 2 es MENOS riesgoso que AT1 (no loss-absorption, no cupón discrecional,
+    no perpetuidad), pero MÁS riesgoso que senior (subordinación + plazo más largo).
+
+    ACTUALIZACIÓN: T2 panameño bajo SBP Acuerdo 1-2015 NO requiere write-down
+    contractual (solo subordinación legal en liquidación), a diferencia del
+    T2 europeo bajo Basilea III estricto. Esto reduce el premium de iliquidez
+    y subordinación vs benchmarks internacionales.
+
+    ACTUALIZACIÓN 2: Multibank emitió T2 doméstico 10y bullet en 2022
+    (US$28MM, 3 series, vence 2032). Caja de Ahorros emitió subordinado 10y
+    AAA(pan) por US$150MM en 2021. Mercantil NO es primer pionero estricto,
+    aunque sí en su tier de rating. Premium first-time se reduce.
+    """
+    return {
+        "subordinacion_t2_vs_senior_bp": (80, 150),  # subordinado a senior/sub ordinaria
+        "plazo_10y_vs_5y_bp": (50, 100),             # extension premium
+        "iliquidez_sub_panama_bp": (30, 80),         # mercado T2 doméstico delgado
+        "first_time_t2_local_market_bp": (10, 25),   # actualizado — Multibank y CA tienen precedente
+        "total_t2_10y_vs_senior_5y_bp": (170, 355),
+        "midpoint_bp": 263,
+    }
+
+
+def t2_local_precedents() -> list[dict]:
+    """Precedentes domésticos de T2 / subordinados largos en Panamá identificados."""
+    return [
+        {
+            "emisor": "Multibank Inc.",
+            "fecha": "2022 Q4",
+            "monto_mm": 28,
+            "plazo_anos": 10,
+            "vencimiento": "2032",
+            "cupon_pct": None,  # no encontrado en investigación
+            "estructura": "Tier 2 puro bullet, 3 series",
+            "rating_emision": None,
+            "reconocido_como": "T2 (capital secundario)",
+            "comentario": "Único T2 doméstico bullet 10y identificado en mercado panameño. Monto modesto sugiere placement privado o demanda limitada.",
+            "fuente": "EEFF Multibank 2022",
+        },
+        {
+            "emisor": "Caja de Ahorros",
+            "fecha": "dic-2021",
+            "monto_mm": 150,
+            "plazo_anos": 10,
+            "vencimiento": "2031",
+            "cupon_pct": None,
+            "estructura": "Subordinado a término (T2 o T1 — no confirmado oficial)",
+            "rating_emision": "AAA(pan) Fitch",
+            "reconocido_como": "Subordinado (status T2 vs T1 ambiguo)",
+            "comentario": "Caja de Ahorros es banco estatal AAA(pan). Programa hasta $400MM rotativo. Caso más cercano a T2 bullet 10y doméstico por monto.",
+            "fuente": "La Estrella Panamá; Caja de Ahorros disclosures",
+        },
+        {
+            "emisor": "Banesco (Panamá), S.A.",
+            "fecha": "may-2022",
+            "monto_mm": 78,
+            "plazo_anos": "Perpetuo",
+            "vencimiento": "2099 (≈perpetuo)",
+            "cupon_pct": 7.00,
+            "estructura": "AT1 perpetual subordinado (NO T2)",
+            "rating_emision": "Estimado BBB+(pan) o BBB(pan)",
+            "reconocido_como": "AT1 (capital primario adicional)",
+            "comentario": "Capital regulatorio, pero estructura distinta a T2. Sirve como anchor conceptual pero NO direct comparable de pricing.",
+            "fuente": "IN-A 2025 Banesco; SMV-541-21",
+        },
+        {
+            "emisor": "BAC International Bank",
+            "fecha": "may-2020 (autorización)",
+            "monto_mm": "8.4 emitidos / 700 programa",
+            "plazo_anos": "Perpetuo",
+            "vencimiento": "—",
+            "cupon_pct": None,
+            "estructura": "AT1 perpetual convertible en acciones",
+            "rating_emision": None,
+            "reconocido_como": "AT1",
+            "comentario": "Programa grande pero ejecución mínima ($8.4MM colocados vs $700MM autorizados).",
+            "fuente": "BIB IN-T mar-2025",
+        },
+    ]
+
+
+def t2_regulatory_rules_sbp() -> dict:
+    """Resumen verificado de reglas T2 bajo SBP Acuerdo 1-2015."""
+    return {
+        "marco_legal": "Ley Bancaria DE 52-2008 + Acuerdo 1-2015 (texto único 2020) + Acuerdo 3-2016",
+        "implementacion_basilea": "Híbrido Basilea II 'plus' — NO Basilea III completo (no TLAC, no write-down contractual obligatorio)",
+        "capital_secundario_max_pct_primario": 100,  # T2 ≤ 100% T1
+        "coeficiente_total_minimo_pct": 8.0,
+        "capital_primario_minimo_pct": 4.0,
+        "plazo_t2_minimo_anos": 5,
+        "plazo_t2_maximo": "Sin máximo regulatorio (típico 7-10y bullet)",
+        "subordinacion_requerida": "Contractualmente subordinado a depósitos y acreedores comunes/senior; senior solo a T1/AT1 y acciones",
+        "step_down_pct_por_ano": 20,  # últimos 5 años
+        "step_down_anos": 5,
+        "loss_absorption_contractual": False,  # CRÍTICO — diferencia con Basilea III europea
+        "comentario_loss_absorption": (
+            "T2 panameño NO requiere cláusula contractual de write-down ni conversión a acciones. "
+            "La absorción de pérdidas opera por subordinación legal en liquidación únicamente. "
+            "Esto hace T2 panameño MENOS riesgoso para inversores que un T2 europeo estricto bajo Basilea III."
+        ),
+        "call_emisor": "Requiere autorización previa SBP; típicamente no antes del año 5; ejercicio no puede deteriorar coeficiente adecuación",
+        "step_up_post_call": "No se permiten cláusulas step-up agresivas (criterio supervisor)",
+        "diferencia_sub_ordinario_vs_t2": (
+            "Un bono subordinado solo computa como T2 si la SBP lo aprueba expresamente al momento de emisión, "
+            "verificando subordinación, plazo y step-down. Hay subordinados que no computan."
+        ),
+        "fuente_acuerdo": "https://supervalores.gob.pa/files/Acuerdos/2015/Acuerdo-1-2015-texto-unico3.pdf",
+    }
+
+
+def mercantil_t2_sub_10y_pricing(
+    banesco_anchor: dict,
+    diferencial_rating_bp: float = 35,
+    prima_first_time_issuer_bp: float = 25,
+    prima_morosidad_capital_bank_bp: float = 25,
+    prima_capital_recognition_step_down_bp: float = 15,  # premio porque el valor regulatorio decae en últimos 5y
+) -> dict:
+    """Modelo de pricing para Mercantil Banco Tier 2 sub 10y bullet.
+
+    Dos aproximaciones reconciliadas:
+
+    A) Desde Banesco AT1 anchor (más cercano por ser capital regulatorio):
+       Banesco AT1 7% (firm-UW) → clearing real ~7.5-8.0%
+       - Premium AT1 vs T2 (loss-absorption + discrecional + perpetuidad): -100 a -200 bp
+       - Banesco T2 hipotetico 10y: 5.50% - 7.00%
+       - + Diferencial rating Mercantil vs Banesco: +25-35 bp
+       - + First-time T2 local + morosidad: +50 bp
+       - Mercantil T2 10y target via AT1: 6.25% - 7.85%
+
+    B) Desde Mercantil Holding senior 5y como anchor (escalado):
+       Holding senior 5y = 7.00%
+       - Bank vs Holding (sub jerarquía): -50 bp (bank más arriba estructuralmente)
+       - Sub vs senior dentro del banco: +100-150 bp
+       - 10y vs 5y term premium: +75-100 bp
+       - Mercantil T2 10y target via Holding: 8.25% - 9.00%
+
+    Consenso ponderado: 7.50% - 8.50%, midpoint ~8.00%
+    """
+    # Approach A — desde Banesco AT1
+    banesco_at1_clearing_low, banesco_at1_clearing_high = banesco_anchor["cupon_clearing_natural"]
+    # AT1 → T2 diferencial: T2 es menos riesgoso (no LA, no discrecional, no perpetuo)
+    at1_to_t2_low, at1_to_t2_high = 100, 200  # bp menos
+    banesco_t2_implicito_low = banesco_at1_clearing_low - at1_to_t2_high / 100  # más bajo
+    banesco_t2_implicito_high = banesco_at1_clearing_high - at1_to_t2_low / 100
+    # Ajustes Mercantil
+    adj = (diferencial_rating_bp + prima_first_time_issuer_bp
+           + prima_morosidad_capital_bank_bp + prima_capital_recognition_step_down_bp) / 100
+    target_via_banesco_low = banesco_t2_implicito_low + adj
+    target_via_banesco_high = banesco_t2_implicito_high + adj
+
+    # Approach B — desde Mercantil Holding senior 5y
+    holding_5y = 7.00  # cupón observado consistente Mercantil Holding
+    bank_vs_holding = -0.50  # banco regulado mejor que holding
+    sub_vs_senior_bp = (100, 150)
+    term_5y_to_10y_bp = (75, 100)
+    target_via_holding_low = holding_5y + bank_vs_holding + sub_vs_senior_bp[0]/100 + term_5y_to_10y_bp[0]/100
+    target_via_holding_high = holding_5y + bank_vs_holding + sub_vs_senior_bp[1]/100 + term_5y_to_10y_bp[1]/100
+
+    # Consenso ponderado (50/50)
+    consenso_low = (target_via_banesco_low + target_via_holding_low) / 2
+    consenso_high = (target_via_banesco_high + target_via_holding_high) / 2
+
+    return {
+        "approach_a_via_banesco_at1": {
+            "banesco_at1_clearing_natural": (banesco_at1_clearing_low, banesco_at1_clearing_high),
+            "at1_to_t2_descuento_bp": (at1_to_t2_low, at1_to_t2_high),
+            "banesco_t2_implicito": (round(banesco_t2_implicito_low, 2), round(banesco_t2_implicito_high, 2)),
+            "ajustes_mercantil_bp": diferencial_rating_bp + prima_first_time_issuer_bp + prima_morosidad_capital_bank_bp + prima_capital_recognition_step_down_bp,
+            "target": (round(target_via_banesco_low, 2), round(target_via_banesco_high, 2)),
+        },
+        "approach_b_via_mercantil_holding": {
+            "holding_senior_5y": holding_5y,
+            "bank_vs_holding_bp": bank_vs_holding * 100,
+            "sub_vs_senior_bp": sub_vs_senior_bp,
+            "term_5y_to_10y_bp": term_5y_to_10y_bp,
+            "target": (round(target_via_holding_low, 2), round(target_via_holding_high, 2)),
+        },
+        "consenso_t2_10y": (round(consenso_low, 2), round(consenso_high, 2)),
+        "con_firm_uw_apretado_25_50bp": (round(consenso_low - 0.50, 2), round(consenso_high - 0.25, 2)),
+        "midpoint_target": round((consenso_low + consenso_high) / 2, 2),
+    }
+
+
+def capital_sizing_analysis(
+    monto_emision_mm: float,
+    capital_actual_mm: float = 450,  # estimado para Mercantil Banco ~$10bn activos
+    apr_actual_mm: float = 3500,    # APR (activos ponderados por riesgo)
+    car_actual_pct: float = 13.0,   # Capital ratio actual estimado
+) -> dict:
+    """Modela impacto en ratio de capital y capacidad de crecimiento de crédito.
+
+    Asume parámetros típicos para banco mediano panameño:
+    - Activos ~$10bn
+    - APR ~35% activos = $3.5bn
+    - Capital total ~13% APR = $455MM
+
+    Una emisión T2 añade al numerador del CAR.
+    """
+    capital_post = capital_actual_mm + monto_emision_mm
+    car_post = capital_post / apr_actual_mm * 100
+    # Capacidad incremental de crédito a 50% risk weight (corporates de buena calidad)
+    apr_extra_capacity = (capital_post - capital_actual_mm) / (car_actual_pct/100)  # mismo ratio
+    credito_extra_capacity_50rw = apr_extra_capacity / 0.5  # corporativos investment grade
+    credito_extra_capacity_100rw = apr_extra_capacity / 1.0  # corporativos genéricos
+    return {
+        "monto_emision_mm": monto_emision_mm,
+        "capital_pre_mm": capital_actual_mm,
+        "capital_post_mm": round(capital_post, 1),
+        "car_pre_pct": car_actual_pct,
+        "car_post_pct": round(car_post, 2),
+        "delta_car_bp": round((car_post - car_actual_pct) * 100, 0),
+        "credito_extra_capacity_50rw_mm": round(credito_extra_capacity_50rw, 0),
+        "credito_extra_capacity_100rw_mm": round(credito_extra_capacity_100rw, 0),
+    }
+
+
+def t2_vs_at1_decision_matrix() -> list[dict]:
+    """Tabla de decisión Tier 2 vs AT1 para Mercantil."""
+    return [
+        {
+            "criterio": "Costo (cupón estimado)",
+            "t2_sub_10y": "7.50-8.50%",
+            "at1_perpetuo": "8.50-9.50%",
+            "ganador": "T2",
+        },
+        {
+            "criterio": "Capital regulatorio (qué cuenta)",
+            "t2_sub_10y": "Tier 2 (total capital)",
+            "at1_perpetuo": "Tier 1 (capital primario)",
+            "ganador": "AT1 si necesitan Tier 1 específicamente",
+        },
+        {
+            "criterio": "Loss-absorption / write-down",
+            "t2_sub_10y": "No requerido",
+            "at1_perpetuo": "Sí — write-down si CET1 baja de trigger",
+            "ganador": "T2 (menos riesgo accionistas)",
+        },
+        {
+            "criterio": "Cupón discrecional",
+            "t2_sub_10y": "Obligatorio (default si no se paga)",
+            "at1_perpetuo": "Discrecional (puede saltarse sin default)",
+            "ganador": "AT1 (más flexibilidad para el banco)",
+        },
+        {
+            "criterio": "Deducibilidad fiscal de intereses",
+            "t2_sub_10y": "Sí (intereses)",
+            "at1_perpetuo": "Discutible (puede ser tratado como dividendo)",
+            "ganador": "T2 (mejor tax shield)",
+        },
+        {
+            "criterio": "Step-down de reconocimiento",
+            "t2_sub_10y": "Sí — pierde 20%/año en últimos 5y",
+            "at1_perpetuo": "No (mientras esté vivo)",
+            "ganador": "AT1 (capital permanente)",
+        },
+        {
+            "criterio": "Plazo",
+            "t2_sub_10y": "10 años bullet",
+            "at1_perpetuo": "Perpetuo con call (típico año 5)",
+            "ganador": "T2 (define exit)",
+        },
+        {
+            "criterio": "Base inversora",
+            "t2_sub_10y": "AFP, aseguradoras selectas, bancas privadas",
+            "at1_perpetuo": "Más restringida (algunas AFP excluyen AT1)",
+            "ganador": "T2 (más demanda potencial)",
+        },
+        {
+            "criterio": "Aprobación regulatoria",
+            "t2_sub_10y": "Más simple (T2 ordinario)",
+            "at1_perpetuo": "Más estricta (revisión SBP sobre triggers)",
+            "ganador": "T2 (menos fricción)",
+        },
+        {
+            "criterio": "Mercado doméstico Panamá",
+            "t2_sub_10y": "Sin precedente claro (Mercantil pionero)",
+            "at1_perpetuo": "Un precedente (Banesco 2022)",
+            "ganador": "AT1 (más fácil pre-marketing)",
+        },
+    ]
+
+
+def issuance_program_projection(
+    monto_total_programa_mm: float = 100,
+    monto_serie_a_mm: float = 30,
+    frecuencia_meses: int = 4,
+    cupon_pct: float = 7.75,
+    plazo_anos: int = 10,
+) -> dict:
+    """Proyecta la cadencia óptima de un programa T2 sub 10y de Mercantil."""
+    n_series = int(monto_total_programa_mm // monto_serie_a_mm)
+    n_series += 1 if monto_total_programa_mm % monto_serie_a_mm > 0 else 0
+    duracion_programa_meses = (n_series - 1) * frecuencia_meses
+    interes_anual_serie = monto_serie_a_mm * cupon_pct / 100
+    interes_anual_programa_total = monto_total_programa_mm * cupon_pct / 100
+    return {
+        "monto_total_programa_mm": monto_total_programa_mm,
+        "monto_por_serie_mm": monto_serie_a_mm,
+        "n_series": n_series,
+        "frecuencia_meses_entre_series": frecuencia_meses,
+        "duracion_programa_meses": duracion_programa_meses,
+        "cupon_pct": cupon_pct,
+        "interes_anual_serie_mm": round(interes_anual_serie, 2),
+        "interes_anual_programa_total_mm": round(interes_anual_programa_total, 2),
+        "intereses_totales_vida_programa_mm": round(interes_anual_programa_total * plazo_anos, 1),
+    }
+

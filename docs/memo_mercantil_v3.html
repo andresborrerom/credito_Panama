@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<title>Memo v3 — Mercantil Banco Tier 2 Sub 10y</title>
+<style>
+@page { size: A4; margin: 16mm; }
+body { font-family: -apple-system, "Segoe UI", Helvetica, sans-serif; color: #1a1a2e;
+       max-width: 820px; margin: 0 auto; line-height: 1.45; padding: 0; font-size: 10pt; }
+h1 { color: #002b5c; font-size: 22pt; border-bottom: 3px solid #002b5c; padding-bottom: 6px; margin-bottom: 4px; }
+h2 { color: #002b5c; font-size: 13pt; margin-top: 22px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+h3 { color: #003f7a; font-size: 11pt; margin-top: 14px; }
+.subtitle { font-size: 9pt; color: #666; margin-top: 2px; }
+.confidential { background: #fff7e6; padding: 8px 12px; border-left: 4px solid #d18f00;
+                 font-size: 8.5pt; margin: 10px 0; }
+.box { background: #f3f5fa; border-left: 4px solid #002b5c; padding: 10px 14px;
+       margin: 12px 0; border-radius: 3px; font-size: 9.5pt; }
+.rec-box { background: #e8f3e8; border-left: 5px solid #1f6f43; padding: 12px 16px;
+            margin: 14px 0; border-radius: 4px; }
+.warn-box { background: #fdecec; border-left: 4px solid #c23030; padding: 10px 14px;
+             margin: 12px 0; border-radius: 4px; font-size: 9.5pt; }
+.thesis-box { background: #e8f4ff; border-left: 5px solid #004080; padding: 14px 18px;
+               margin: 16px 0; border-radius: 4px; font-size: 10pt; }
+.kpi-row { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.kpi { flex: 1; min-width: 100px; background: #002b5c; color: #fff;
+       padding: 10px 6px; border-radius: 5px; text-align: center; }
+.kpi .v { font-size: 14pt; font-weight: 700; line-height: 1.1; }
+.kpi .l { font-size: 7.5pt; opacity: 0.85; margin-top: 3px; }
+img { max-width: 100%; height: auto; margin: 8px 0; }
+ul, ol { margin: 6px 0; padding-left: 20px; }
+li { margin: 4px 0; }
+.figcap { font-size: 8.5pt; color: #666; margin-top: -4px; margin-bottom: 12px; font-style: italic; }
+table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin: 8px 0; }
+th { background: #002b5c; color: #fff; padding: 5px 6px; text-align: left; }
+td { padding: 4px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+.page-break { page-break-before: always; }
+code { background: #eef1f7; padding: 1px 4px; border-radius: 3px; font-size: 9pt; }
+.callout-small { font-size: 8.5pt; color: #555; margin-top: 4px; }
+.toc { font-size: 9pt; column-count: 2; column-gap: 18px; }
+</style></head><body>
+
+<h1>Mercantil Banco — emisión de Tier 2 Sub 10y</h1>
+<div class="subtitle"><b>Memo v3 · 2026-05-26 16:30 UTC</b> · Análisis estructurado de capital regulatorio</div>
+
+<div class="confidential">
+<b>Informativo · No constituye recomendación de inversión, asesoría regulatoria ni opinión legal.</b><br>
+Sustentado en datos públicos Latinex/SMV, U.S. Treasury, calificaciones públicas (Fitch, Moody's Local) e investigación dirigida sobre Banesco AT1 2022 y reglas SBP.
+</div>
+
+<div class="thesis-box">
+<h2 style="margin-top:0;border:none">Tesis estratégica del banco (input del cliente)</h2>
+<ul>
+<li><b>Diagnóstico:</b> exceso estructural de liquidez — depósitos crecen más rápido que originación de crédito tras endurecimiento de políticas crediticias.</li>
+<li><b>Restricción binding:</b> capital regulatorio (no liquidez). El banco quiere crecer crédito a mejores corporativos con tickets más grandes, lo que exige más capital por nombre.</li>
+<li><b>Producto necesario:</b> instrumento que compute como capital regulatorio sin engrosar el balance pasivo de depósitos.</li>
+<li><b>Plazo objetivo:</b> 10 años.</li>
+</ul>
+<b>Esta tesis define el producto:</b> <u>Bono Tier 2 Subordinado a 10 años bullet</u> (no callable o callable año 5).
+T2 es la estructura más eficiente para el objetivo descrito porque:
+<ul>
+<li>Computa como capital regulatorio (Total Capital ratio bajo SBP Acuerdo 1-2015)</li>
+<li>Es ~100-150 bp más barato que AT1 perpetuo (no requiere loss-absorption ni cupón discrecional)</li>
+<li>Intereses son deducibles fiscalmente (vs AT1 que puede ser tratado como dividendo)</li>
+<li>Base inversora más amplia (algunas AFP/aseguradoras no pueden tener AT1, sí T2)</li>
+</ul>
+</div>
+
+<h2>Recomendación principal</h2>
+<div class="rec-box">
+Emitir <b>Bono Tier 2 Subordinado a 10 años bullet</b>, cupón fijo trimestral en rango <b>7.50%–8.50%</b>
+(midpoint <b>7.94%</b>), monto inicial <b>$30 MM</b>, programa total <b>$100 MM</b>
+en 3-4 series escalonadas cada 4 meses. Estructurar con casa con presencia institucional fuerte
+(Prival, BG Valores, MMG Bank). Best-efforts default; firm-UW si la apretada esperada es ≥ 25-35 bp.
+<br><br>
+<b>Capital efecto $30MM:</b> +71 pb en CAR (13% → 13.71%); desbloquea ~$462MM en originación adicional
+a corporativos investment-grade (50% risk weight) o ~$231MM a corporativos genéricos (100% RW).
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="v">T2 sub</div><div class="l">Estructura</div></div>
+  <div class="kpi"><div class="v">10y bullet</div><div class="l">Plazo</div></div>
+  <div class="kpi"><div class="v">7.38-8.50%</div><div class="l">Cupón target</div></div>
+  <div class="kpi"><div class="v">$30MM</div><div class="l">Serie inicial</div></div>
+  <div class="kpi"><div class="v">$100MM</div><div class="l">Programa</div></div>
+  <div class="kpi"><div class="v">+71 pb</div><div class="l">∆ CAR</div></div>
+  <div class="kpi"><div class="v">+$462MM</div><div class="l">Capacidad crédito</div></div>
+</div>
+
+<h2>Tabla de contenido</h2>
+<div class="box"><div class="toc"><ol>
+<li>Tesis y caso de negocio del capital</li>
+<li>El producto: Tier 2 vs alternativas</li>
+<li>Capital regulatorio Panamá — marco SBP Acuerdo 1-2015</li>
+<li>Sizing: monto óptimo según objetivo de CAR</li>
+<li>Pricing T2 10y — racional bottom-up doble approach</li>
+<li>Anchor Banesco AT1 — relectura para T2</li>
+<li>Universo de instrumentos de capital bancario Panamá</li>
+<li>Cláusulas y estructura recomendada</li>
+<li>Estructura del programa y cadencia óptima</li>
+<li>Ventana de mercado y timing competitivo</li>
+<li>Estrategia de underwriter</li>
+<li>Sensibilidades y escenarios de stress</li>
+<li>Próximos pasos operativos</li>
+<li>Metodología y limitaciones</li>
+</ol></div></div>
+
+<!-- ============ 1. TESIS ============= -->
+<h2>1. Tesis y caso de negocio del capital</h2>
+
+<h3>1.1 Diagnóstico del banco</h3>
+<p>El banco ha endurecido recientemente las políticas crediticias (mayor selectividad en originación). Mientras tanto, las
+captaciones han seguido creciendo a su ritmo normal. <b>El resultado mecánico es exceso de liquidez</b>: el balance tiene más
+depósitos disponibles de los que el equipo de crédito está colocando.</p>
+
+<p>La estrategia anunciada es <b>reactivar la originación de crédito enfocándose en corporativos de mejor calidad y tickets
+más grandes</b>. Esa decisión es óptima por dos razones: (a) aprovecha la liquidez sobrante, (b) consolida la cartera en
+nombres con menor PD esperada. Pero tiene una restricción operativa real: <b>capital regulatorio por contraparte</b>.</p>
+
+<h3>1.2 Por qué capital es la restricción binding (no liquidez)</h3>
+<p>Bajo SBP Acuerdo 1-2015, cada crédito consume capital regulatorio según su <i>risk weight</i>:</p>
+<ul>
+<li>Crédito a soberano AAA: 0% RW (no consume capital)</li>
+<li>Crédito hipotecario residencial: 35% RW</li>
+<li>Crédito a corporativo IG: 50-75% RW</li>
+<li>Crédito a corporativo genérico: 100% RW</li>
+<li>Crédito a empresa unrated/distressed: 150% RW</li>
+</ul>
+<p>Si Mercantil quiere originar $500 MM en créditos nuevos a corporativos 50% RW, eso consume <b>$32.5 MM de Total Capital</b>
+asumiendo CAR mínimo de 13%. Sin capital nuevo, ese crecimiento no es posible aunque haya liquidez excedente esperando.</p>
+
+<h3>1.3 Multiplicador: $1 de T2 nuevo desbloquea ~15× en crédito</h3>
+<img src="figs_memo_v3/mult.png" alt="mult" />
+<div class="figcap">Multiplicador de crédito por cada $1 de capital nuevo, según CAR objetivo y risk weight del crédito originado. Verde más oscuro = más crédito desbloqueado.</div>
+
+<p>Para un banco con CAR objetivo 13% que origina a corporativos 50% RW, <b>cada $1 de capital nuevo permite originar $15.4 de crédito</b>.
+Para una emisión de $30 MM en T2, eso son <b>~$462 MM en capacidad incremental</b>.</p>
+
+<!-- ============ 2. PRODUCTO ============= -->
+<h2>2. El producto: Tier 2 vs alternativas</h2>
+<p>Hay tres formas técnicas de aumentar capital regulatorio para un banco panameño:</p>
+
+<table>
+<tr><th>Criterio</th><th>Tier 2 sub 10y</th><th>AT1 perpetuo</th><th>Decisión</th></tr>
+<tr><td><b>Costo (cupón estimado)</b></td><td>7.50-8.50%</td><td>8.50-9.50%</td><td><i>→ T2</i></td></tr><tr><td><b>Capital regulatorio (qué cuenta)</b></td><td>Tier 2 (total capital)</td><td>Tier 1 (capital primario)</td><td><i>→ AT1 si necesitan Tier 1 específicamente</i></td></tr><tr><td><b>Loss-absorption / write-down</b></td><td>No requerido</td><td>Sí — write-down si CET1 baja de trigger</td><td><i>→ T2 (menos riesgo accionistas)</i></td></tr><tr><td><b>Cupón discrecional</b></td><td>Obligatorio (default si no se paga)</td><td>Discrecional (puede saltarse sin default)</td><td><i>→ AT1 (más flexibilidad para el banco)</i></td></tr><tr><td><b>Deducibilidad fiscal de intereses</b></td><td>Sí (intereses)</td><td>Discutible (puede ser tratado como dividendo)</td><td><i>→ T2 (mejor tax shield)</i></td></tr><tr><td><b>Step-down de reconocimiento</b></td><td>Sí — pierde 20%/año en últimos 5y</td><td>No (mientras esté vivo)</td><td><i>→ AT1 (capital permanente)</i></td></tr><tr><td><b>Plazo</b></td><td>10 años bullet</td><td>Perpetuo con call (típico año 5)</td><td><i>→ T2 (define exit)</i></td></tr><tr><td><b>Base inversora</b></td><td>AFP, aseguradoras selectas, bancas privadas</td><td>Más restringida (algunas AFP excluyen AT1)</td><td><i>→ T2 (más demanda potencial)</i></td></tr><tr><td><b>Aprobación regulatoria</b></td><td>Más simple (T2 ordinario)</td><td>Más estricta (revisión SBP sobre triggers)</td><td><i>→ T2 (menos fricción)</i></td></tr><tr><td><b>Mercado doméstico Panamá</b></td><td>Sin precedente claro (Mercantil pionero)</td><td>Un precedente (Banesco 2022)</td><td><i>→ AT1 (más fácil pre-marketing)</i></td></tr>
+</table>
+
+<p><b>Conclusión:</b> 7 de 10 criterios favorecen T2. AT1 conviene SOLO si el banco necesita reforzar específicamente
+Tier 1 (capital primario) por una restricción regulatoria específica, no Total Capital. Si la tesis es "expandir crédito
+con capital adicional", T2 es óptimo.</p>
+
+<h3>2.1 Por qué no equity nuevo</h3>
+<p>Equity es la forma más cara de capital (costo de equity típicamente 12-15% para bancos panameños vs 7.5-8.5% para T2).
+Solo se justifica si Tier 1 es insuficiente y AT1 no es viable. La emisión T2 evita dilución y aprovecha el "tax shield" de
+intereses deducibles.</p>
+
+<div class="page-break"></div>
+
+<!-- ============ 3. MARCO REGULATORIO ============= -->
+<h2>3. Capital regulatorio Panamá — marco SBP Acuerdo 1-2015</h2>
+<p>La Superintendencia de Bancos de Panamá regula adecuación de capital bajo el Acuerdo 1-2015 con complemento
+Acuerdo 3-2016. La estructura jerárquica es Basilea III adaptada:</p>
+
+<table>
+<tr><th>Capa</th><th>Componentes</th><th>Mínimo SBP</th><th>Mínimo industria</th></tr>
+<tr><td><b>CET1</b> (Common Equity)</td><td>Acciones comunes, reservas, retenidos</td><td>4.5%</td><td>≥ 10%</td></tr>
+<tr><td><b>Tier 1</b> (CET1 + AT1)</td><td>CET1 + AT1 perpetuos con write-down</td><td>6.0%</td><td>≥ 11%</td></tr>
+<tr><td><b>Total Capital</b> (T1 + T2)</td><td>Tier 1 + bonos subordinados T2</td><td><b>8.0%</b></td><td><b>≥ 13%</b></td></tr>
+</table>
+
+<h3>3.1 Requisitos específicos para que un bono compute como Tier 2 bajo SBP</h3>
+<ul>
+<li><b>Plazo:</b> mínimo 5 años. No hay máximo. 10 años es estándar.</li>
+<li><b>Subordinación:</b> subordinado a todos los acreedores generales (depositantes, senior debt, deuda sub ordinaria); senior solo a CET1 y AT1.</li>
+<li><b>Cupón:</b> obligatorio. No discrecional (a diferencia de AT1).</li>
+<li><b>Loss-absorption:</b> NO requerido en Panamá para T2 (diferencia importante vs Basilea III europea que sí lo exige).</li>
+<li><b>Call:</b> permitido pero requiere autorización previa SBP. Típicamente no antes del año 5.</li>
+<li><b>Step-down regulatorio:</b> el monto reconocido como Tier 2 declina 20% por año en los últimos 5 años de vida del bono. Un T2 10y emitido hoy computa 100% en años 1-5, luego 80%, 60%, 40%, 20%, 0% en años 6-10.</li>
+</ul>
+
+<h3>3.2 Diferencia clave vs Basilea III europea</h3>
+<div class="box">
+<b>T2 panameño NO requiere cláusula contractual de write-down ni conversión a acciones</b> (a diferencia del T2 europeo estricto bajo Basilea III). La absorción de pérdidas opera únicamente por <b>subordinación legal en liquidación</b>. Esto hace al T2 panameño:
+<ul>
+<li><b>Menos riesgoso para inversores</b> que sus análogos europeos → debería pricing un poco mejor</li>
+<li><b>Más simple de documentar</b> que un AT1 con triggers de CET1</li>
+<li><b>Más fácil de aprobar regulatoriamente</b> (no requiere review SBP sobre triggers complejos)</li>
+</ul>
+</div>
+
+<h3>3.3 Precedentes T2 / subordinado doméstico en Panamá (últimos 5 años)</h3>
+<table>
+<tr><th>Emisor</th><th>Fecha</th><th>Monto</th><th>Plazo</th><th>Reconocido como</th><th>Rating emisión</th><th>Comentario</th></tr>
+<tr><td><b>Multibank Inc.</b></td><td>2022 Q4</td><td>$28MM</td><td>10y</td><td>T2 (capital secundario)</td><td>—</td><td style='font-size:7.5pt'>Único T2 doméstico bullet 10y identificado en mercado panameño. Monto modesto sugiere placement privado o demanda limitada.</td></tr><tr><td><b>Caja de Ahorros</b></td><td>dic-2021</td><td>$150MM</td><td>10y</td><td>Subordinado (status T2 vs T1 ambiguo)</td><td>AAA(pan) Fitch</td><td style='font-size:7.5pt'>Caja de Ahorros es banco estatal AAA(pan). Programa hasta $400MM rotativo. Caso más cercano a T2 bullet 10y doméstico por monto.</td></tr><tr><td><b>Banesco (Panamá), S.A.</b></td><td>may-2022</td><td>$78MM</td><td>Perpetuo</td><td>AT1 (capital primario adicional)</td><td>Estimado BBB+(pan) o BBB(pan)</td><td style='font-size:7.5pt'>Capital regulatorio, pero estructura distinta a T2. Sirve como anchor conceptual pero NO direct comparable de pricing.</td></tr><tr><td><b>BAC International Bank</b></td><td>may-2020 (autorización)</td><td>$8.4 emitidos / 700 programaMM</td><td>Perpetuo</td><td>AT1</td><td>—</td><td style='font-size:7.5pt'>Programa grande pero ejecución mínima ($8.4MM colocados vs $700MM autorizados).</td></tr>
+</table>
+
+<p><b>Lectura del precedente:</b></p>
+<ul>
+<li><b>Multibank 2022</b> es el ÚNICO T2 puro bullet 10y doméstico identificado. Monto modesto ($28MM) sugiere placement principalmente privado o demanda institucional limitada en ese momento. Validación crítica: el producto SÍ es viable bajo SBP, hay aprobación regulatoria documentada.</li>
+<li><b>Caja de Ahorros 2021</b> ($150MM, 10y, AAA(pan)) es el subordinado largo más grande del mercado. Status técnico T2 vs T1 ambiguo pero el monto y plazo validan apetito institucional por subordinado bancario.</li>
+<li><b>Banesco 2022 y BIB 2020</b> son AT1, estructura distinta — sirven como anchor conceptual de "capital regulatorio bancario en Panamá" pero no son direct comparables de pricing T2.</li>
+</ul>
+
+<p><b>Implicación para Mercantil:</b> NO es primer pionero estricto del producto T2 — Multibank y Caja de Ahorros ya lo hicieron. Premium "first-time T2 local" se reduce a +10-25 bp (en vez de +25-50 bp en estimación previa). Esto baja el target de pricing en ~15 bp.</p>
+
+<!-- ============ 4. SIZING ============= -->
+<h2>4. Sizing: monto óptimo según objetivo de CAR</h2>
+<img src="figs_memo_v3/cap.png" alt="cap" />
+<div class="figcap">Impacto de la emisión T2 en el CAR y en capacidad incremental de crédito a corporativos 50% RW. Asume capital actual $450MM, APR $3,500MM, CAR pre 13%.</div>
+
+<table>
+<tr><th>Monto T2</th><th>CAR post</th><th>∆ CAR</th><th>Cap. crédito 50% RW</th><th>Cap. crédito 100% RW</th></tr>
+<tr><td>$30MM</td><td>13.71%</td><td>+71 pb</td><td>$462MM</td><td>$231MM</td></tr><tr><td>$60MM</td><td>14.57%</td><td>+157 pb</td><td>$923MM</td><td>$462MM</td></tr><tr><td>$100MM</td><td>15.71%</td><td>+271 pb</td><td>$1538MM</td><td>$769MM</td></tr>
+</table>
+
+<p><b>Recomendación de sizing:</b></p>
+<ul>
+<li><b>Serie inicial $30 MM</b> — sube CAR 71 pb, suficiente para validar producto en mercado sin riesgo de sobre-suscripción fallida.</li>
+<li><b>Programa total $100 MM en 3-4 series</b> escalonadas cada 4 meses — sube CAR a 15.7% (+271 pb) y desbloquea $1.5 bn en capacidad de crédito.</li>
+<li>Si la prioridad es señal pública fuerte y demanda institucional masiva: emisión única <b>$60 MM</b> — más rara en plaza pero replica el modelo Banesco AT1 2022.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ============ 5. PRICING ============= -->
+<h2>5. Pricing T2 10y — racional bottom-up doble approach</h2>
+
+<h3>5.1 Premium T2 sub 10y vs senior bullet 5y</h3>
+<table>
+<tr><th>Componente del premium</th><th>Rango (bp)</th></tr>
+<tr><td>Subordinación T2 vs senior (sub a senior, NO a depósitos)</td><td>80–150</td></tr>
+<tr><td>Plazo 10y vs 5y (extension premium)</td><td>50–100</td></tr>
+<tr><td>Iliquidez secundaria de sub en Panamá</td><td>30–80</td></tr>
+<tr><td>First-time T2 local market (Mercantil pionero)</td><td>10–25</td></tr>
+<tr><td><b>TOTAL T2 10y vs senior 5y</b></td><td><b>170–355</b> (midpoint 263)</td></tr>
+</table>
+
+<h3>5.2 Aproximación A — desde Banesco AT1 anchor</h3>
+<p>Banesco AT1 perpetual @ 7% (clearing real estimado 7.5-8% sin efecto Prival firm-UW).
+T2 es ~100-200 bp menos riesgoso que AT1 (no loss-absorption, no cupón discrecional, no perpetuidad):</p>
+<ul>
+<li>Banesco T2 10y implícito: <b>5.50%–7.00%</b></li>
+<li>+ Ajustes Mercantil (rating A vs A+, first-time, morosidad Capital Bank, step-down): +100 bp</li>
+<li><b>Target Mercantil T2 10y vía A: 6.50%–8.00%</b></li>
+</ul>
+
+<h3>5.3 Aproximación B — desde Mercantil Holding senior 5y</h3>
+<p>Mercantil Holding 5y @ 7.00% (cupón consistente de su programa exitoso 9 series).
+Escalando para llevar a T2 sub 10y del Banco (no Holding):</p>
+<ul>
+<li>Bank vs Holding (banco regulado mejor que holding): −50 bp</li>
+<li>Sub vs senior dentro del banco: +100–150 bp</li>
+<li>Term premium 5y → 10y: +75–100 bp</li>
+<li><b>Target Mercantil T2 10y vía B: 8.25%–9.00%</b></li>
+</ul>
+
+<h3>5.4 Reconciliación</h3>
+<img src="figs_memo_v3/pricing_cmp.png" alt="pricing_cmp" />
+<div class="figcap">Reconciliación de las dos aproximaciones de pricing. El consenso 50/50 ubica el target en 7.38%-8.50%, midpoint 7.94%.</div>
+
+<div class="rec-box">
+<b>Pricing recomendado final:</b>
+<ul>
+<li><b>Best case (firm-UW agresivo, ventana favorable):</b> 7.00–7.50%</li>
+<li><b>Base case (best-efforts, ventana actual):</b> <b>7.38–8.50%</b> (midpoint <b>7.94%</b>)</li>
+<li><b>Stress case (sin firm-UW, post-Banesco):</b> 8.00–8.75%</li>
+</ul>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ============ 6. ANCHOR BANESCO ============= -->
+<h2>6. Anchor Banesco AT1 — relectura para T2</h2>
+
+<p>El bono Banesco perpetual subordinado AT1 al 7% (May 2022, $78.131 MM colocado bajo SMV-541-21) es el comparable
+más cercano <b>conceptualmente</b> (capital regulatorio bancario), aunque estructuralmente diferente:</p>
+
+<table>
+<tr><th>Variable</th><th>Banesco AT1 (referencia)</th><th>Mercantil T2 (propuesto)</th><th>Implicación</th></tr>
+<tr><td>Cupón observado</td><td>7.00% (firm-UW Prival)</td><td>7.38-8.50%</td><td>Mercantil sin firm-UW debería estar dentro del rango</td></tr>
+<tr><td>Cupón clearing real</td><td>~7.5-8.0%</td><td>Por determinar</td><td>Si Mercantil va firm-UW, comprime ~25-50 bp</td></tr>
+<tr><td>Estructura</td><td>AT1 perpetual subordinado</td><td>T2 sub 10y bullet</td><td>T2 ~100-200 bp más barato que AT1</td></tr>
+<tr><td>Rating emisor</td><td>A+(pan) Fitch (post upgrade may-26)</td><td>A(pa) Moody's Local</td><td>Mercantil paga +25-35 bp</td></tr>
+<tr><td>Tier de capital</td><td>Tier 1 (AT1)</td><td>Tier 2</td><td>Mercantil para Total Capital, no T1</td></tr>
+<tr><td>Loss-absorption</td><td>Sí — write-down si CET1 bajo trigger</td><td>No (no requerido en T2 SBP)</td><td>T2 menos riesgoso para inversor</td></tr>
+<tr><td>Cupón discrecional</td><td>Sí (puede saltarse sin default)</td><td>No (obligatorio)</td><td>T2 menos riesgoso para inversor</td></tr>
+<tr><td>Vencimiento definido</td><td>No (perpetuo, call 2028)</td><td>Sí (10y bullet)</td><td>T2 menos extension risk</td></tr>
+</table>
+
+<p>El Banesco AT1 es <b>simultáneamente</b> útil y limitado como benchmark:</p>
+<ul>
+<li><b>Útil:</b> es la única emisión panameña reciente de capital regulatorio bancario "real" (no senior, no preferred); valida que existe apetito institucional por instrumentos de capital bancario subordinados.</li>
+<li><b>Limitado:</b> AT1 perpetual ≠ T2 10y bullet — son productos distintos con base inversora distinta y premium muy diferente. La "tasa Banesco 7%" no aplica a Mercantil T2 directamente.</li>
+</ul>
+
+<!-- ============ 7. UNIVERSO CAPITAL ============= -->
+<h2>7. Universo de instrumentos de capital bancario en Panamá</h2>
+<img src="figs_memo_v3/landscape.png" alt="landscape" />
+<div class="figcap">Universo histórico de emisiones de instrumentos de capital bancario panameño (acciones preferentes acumulativas + bonos de plazo &gt;20y). Banesco domina con $78MM AT1 2022 al 7% + $40MM preferentes 2011-2012 al 7.5%.</div>
+
+<p><b>Lecturas del landscape:</b></p>
+<ul>
+<li>El mercado panameño tiene <b>poco volumen total de instrumentos de capital bancario</b>: ~$120MM total entre Banesco AT1 ($78MM) y preferentes ($40MM acumulativas).</li>
+<li>Históricamente la "tasa de mercado" para capital subordinado bancario en Panamá ha sido <b>7.0-7.5%</b> (Banesco 2011, 2012, 2022) — independientemente de plazo y estructura.</li>
+<li>Este 7-7.5% funciona como <b>"techo psicológico" para inversionistas institucionales</b> — Mercantil tendrá que comunicar claramente por qué su producto T2 puede pagar dentro de ese rango (no por encima) a pesar de ser pionero del producto.</li>
+</ul>
+
+<!-- ============ 8. CLÁUSULAS ============= -->
+<h2>8. Cláusulas y estructura recomendada</h2>
+<table>
+<tr><th>Variable</th><th>Recomendación</th><th>Racional</th></tr>
+<tr><td>Plazo</td><td>10 años bullet</td><td>Estándar T2; maximiza vida útil regulatoria (5y al 100% + 5y step-down)</td></tr>
+<tr><td>Call</td><td><b>No callable</b> en emisión inicial</td><td>Mejor pricing (-15-25 bp por no extension risk); más simple para inversores; SBP igual requiere su aprobación si quisieran callar</td></tr>
+<tr><td>Cupón</td><td>Fijo trimestral</td><td>Estándar Panamá; mejor cash management que semestral</td></tr>
+<tr><td>Base día</td><td>30/360</td><td>Más usado en Panamá</td></tr>
+<tr><td>Subordinación</td><td>Subordinado a depositantes, senior debt y deuda sub ordinaria; senior solo a CET1 + AT1</td><td>Requisito SBP para reconocimiento T2</td></tr>
+<tr><td>Negative pledge</td><td>Sí, estándar</td><td>Protege a holders T2 vs nuevos gravámenes senior</td></tr>
+<tr><td>Cross-default</td><td>Sí, con umbral $10MM</td><td>Estándar; protege evento de quiebra técnica</td></tr>
+<tr><td>Financial covenants</td><td>CAR mínimo 11% (cushion vs SBP 8%); ratio liquidez 30%</td><td>Reconforta inversores; no es restrictivo para Mercantil actual</td></tr>
+<tr><td>Eventos de default específicos T2</td><td>Solo no-pago de cupón > 30d o quiebra; no triggers de capital</td><td>T2 NO requiere loss-absorption en Panamá</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ============ 9. PROGRAMA ============= -->
+<h2>9. Estructura del programa y cadencia óptima</h2>
+
+<table>
+<tr><th>Variable</th><th>Recomendado</th></tr>
+<tr><td>Monto total programa</td><td>$100 MM</td></tr>
+<tr><td>Monto por serie</td><td>$30 MM</td></tr>
+<tr><td>Número de series</td><td>4</td></tr>
+<tr><td>Frecuencia entre series</td><td>4 meses</td></tr>
+<tr><td>Duración total del programa</td><td>12 meses</td></tr>
+<tr><td>Cupón asumido (midpoint)</td><td>7.94%</td></tr>
+<tr><td>Intereses anuales (programa completo)</td><td>$7.94 MM/año</td></tr>
+<tr><td>Intereses totales vida del programa (10y)</td><td>$79.4 MM</td></tr>
+</table>
+
+<p><b>Cadencia recomendada:</b></p>
+<ol>
+<li><b>Serie A:</b> $30 MM — emisión inaugural, validar producto, anclar pricing público.</li>
+<li><b>Serie B:</b> $30 MM, 4 meses después — confirma demanda repetida, sube CAR a ~14.4%.</li>
+<li><b>Serie C:</b> $30 MM, 8 meses después de A — completa el programa cerca del techo, ya en 15.1% CAR.</li>
+<li><b>Serie D:</b> $10 MM (opcional), 12 meses después — completar al $100 MM si quedó demanda no satisfecha en B/C.</li>
+</ol>
+
+<!-- ============ 10. VENTANA ============= -->
+<h2>10. Ventana de mercado y timing competitivo</h2>
+<p>El spread mediano T2/T3 actual es <b>203 bp</b>, percentil <b>55%</b>
+vs últimos 5 años. Lectura: NEUTRAL (spreads cerca de la mediana histórica).</p>
+
+<p><b>Pipeline competidor (próximos 60 días, bonos largos):</b></p>
+<table>
+<tr><th>Emisor</th><th>Fecha</th><th>Plazo</th><th>Cupón</th><th>Monto</th><th>Estado</th></tr>
+<tr><td>BANESCO (PANAMÁ), S.A.</td><td>2026-05-29</td><td>72.0y</td><td>0.00%</td><td>$40.0MM</td><td>placeholder/pricing TBD</td></tr><tr><td>BANISTMO, S.A.</td><td>2026-05-22</td><td>1.0y</td><td>5.05%</td><td>$5.1MM</td><td>pricing fijo</td></tr><tr><td>BANCO ALIADO, S.A.</td><td>2026-04-28</td><td>1.0y</td><td>4.38%</td><td>$1.0MM</td><td>pricing fijo</td></tr><tr><td>BANCO ALIADO, S.A.</td><td>2026-04-23</td><td>1.0y</td><td>4.38%</td><td>$10.1MM</td><td>pricing fijo</td></tr>
+</table>
+
+<div class="warn-box">
+<b>Timing crítico:</b> Banesco está colocando $40 MM AT1 perpetual en próximos 30-60 días tras su upgrade Fitch a A+(pan).
+Esta colocación absorberá apetito institucional por instrumentos de capital bancario panameño.
+<br><br>
+Mercantil tiene una <b>ventaja estructural</b>: T2 ≠ AT1, base inversora distinta (AFP conservadoras, aseguradoras
+restringidas no pueden tener AT1 pero sí T2). Aún así, conviene NO pricing en la misma ventana que Banesco para evitar
+confusión narrativa.
+</div>
+
+<p><b>Tres ventanas posibles:</b></p>
+<ol>
+<li><b>Antes de Banesco</b> (próximos 21-30 días): documentación apurada, sin tiempo para educación de inversores sobre T2; riesgo alto.</li>
+<li><b>En paralelo con Banesco</b>: aprovecha "calor" del mercado tras upgrade Banesco, pero requiere posicionamiento muy claro como T2 (no AT1).</li>
+<li><b>Después de Banesco</b> (90+ días tras pricing Banesco, ≈sep-oct 2026): base institucional digiere Banesco, busca diversificación, tiene tiempo para educarse sobre T2.</li>
+</ol>
+
+<div class="rec-box">
+<b>Recomendación timing:</b> <b>Ventana 3 (después de Banesco)</b>. Razón principal: T2 es producto nuevo para
+inversionistas panameños; necesita pre-marketing y roadshow completo. El "after Banesco" da ese tiempo y reduce
+canibalización. Si la ventana de mercado se cierra (spreads amplían), pasar a Ventana 1 con producto menos óptimo.
+</div>
+
+<!-- ============ 11. UNDERWRITER ============= -->
+<h2>11. Estrategia de underwriter</h2>
+
+<p>Comparativo de comisiones para bonos bancarios A(pa) en Panamá (verificado de prospectos SMV):</p>
+<ul>
+<li>Estructuración típica: 0.30-0.60% (Mercantil Holding-Prival precedente: 0.321%)</li>
+<li>Colocación típica: 0.535%</li>
+<li>Total comisiones casa bolsa: 0.85-1.10%</li>
+<li>All-in (incluyendo SMV, Latinex, legales): 1.10-1.30%</li>
+<li>Premium subordinado / AT1: +20-50 bp</li>
+<li>Firm-UW (raro en Panamá): +25-50 bp adicionales</li>
+</ul>
+
+<p><b>Para Mercantil T2 sub 10y $30MM</b> (default modelo):</p>
+<table>
+<tr><th>Variable</th><th>Valor</th></tr>
+<tr><td>Fee upfront all-in (best-efforts + premium sub)</td><td>1.30%</td></tr>
+<tr><td>Ahorro esperado en cupón si firm-UW</td><td>35 bp</td></tr>
+<tr><td>Fee total absoluto</td><td>$0.39 MM</td></tr>
+<tr><td>NPV neto firm vs best-efforts (10y)</td><td><b>$0.38 MM</b></td></tr>
+<tr><td>Break-even (bp mínimos para que firm convenga)</td><td>17.7 bp</td></tr>
+</table>
+
+<p><b>Casas candidatas:</b></p>
+<ul>
+<li><b>Prival Securities</b> — estructuró Banesco AT1 2022 + Mercantil Holding programa. Tiene relación con Mercantil
+y experiencia en capital regulatorio bancario. <b>Candidato natural por afinidad y precedente.</b></li>
+<li><b>BG Valores</b> — la casa más grande de Panamá; balance robusto; base inversora institucional fuerte.</li>
+<li><b>MMG Bank</b> — banca privada con relación cercana a aseguradoras y AFP.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ============ 12. SENSIBILIDADES ============= -->
+<h2>12. Sensibilidades y escenarios de stress</h2>
+
+<table>
+<tr><th>Escenario</th><th>Cupón target 10y</th><th>Monto realista</th><th>∆ CAR</th><th>Comentario</th></tr>
+<tr>
+  <td><b>Best case</b><br><i>Firm UW agresivo + ventana favorable</i></td>
+  <td>7.00-7.50%</td><td>$50-75 MM</td><td>+118 a +178 pb</td>
+  <td>Requiere Prival firm + spreads bancarios tightening 25-50 bp</td>
+</tr>
+<tr>
+  <td><b>Base case</b><br><i>Recomendación principal</i></td>
+  <td>7.50-8.50%</td><td>$30 MM serie inicial</td><td>+71 pb</td>
+  <td>Best-efforts; ventana actual neutral; modelo Banesco AT1 escalado</td>
+</tr>
+<tr>
+  <td><b>Stress case 1</b><br><i>Mercantil paga premium first-T2-local</i></td>
+  <td>8.00-9.00%</td><td>$20-30 MM</td><td>+47-71 pb</td>
+  <td>Si AFP exigen prima fuerte por producto desconocido</td>
+</tr>
+<tr>
+  <td><b>Stress case 2</b><br><i>Spreads amplían post-Banesco</i></td>
+  <td>8.50-9.50%</td><td>$15-25 MM</td><td>+35-59 pb</td>
+  <td>Si Banesco satura demanda y el sentimiento bancario se deteriora</td>
+</tr>
+<tr>
+  <td><b>Stress case 3</b><br><i>Downgrade Mercantil por morosidad CB</i></td>
+  <td>9.00-10.00%</td><td>$15-20 MM</td><td>+35-47 pb</td>
+  <td>Si Moody's Local baja por presión persistente en cartera heredada Capital Bank</td>
+</tr>
+</table>
+
+<!-- ============ 13. PRÓXIMOS PASOS ============= -->
+<h2>13. Próximos pasos operativos</h2>
+
+<h3>Fase 1 — Decisión interna (próximos 7-14 días)</h3>
+<ol>
+<li>Validar internamente con riesgos, ALCO y junta directiva la estructura T2 sub 10y bullet vs alternativas (AT1, equity).</li>
+<li>Definir target específico de CAR objetivo (p.ej. "subir de 13% a 14.5% en 12 meses").</li>
+<li>Definir capacidad incremental de originación deseada y mapping a tipos de cliente (RW objetivo).</li>
+<li>Confirmar autorización SBP para programa Tier 2 — preparar borrador de notificación.</li>
+</ol>
+
+<h3>Fase 2 — Estructuración (días 14-45)</h3>
+<ol start="5">
+<li>Sondeo confidencial con 3 casas candidatas (Prival, BG, MMG): indicación non-binding de fee, cupón target firm vs best-efforts.</li>
+<li>Re-contratar calificación con Fitch CA (que retiró cobertura en may-2025) o solicitar a Moody's Local rating específico para el programa T2.</li>
+<li>Documentación SMV: prospecto + suplemento de pricing. Usar el de Banesco AT1 2022 como template (mismo abogado/estructurador puede ser Prival).</li>
+<li>Pre-marketing soft con 5-10 institucionales clave (AFP, aseguradoras top, bancas privadas) para validar apetito T2.</li>
+</ol>
+
+<h3>Fase 3 — Colocación (días 45-90)</h3>
+<ol start="9">
+<li>Roadshow completo (4-6 reuniones con base inversora).</li>
+<li>Book-building (3-5 días) con bid colection.</li>
+<li>Pricing day: definir cupón final según book.</li>
+<li>Settlement T+3.</li>
+<li>Comunicación pública post-pricing destacando logro de capital y plan de crecimiento de crédito.</li>
+</ol>
+
+<h2>14. Metodología y limitaciones</h2>
+
+<h3>Datos utilizados</h3>
+<ul>
+<li>Mercado secundario: 84,191 trades Latinex 10 años; 18,210 con YTM calculado.</li>
+<li>Mercado primario: 2,573 emisiones vigentes vía API Latinex.</li>
+<li>Anchor Banesco: investigación dirigida sobre IN-A 2025, EE.FF. KPMG, SMV-541-21.</li>
+<li>Comisiones: prospectos públicos SMV (Mercantil Holding, Multibank, Banesco, Capital Bank).</li>
+<li>Reglas SBP Tier 2: Acuerdos 1-2015 y 3-2016 (en investigación, ver agente complementario).</li>
+<li>Ratings: Moody's Local PA (Mercantil A(pa), 29-may-2025); Fitch (Banesco A+(pan), 11-may-2026).</li>
+</ul>
+
+<h3>Limitaciones declaradas</h3>
+<ul>
+<li><b>Capital y APR de Mercantil:</b> estimados ($450MM capital, $3.5bn APR, 13% CAR). Reemplazar con cifras reales del banco.</li>
+<li><b>Premium T2 vs senior y vs AT1:</b> rango ancho (estimación basada en mercados emergentes; Panamá no tiene precedente T2 doméstico).</li>
+<li><b>Fee real Banesco-Prival:</b> estimado 1.0-1.5% all-in; el dato real cambiaría ligeramente el "senior implícito" Banesco.</li>
+<li><b>Calificación Mercantil:</b> solo Moody's Local viva (Fitch retiró cobertura). Re-contratar Fitch sería positivo.</li>
+<li><b>Liquidez secundaria 10y bancario:</b> casi inexistente. Holders serán buy-and-hold.</li>
+</ul>
+
+<h3>Sensibilidad del análisis a inputs nuevos</h3>
+<ul>
+<li><b>Capital y APR reales de Mercantil:</b> cambia todo el análisis de sizing y multiplicadores.</li>
+<li><b>Cupón final Banesco reapertura 2026:</b> mejor evidencia del clearing post-upgrade.</li>
+<li><b>Confirmación de reglas T2 SBP:</b> validar step-down, requisitos cláusulas, aprobación.</li>
+<li><b>Resultado de pre-marketing con AFP:</b> determina demanda real por T2 vs AT1.</li>
+</ul>
+
+<div style="margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 7.5pt; color: #888;">
+  Generado: 2026-05-26 16:30 UTC · Fuentes: latinexbolsa.com, supervalores.gob.pa, superbancos.gob.pa, home.treasury.gov, fitchratings.com, moodyslocal.com.pa<br>
+  No constituye recomendación de inversión, opinión legal ni asesoría regulatoria.
+</div>
+
+</body></html>
