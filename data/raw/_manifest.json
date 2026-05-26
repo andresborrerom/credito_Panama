@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-05-25T23:40:37.746214+00:00",
+  "emisiones_activas": "OK 2573 rows -> data/raw/emisiones_activas.json",
+  "transacciones_10y": "OK 84191 rows -> data/raw/transacciones_10y.json",
+  "volumen_emisor": "OK 6 rows -> data/raw/volumen_emisor.json",
+  "ofertas_home": "OK 10 rows -> data/raw/ofertas_home.json",
+  "emisiones_sostenibles": "OK 29 rows -> data/raw/emisiones_sostenibles.json",
+  "emisiones_tramites": "OK 23 rows -> data/raw/emisiones_tramites.json",
+  "emisiones_prospectos": "OK 771 rows -> data/raw/emisiones_prospectos.json",
+  "ranking_creadores": "OK 1 rows -> data/raw/ranking_creadores.json",
+  "hechos_relevantes": "OK 8783 rows -> data/raw/hechos_relevantes.json",
+  "emisiones_nuevas": "OK 1284 rows -> data/raw/emisiones_nuevas.json",
+  "ust_yields": "OK 12 years"
+}

@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Universo de Emisores — Panamá</title>
+<script src="https://cdn.plot.ly/plotly-3.5.0.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #fafbfc; color: #1a1a2e; line-height: 1.55;
+  }
+  header {
+    background: linear-gradient(135deg, #002b5c 0%, #004080 100%);
+    color: #fff; padding: 28px 18px 22px; text-align: center;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.45rem; font-weight: 600; }
+  header .sub { font-size: 0.85rem; opacity: 0.88; }
+  main { max-width: 980px; margin: 0 auto; padding: 18px 14px 60px; }
+  section { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            margin-bottom: 20px; padding: 18px 16px; }
+  section h2 { margin: 0 0 8px; font-size: 1.1rem; color: #002b5c; }
+  section p.note { font-size: 0.86rem; color: #555; margin: 4px 0 14px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 10px; }
+  .stat { background: #f3f5fa; border-radius: 8px; padding: 12px; text-align: center; }
+  .stat .v { font-size: 1.25rem; font-weight: 700; color: #002b5c; }
+  .stat .l { font-size: 0.78rem; color: #555; margin-top: 2px; }
+  ul.findings li { margin: 6px 0; }
+  nav.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  nav.tabs a {
+    background: #fff; color: #002b5c; padding: 8px 12px; border-radius: 20px;
+    text-decoration: none; font-size: 0.82rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  nav.tabs a.active { background: #002b5c; color: #fff; }
+  footer { text-align: center; color: #888; font-size: 0.78rem; padding: 30px 10px; }
+  .download { background: #002b5c; color: #fff !important; padding: 10px 18px; border-radius: 8px;
+              display: inline-block; text-decoration: none; font-weight: 600; }
+  code { background: #eef1f7; padding: 2px 5px; border-radius: 4px; font-size: 0.88em; }
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.2rem; }
+    section { padding: 14px 12px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Renta Fija de Panamá — Niveles actuales vs historia</h1>
+  <div class="sub">Datos Latinex · 2026-05-25 23:57 UTC · Cobertura 2019-01-21 a 2026-05-25</div>
+</header>
+<main>
+  <nav class="tabs">
+    <a href="index.html" class="">Resumen</a>
+    <a href="curvas.html" class="">Curvas</a>
+    <a href="historia.html" class="">Historia</a>
+    <a href="universo.html" class="active">Universo</a>
+    <a href="metodologia.html" class="">Metodología</a>
+  </nav>
+  
+    <section>
+      <h2>¿Dónde están los yields vs su historia 5y?</h2>
+      <p class="note">Cada barra es un (instrumento × bucket de plazo). Percentil ALTO (verde) = yield negociado hoy es alto vs su historia 5y → bono BARATO. Percentil BAJO (rojo) = yield comprimido → bono CARO.</p>
+      <div>                            <div id="fig_pc" class="plotly-graph-div" style="height:506px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("fig_pc")) {                    Plotly.newPlot(                        "fig_pc",                        [{"customdata":{"dtype":"f8","bdata":"AABYURcCFUAAAJiqOpkbQAAAAAAAgH5AAADAEXoVEkAAAMBlxncUQAAAAAAAgEFAAAAALBafGUAAAEABuzYdQAAAAAAAgFRAAADChZX8FkAAADCNe2AbQAAAAAAA1JRAAAAw\u002f5ooHEAAAPA8RcodQAAAAAAAAE9AAACIpePrG0AAADDqetkdQAAAAAAAJKhAAAAmu2hjFkAAAAwvDRgYQAAAAAAAAG9AAACAASsjF0AAAEBBk0UZQAAAAAAA2JlAAAAAKNM3HUAAAOh+AeceQAAAAAAAgqJAAAAQ8w64EkAAAABC1P0TQAAAAAAAgERAAAAAPfDXGEAAAIA0Hb0bQAAAAAAAAFpAAAAkZVS1HEAAAG7bT9siQAAAAAAAAExAAADoQFg3IEAAANj2fUMgQAAAAAAA1KFAAAB4WOPnHUAAAEqwdIEeQAAAAAAAWJBAAACDgzPmG0AAAHWn8vcbQAAAAAAA8JNAAADAkRhTGkAAAFQpzd0YQAAAAAAAgINAAABAIYv3IUAAAOCAWY4hQAAAAAAAQHdAAADAYNoWIUAAAIA9uIMgQAAAAAAAQGBAAAB6k4\u002fAH0AAAIYkT\u002fgcQAAAAAAAwGVAAAD4kzMvIUAAAIiZ5C8gQAAAAAAAAERAAACAQ1qtJkAAAOAZD18lQAAAAAAAADdAAAAIa+rNGkAAANCCydgUQAAAAAAA4GVAAADAynLSIUAAAADjxgoZQAAAAAAAADtA","shape":"23, 3"},"hovertemplate":"Percentil vs últimos 5 años=%{marker.color:.0%}\u003cbr\u003e=%{y}\u003cbr\u003eyld_now_pct=%{customdata[0]:.2f}\u003cbr\u003ep50_pct=%{customdata[1]:.2f}\u003cbr\u003en_hist=%{customdata[2]}\u003cextra\u003e\u003c\u002fextra\u003e","legendgroup":"","marker":{"color":{"dtype":"f8","bdata":"mpmZmZmZqT+amZmZmZmpP5D7TQIR7sc\u002fgh9cvFoszD\u002f8lmyq5nPMP+HZLCbdhMw\u002fRG1HIwPmzj\u002fRMiTSNMbQP2g04E39KtE\u002fS3WL9E1y0j96GsubltvTP97mBIe7Y9g\u002f1up5Y0T\u002f2z+kT54J\u002fuHcP6J7TnIsvN8\u002fGGzMwH9m4j9b\u002fT0cosLiP6JU48BmUOY\u002fLVh\u002ft+t86D9PIYgZLJzoP29WKeUkVOk\u002fJkdr5qq87D9mZmZmZmbuPw=="},"coloraxis":"coloraxis","pattern":{"shape":""}},"name":"","orientation":"h","showlegend":false,"textposition":"auto","x":{"dtype":"f8","bdata":"mpmZmZmZqT+amZmZmZmpP5D7TQIR7sc\u002fgh9cvFoszD\u002f8lmyq5nPMP+HZLCbdhMw\u002fRG1HIwPmzj\u002fRMiTSNMbQP2g04E39KtE\u002fS3WL9E1y0j96GsubltvTP97mBIe7Y9g\u002f1up5Y0T\u002f2z+kT54J\u002fuHcP6J7TnIsvN8\u002fGGzMwH9m4j9b\u002fT0cosLiP6JU48BmUOY\u002fLVh\u002ft+t86D9PIYgZLJzoP29WKeUkVOk\u002fJkdr5qq87D9mZmZmZmbuPw=="},"xaxis":"x","y":["NOTAS DEL TESORO 3-5y","LETRAS DEL TESORO 1-3y","NOTAS CORPORATIVAS 1-3y","BONOS DEL TESORO 7-10y","SVS - BONOS 3-5y","BONOS 1-3y","BONOS DEL TESORO 5-7y","VCN 0-1y","BONOS 3-5y","LETRAS DEL TESORO 0-1y","VCN 1-3y","NOTAS CORPORATIVAS 3-5y","BONOS HIPOTECARIOS 1-3y","BONOS 5-7y","BONOS 10y+","BONOS 7-10y","BONOS 0-1y","BONOS HIPOTECARIOS 0-1y","ACCIONES PREFERIDAS 10y+","SVS - BONOS 1-3y","SVS - VCN 0-1y","ACCIONES DE FONDOS 10y+","NOTAS CORPORATIVAS 0-1y"],"yaxis":"y","type":"bar"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"xaxis":{"anchor":"y","domain":[0.0,1.0],"title":{}},"yaxis":{"anchor":"x","domain":[0.0,1.0],"title":{"text":""}},"coloraxis":{"colorbar":{"title":{"text":"Percentil vs últimos 5 años"}},"colorscale":[[0.0,"rgb(165,0,38)"],[0.1,"rgb(215,48,39)"],[0.2,"rgb(244,109,67)"],[0.3,"rgb(253,174,97)"],[0.4,"rgb(254,224,139)"],[0.5,"rgb(255,255,191)"],[0.6,"rgb(217,239,139)"],[0.7,"rgb(166,217,106)"],[0.8,"rgb(102,189,99)"],[0.9,"rgb(26,152,80)"],[1.0,"rgb(0,104,55)"]],"cmin":0,"cmax":1,"showscale":false},"legend":{"tracegroupgap":0,"orientation":"h","yanchor":"bottom","y":-0.25,"xanchor":"left","x":0},"margin":{"t":50,"l":10,"r":10,"b":10},"barmode":"relative","shapes":[{"line":{"color":"gray","dash":"dash"},"type":"line","x0":0.5,"x1":0.5,"xref":"x","y0":0,"y1":1,"yref":"y domain"}],"font":{"family":"-apple-system, system-ui, sans-serif","size":12},"title":{"text":"¿Dónde está el yield actual vs su historia 5y? (verde = barato, rojo = caro)"},"height":506},                        {"responsive": true, "displaylogo": false}                    )                };            </script>        </div>
+    </section>
+    <section>
+      <h2>Top emisores activos por monto colocado</h2>
+      <p class="note">Universo de instrumentos vigentes — agregado por emisor.</p>
+      <table border="1" class="dataframe dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>emisor</th>
+      <th>sector</th>
+      <th>n_emisiones</th>
+      <th>monto_mm</th>
+      <th>avg_cupon</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>REPÚBLICA DE PANAMÁ</td>
+      <td>Gobierno</td>
+      <td>25</td>
+      <td>10,024.20</td>
+      <td>3.14</td>
+    </tr>
+    <tr>
+      <td>AEROPUERTO INTERNACIONAL DE TOCUMEN, S.A.</td>
+      <td>Industriales</td>
+      <td>4</td>
+      <td>1,855.00</td>
+      <td>4.56</td>
+    </tr>
+    <tr>
+      <td>AES PANAMA GENERATION HOLDINGS, S.R.L.</td>
+      <td>Energía</td>
+      <td>2</td>
+      <td>1,380.00</td>
+      <td>4.38</td>
+    </tr>
+    <tr>
+      <td>GENERADORA DE GATUN, S.A.</td>
+      <td>Energía</td>
+      <td>2</td>
+      <td>1,050.00</td>
+      <td>6.87</td>
+    </tr>
+    <tr>
+      <td>EMPRESA DE TRANSMISION ELECTRICA, S.A. (ETESA)</td>
+      <td>Utilidades</td>
+      <td>5</td>
+      <td>800.00</td>
+      <td>5.68</td>
+    </tr>
+    <tr>
+      <td>GRUPO DE COMUNICACIONES DIGITALES, S.A. (antes TELECOMUNICACIONES DIGITALES, S.A.)</td>
+      <td>Comunicaciones</td>
+      <td>2</td>
+      <td>605.20</td>
+      <td>4.50</td>
+    </tr>
+    <tr>
+      <td>FIDEICOMISO ENA NORTE</td>
+      <td>Industriales</td>
+      <td>2</td>
+      <td>600.00</td>
+      <td>4.95</td>
+    </tr>
+    <tr>
+      <td>FONDO GENERAL DE INVERSIONES, S.A.</td>
+      <td>Financiero</td>
+      <td>1</td>
+      <td>581.70</td>
+      <td>0.00</td>
+    </tr>
+    <tr>
+      <td>BAC INTERNATIONAL BANK, INC.</td>
+      <td>Financiero</td>
+      <td>1</td>
+      <td>520.00</td>
+      <td>10.00</td>
+    </tr>
+    <tr>
+      <td>BANCO GENERAL, S.A.</td>
+      <td>Financiero</td>
+      <td>3</td>
+      <td>450.40</td>
+      <td>5.63</td>
+    </tr>
+    <tr>
+      <td>HIPOTECARIA METROCREDIT, S.A.</td>
+      <td>Financiero</td>
+      <td>486</td>
+      <td>425.40</td>
+      <td>7.45</td>
+    </tr>
+    <tr>
+      <td>ENA MASTER TRUST</td>
+      <td>Industriales</td>
+      <td>2</td>
+      <td>400.00</td>
+      <td>4.00</td>
+    </tr>
+    <tr>
+      <td>PS MULTI-ASSET CLASS FUND, INC.</td>
+      <td>Financiero</td>
+      <td>19</td>
+      <td>383.10</td>
+      <td>0.00</td>
+    </tr>
+    <tr>
+      <td>CORPORACION DE FINANZAS DEL PAIS,S.A. (PANACREDIT)</td>
+      <td>Financiero</td>
+      <td>349</td>
+      <td>354.10</td>
+      <td>6.67</td>
+    </tr>
+    <tr>
+      <td>PRIVAL BOND FUND, S.A.</td>
+      <td>Financiero</td>
+      <td>1</td>
+      <td>328.00</td>
+      <td>0.00</td>
+    </tr>
+    <tr>
+      <td>GLOBAL BANK CORPORATION Y SUBSIDIARIAS</td>
+      <td>Financiero</td>
+      <td>12</td>
+      <td>287.10</td>
+      <td>6.60</td>
+    </tr>
+    <tr>
+      <td>BANCO INTERNACIONAL DE COSTA RICA, S.A.</td>
+      <td>Financiero</td>
+      <td>77</td>
+      <td>273.20</td>
+      <td>5.41</td>
+    </tr>
+    <tr>
+      <td>UEP PENONOME II, S.A.</td>
+      <td>Energía</td>
+      <td>2</td>
+      <td>264.70</td>
+      <td>6.50</td>
+    </tr>
+    <tr>
+      <td>CAJA DE AHORROS</td>
+      <td>Financiero</td>
+      <td>4</td>
+      <td>260.00</td>
+      <td>4.23</td>
+    </tr>
+    <tr>
+      <td>ARROW CAPITAL CORP.</td>
+      <td>Bienes Raíces</td>
+      <td>18</td>
+      <td>253.50</td>
+      <td>7.80</td>
+    </tr>
+    <tr>
+      <td>MMG FIXED INCOME FUND, S.A.</td>
+      <td>Financiero</td>
+      <td>2</td>
+      <td>249.00</td>
+      <td>0.00</td>
+    </tr>
+    <tr>
+      <td>ELEKTRA NORESTE, S.A.</td>
+      <td>Utilidades</td>
+      <td>4</td>
+      <td>220.00</td>
+      <td>4.85</td>
+    </tr>
+    <tr>
+      <td>INMOBILIARIA DON ANTONIO, S.A.</td>
+      <td>Consumo Básico</td>
+      <td>4</td>
+      <td>215.30</td>
+      <td>7.41</td>
+    </tr>
+    <tr>
+      <td>FONDO RENTA FIJA VALOR, S.A.</td>
+      <td>Financiero</td>
+      <td>1</td>
+      <td>214.30</td>
+      <td>0.00</td>
+    </tr>
+    <tr>
+      <td>BANCO NACIONAL DE PANAMA</td>
+      <td>Financiero</td>
+      <td>1</td>
+      <td>205.70</td>
+      <td>3.00</td>
+    </tr>
+  </tbody>
+</table>
+    </section>
+    
+    <style>
+      .dataframe { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+      .dataframe th { background: #002b5c; color: #fff; padding: 6px; text-align: left; }
+      .dataframe td { padding: 5px 6px; border-bottom: 1px solid #eee; }
+    </style>
+    
+</main>
+<footer>
+  Fuente: <a href="https://www.latinexbolsa.com">latinexbolsa.com</a> (API JSON pública) · UST: home.treasury.gov · Estudio no constituye recomendación de inversión.
+</footer>
+</body>
+</html>

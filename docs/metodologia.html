@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Metodología — Renta Fija Panamá</title>
+<script src="https://cdn.plot.ly/plotly-3.5.0.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #fafbfc; color: #1a1a2e; line-height: 1.55;
+  }
+  header {
+    background: linear-gradient(135deg, #002b5c 0%, #004080 100%);
+    color: #fff; padding: 28px 18px 22px; text-align: center;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.45rem; font-weight: 600; }
+  header .sub { font-size: 0.85rem; opacity: 0.88; }
+  main { max-width: 980px; margin: 0 auto; padding: 18px 14px 60px; }
+  section { background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            margin-bottom: 20px; padding: 18px 16px; }
+  section h2 { margin: 0 0 8px; font-size: 1.1rem; color: #002b5c; }
+  section p.note { font-size: 0.86rem; color: #555; margin: 4px 0 14px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 10px; }
+  .stat { background: #f3f5fa; border-radius: 8px; padding: 12px; text-align: center; }
+  .stat .v { font-size: 1.25rem; font-weight: 700; color: #002b5c; }
+  .stat .l { font-size: 0.78rem; color: #555; margin-top: 2px; }
+  ul.findings li { margin: 6px 0; }
+  nav.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  nav.tabs a {
+    background: #fff; color: #002b5c; padding: 8px 12px; border-radius: 20px;
+    text-decoration: none; font-size: 0.82rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  nav.tabs a.active { background: #002b5c; color: #fff; }
+  footer { text-align: center; color: #888; font-size: 0.78rem; padding: 30px 10px; }
+  .download { background: #002b5c; color: #fff !important; padding: 10px 18px; border-radius: 8px;
+              display: inline-block; text-decoration: none; font-weight: 600; }
+  code { background: #eef1f7; padding: 2px 5px; border-radius: 4px; font-size: 0.88em; }
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.2rem; }
+    section { padding: 14px 12px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Renta Fija de Panamá — Niveles actuales vs historia</h1>
+  <div class="sub">Datos Latinex · 2026-05-25 23:57 UTC · Cobertura 2019-01-21 a 2026-05-25</div>
+</header>
+<main>
+  <nav class="tabs">
+    <a href="index.html" class="">Resumen</a>
+    <a href="curvas.html" class="">Curvas</a>
+    <a href="historia.html" class="">Historia</a>
+    <a href="universo.html" class="">Universo</a>
+    <a href="metodologia.html" class="active">Metodología</a>
+  </nav>
+  
+    <section>
+      <h2>Cobertura y profundidad</h2>
+      <p>La base usa la ventana <b>10 años</b> completa de la API de Latinex. La profundidad por bucket
+      no se pierde al ampliar la ventana — lo que pasa es que en los primeros 2–3 años (2017–2019) había
+      menos liquidez registrada, especialmente en bonos hipotecarios y notas corporativas. Por eso:</p>
+      <ul>
+        <li>Curvas <b>actuales</b> se calculan con últimos 90 días.</li>
+        <li>Series temporales se agregan a frecuencia trimestral con mínimo 3 trades por celda.</li>
+        <li>Percentiles históricos se calculan sobre los últimos 5 años (1,825 días).</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Cálculo de YTM</h2>
+      <p>Para cada trade de bono a tasa fija con info completa, se reconstruyen los flujos hasta vencimiento
+      (cupón × frecuencia + amortización bullet al vencimiento), y se resuelve por bisección la tasa que iguala
+      el VP de flujos al precio limpio negociado. Bases soportadas: 30/360, ACT/360, 365/360, ACT/365, ACT/ACT.</p>
+    </section>
+    <section>
+      <h2>Proxy de crédito</h2>
+      <p>No tenemos feed de calificaciones licenciado. Construimos un proxy basado en sector + tipo de instrumento:</p>
+      <ul>
+        <li><b>AAA-PAN-Sov</b>: Bonos del Tesoro, Notas del Tesoro, Letras del Tesoro</li>
+        <li><b>BBB-Bank</b>: Sector Financiero</li>
+        <li><b>BBB-Corp</b>: Comunicaciones, Energía, Utilidades</li>
+        <li><b>BB-Corp</b>: Consumo, Industrial, Servicios, Salud</li>
+        <li><b>BB-RealEstate</b>: Bienes Raíces (Bonos Hipotecarios)</li>
+      </ul>
+      <p>Adicionalmente, el spread negociado vs Tesoro mismo bucket se reporta como medida revealed-market del riesgo.</p>
+    </section>
+    <section>
+      <h2>Limitaciones</h2>
+      <ul>
+        <li>Precios = transacciones pactadas, no order book continuo — hay ruido en yields individuales. Se mitiga con medianas por bucket.</li>
+        <li>Calificaciones públicas reales (Fitch, Moody's, Equilibrium) no se incorporan en esta versión — quedan pendientes.</li>
+        <li>Bonos con call/put options se tratan como bullet salvo evidencia desde <code>/pago</code> endpoint.</li>
+        <li>Bonos a tasa variable se excluyen de las curvas (no se puede calcular YTM bullet con cupones flotantes futuros sin asumir trayectoria de la tasa de referencia).</li>
+        <li>Tasas cupón reportadas en 0% se interpretan como cero-cupón o data missing (revisar caso por caso).</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Reproducibilidad</h2>
+      <p>El pipeline completo es:</p>
+      <ol>
+        <li><code>python -m src.etl.extract</code> — descarga raw JSON de Latinex + UST</li>
+        <li><code>python -m src.etl.transform</code> — normaliza, calcula YTM, escribe SQLite + Parquet</li>
+        <li><code>python -m src.app.build_site</code> — regenera este sitio estático</li>
+        <li><code>streamlit run src/app/streamlit_app.py</code> — herramienta interactiva con filtros completos</li>
+        <li><code>python -m src.app.build_pdf</code> — genera el PDF descargable</li>
+      </ol>
+      <p>La base completa está versionada en el repo. Cada vez que se quiera refrescar, basta con re-ejecutar los pasos 1–3.</p>
+    </section>
+    
+</main>
+<footer>
+  Fuente: <a href="https://www.latinexbolsa.com">latinexbolsa.com</a> (API JSON pública) · UST: home.treasury.gov · Estudio no constituye recomendación de inversión.
+</footer>
+</body>
+</html>

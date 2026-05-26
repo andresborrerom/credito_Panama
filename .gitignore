@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.ipynb_checkpoints/
+.DS_Store
+*.egg-info/
+
+# Base SQLite es derivable desde data/processed/*.parquet ejecutando
+# `python -m src.etl.transform`. Se omite del repo para reducir tamaño.
+data/panama_fixed_income.sqlite
+
