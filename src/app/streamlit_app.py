@@ -83,14 +83,19 @@ with st.sidebar:
     )
 
     fmin, fmax = trades["fecha_d"].min(), trades["fecha_d"].max()
-    fecha_range = st.slider(
+    default_start = max(fmin, fmax - timedelta(days=365))
+    fecha_range = st.date_input(
         "Rango de fechas",
+        value=(default_start, fmax),
         min_value=fmin,
         max_value=fmax,
-        value=(fmax - timedelta(days=365), fmax),
-        step=timedelta(days=1),
         format="YYYY-MM-DD",
     )
+    # Si el usuario aún no seleccionó las dos fechas, st.date_input devuelve un solo date
+    if isinstance(fecha_range, (list, tuple)) and len(fecha_range) == 2:
+        fecha_ini, fecha_fin = fecha_range
+    else:
+        fecha_ini, fecha_fin = default_start, fmax
 
     buckets = st.multiselect("Buckets de plazo", BUCKET_ORDER, default=BUCKET_ORDER)
 
@@ -103,7 +108,7 @@ with st.sidebar:
 
 # ============ FILTRO ============
 df = trades.copy()
-df = df[(df["fecha_d"] >= fecha_range[0]) & (df["fecha_d"] <= fecha_range[1])]
+df = df[(df["fecha_d"] >= fecha_ini) & (df["fecha_d"] <= fecha_fin)]
 if sector_sel != "(todos)":
     df = df[df["sector"] == sector_sel]
 if "(todos)" not in instr_sel and instr_sel:
