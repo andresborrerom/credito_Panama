@@ -1,0 +1,4 @@
+plazo_anos,plazo_bucket,peer_cupon_p25,peer_cupon_median,peer_cupon_p75,mercantil_recomendado_low,mercantil_recomendado_mid,mercantil_recomendado_high,monto_tipico_mm,n_emisiones_peer
+2,~2y,5.2875,5.4375,5.6,5.04,5.31,5.6,5-15,12
+3,~3y,5.7125,5.75,5.75,5.46,5.62,5.75,10-30,8
+5,5y,7.000000000000001,7.000000000000001,7.000000000000001,6.75,6.88,7.0,15-50,6

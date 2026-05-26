@@ -672,6 +672,7 @@ PAGE_TPL = """<!doctype html>
   <nav class="tabs">
     <a href="index.html" class="{cls_home}">Resumen</a>
     <a href="bancos.html" class="{cls_bancos}">Bancos</a>
+    <a href="mercantil.html" class="{cls_mercantil}">Mercantil</a>
     <a href="curvas.html" class="{cls_curvas}">Curvas</a>
     <a href="historia.html" class="{cls_historia}">Historia</a>
     <a href="universo.html" class="{cls_universo}">Universo</a>
@@ -687,7 +688,7 @@ PAGE_TPL = """<!doctype html>
 
 
 def render_page(slug: str, title: str, body: str, snapshot: str, date_min: str, date_max: str) -> str:
-    cls = {k: "" for k in ["home", "bancos", "curvas", "historia", "universo", "metod"]}
+    cls = {k: "" for k in ["home", "bancos", "mercantil", "curvas", "historia", "universo", "metod"]}
     cls[slug] = "active"
     return PAGE_TPL.format(
         title=title,
@@ -698,6 +699,7 @@ def render_page(slug: str, title: str, body: str, snapshot: str, date_min: str, 
         plotly_cdn=PLOTLY_CDN,
         cls_home=cls["home"],
         cls_bancos=cls["bancos"],
+        cls_mercantil=cls["mercantil"],
         cls_curvas=cls["curvas"],
         cls_historia=cls["historia"],
         cls_universo=cls["universo"],
