@@ -41,6 +41,11 @@ ASSETS.mkdir(exist_ok=True)
 PLOTLY_VERSION = get_plotlyjs_version()
 PLOTLY_CDN = f"https://cdn.plot.ly/plotly-{PLOTLY_VERSION}.min.js"
 
+# URL de la app Streamlit cuando esté deployada en share.streamlit.io.
+# Edita este valor o pásalo por env var STREAMLIT_APP_URL.
+import os as _os
+STREAMLIT_APP_URL = _os.environ.get("STREAMLIT_APP_URL", "").strip()
+
 
 def fig_html(fig: go.Figure, div_id: str) -> str:
     """Renderiza fig a HTML usando Plotly CDN compartido (más liviano)."""
@@ -748,7 +753,26 @@ def main():
         f"<li>{md_to_html(f)}</li>" for f in findings
     ) + "</ul>"
 
+    if STREAMLIT_APP_URL:
+        st_block = f"""
+    <section style="background:linear-gradient(135deg,#004080 0%,#002b5c 100%);color:#fff;">
+      <h2 style="color:#fff;margin-top:0">🛠 Herramienta interactiva</h2>
+      <p style="color:#dbe4f3;margin:6px 0 14px;">Filtros cruzados (rating × sector × plazo × emisor × período) y gráficos que se recalculan en vivo.</p>
+      <p><a class="download" href="{STREAMLIT_APP_URL}" style="background:#fff;color:#002b5c !important;">Abrir herramienta →</a></p>
+    </section>"""
+    else:
+        st_block = """
+    <section style="background:#fff7e6;border-left:4px solid #d18f00;">
+      <h2 style="margin-top:0">🛠 Herramienta interactiva (pendiente de deploy)</h2>
+      <p class="note">Para activar la app interactiva con filtros cruzados, deploy un click en
+      <a href="https://share.streamlit.io">share.streamlit.io</a>: New app → repo
+      <code>andresborrerom/credito_Panama</code> → archivo <code>src/app/streamlit_app.py</code>.
+      Una vez deployada, exporta <code>STREAMLIT_APP_URL=https://...streamlit.app</code> y vuelve a correr
+      <code>python -m src.app.build_site</code> para que este botón quede activo.</p>
+    </section>"""
+
     body_home = f"""
+    {st_block}
     <section>
       <h2>Universo</h2>
       <p class="note">Snapshot del estudio sobre la base de datos extraída de Latinex.</p>

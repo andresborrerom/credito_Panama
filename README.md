@@ -7,6 +7,12 @@
 La URL será `https://andresborrerom.github.io/credito_Panama/` una vez habilitado Pages
 en *Settings → Pages → Source: GitHub Actions*.
 
+**🛠 Herramienta interactiva (Streamlit Cloud):** entra a [share.streamlit.io](https://share.streamlit.io)
+con tu cuenta de GitHub → **New app** → repo `andresborrerom/credito_Panama` → branch
+`claude/pensive-carson-shPap` (o `main` después del merge) → archivo `src/app/streamlit_app.py` → Deploy.
+La URL quedará tipo `https://<algo>.streamlit.app` y es accesible desde cualquier dispositivo,
+sin instalación, con todos los filtros cruzados (rating, sector, plazo, emisor, período) en tiempo real.
+
 **📄 Entregables:**
 - `docs/index.html` — herramienta interactiva (sitio estático, Plotly)
 - `docs/estudio_renta_fija_panama.pdf` — reporte ejecutivo
