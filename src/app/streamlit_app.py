@@ -90,13 +90,15 @@ with st.sidebar:
     sector_sel = "Financiero" if foco_bancos else st.selectbox("Sector", sectores)
 
     instrs = ["(todos)"] + sorted(trades["instrumento_clase"].dropna().unique().tolist())
-    instr_sel = st.multiselect("Instrumento", instrs, default=["(todos)"])
+    instr_sel = st.multiselect("Instrumento", instrs, default=["(todos)"],
+                                help="Vacío o '(todos)' = no filtra por instrumento.")
 
     ratings_sel = st.multiselect(
         "Rating tier",
         TIER_ORDER,
         default=TIER_ORDER,
         format_func=lambda t: f"{t} · {TIER_DESC[t].split(' — ')[0]}",
+        help="Vacío = todos los tiers (no filtra). Selecciona uno o más para acotar.",
     )
 
     fmin, fmax = trades["fecha_d"].min(), trades["fecha_d"].max()
@@ -114,7 +116,8 @@ with st.sidebar:
     else:
         fecha_ini, fecha_fin = default_start, fmax
 
-    buckets = st.multiselect("Buckets de plazo", BUCKET_ORDER, default=BUCKET_ORDER)
+    buckets = st.multiselect("Buckets de plazo", BUCKET_ORDER, default=BUCKET_ORDER,
+                              help="Vacío = todos los buckets (no filtra). Selecciona uno o más para acotar.")
 
     emisores_top = ["(todos)"] + sorted(trades["emisor"].dropna().value_counts().head(50).index.tolist())
     emisor_sel = st.selectbox("Emisor (top 50)", emisores_top)
@@ -132,16 +135,24 @@ with st.sidebar:
 # ============ FILTRO ============
 df = trades.copy()
 df = df[(df["fecha_d"] >= fecha_ini) & (df["fecha_d"] <= fecha_fin)]
+active_filters = [f"fechas: {fecha_ini} → {fecha_fin}"]
 if sector_sel != "(todos)":
     df = df[df["sector"] == sector_sel]
+    active_filters.append(f"sector: {sector_sel}")
 if "(todos)" not in instr_sel and instr_sel:
     df = df[df["instrumento_clase"].isin(instr_sel)]
+    active_filters.append(f"instrumento: {', '.join(instr_sel)}")
 if ratings_sel and len(ratings_sel) < len(TIER_ORDER):
     df = df[df["rating_tier"].isin(ratings_sel)]
-if buckets:
+    active_filters.append(f"rating: {', '.join(ratings_sel)}")
+if buckets and len(buckets) < len(BUCKET_ORDER):
     df = df[df["bucket_plazo"].isin(buckets)]
+    active_filters.append(f"plazos: {', '.join(buckets)}")
 if emisor_sel != "(todos)":
     df = df[df["emisor"] == emisor_sel]
+    active_filters.append(f"emisor: {emisor_sel}")
+
+st.info("🔎 **Filtros activos:** " + " · ".join(active_filters))
 
 if df.empty:
     st.warning("No hay trades que cumplan los filtros. Ajusta los criterios.")
