@@ -32,7 +32,8 @@ NON_VINTAGE = {
     "fred_fed_funds_target_lower":   "DFEDTARL",  # 2008+
     "fred_iorb":                     "IORB",      # 2021+ (nombre actual; antes era IOER)
     "fred_ioer_legacy":              "IOER",      # 2008-2021 (nombre viejo)
-    "fred_on_rrp":                   "RRPONTSYD", # 2013+ Reverse Repo award rate
+    "fred_on_rrp_award":             "RRPONTSYAWARD",  # 2013+ Reverse Repo AWARD RATE (la tasa, en %)
+    "fred_on_rrp_volume_usd_b":      "RRPONTSYD", # 2013+ VOLUMEN en USD billion (no es la tasa)
     # UST nominal
     "fred_ust_2y":  "DGS2",
     "fred_ust_5y":  "DGS5",
