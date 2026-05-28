@@ -109,11 +109,12 @@ Ejemplo `configs/modelo.yaml`:
 version: "0.1.0"
 
 ventanas:
-  brutos_desde: "1994-01-01"          # post-Greenspan target explícito
-  calibracion_hp: ["2000-01-01", "2009-12-31"]
+  brutos_desde: "1985-01-01"          # Volcker disinflation post-shock
+  calibracion_hp: ["1995-01-01", "2009-12-31"]
   evaluacion_walk_forward_desde: "2010-01-01"
   evaluacion_modernos_desde: "2019-01-01"   # SOFR/SR3/FedWatch reales
   horizontes_meses: [1, 3, 6, 12]
+  pre_target_explicito_hasta: "1994-01-31"  # se reporta separadamente
 
 pesos_agregacion:
   w_a: 0.55
@@ -129,15 +130,22 @@ rivales:
   - rival_dotplot_median
 
 regimenes:
-  - {id: "qe_zlb",         from: "2010-01", to: "2013-04"}
-  - {id: "taper_tantrum",  from: "2013-05", to: "2014-12"}
-  - {id: "normalizacion",  from: "2015-01", to: "2018-09"}
-  - {id: "hike_powell",    from: "2018-10", to: "2019-06"}
-  - {id: "pivot_cuts",     from: "2019-07", to: "2020-02"}
-  - {id: "covid_zlb",      from: "2020-03", to: "2022-02"}
-  - {id: "hike_agresivo",  from: "2022-03", to: "2023-07"}
-  - {id: "hold",           from: "2023-08", to: "2024-08"}
-  - {id: "cut_cycle",      from: "2024-09", to: "now"}
+  # Pre-2010: in-training, reportados separadamente con caveat
+  - {id: "volcker_disinflation",   from: "1985-01", to: "1987-08", evaluacion: "in_sample"}
+  - {id: "greenspan_pre_target",   from: "1987-09", to: "1994-01", evaluacion: "in_sample"}
+  - {id: "greenspan_post_target",  from: "1994-02", to: "2005-12", evaluacion: "in_sample"}
+  - {id: "bernanke_pre_crisis",    from: "2006-01", to: "2007-12", evaluacion: "in_sample"}
+  - {id: "crisis_early_qe",        from: "2008-01", to: "2009-12", evaluacion: "in_sample"}
+  # Post-2010: walk-forward genuino
+  - {id: "qe_zlb",                 from: "2010-01", to: "2013-04", evaluacion: "walk_forward"}
+  - {id: "taper_tantrum",          from: "2013-05", to: "2014-12", evaluacion: "walk_forward"}
+  - {id: "normalizacion_yellen",   from: "2015-01", to: "2018-09", evaluacion: "walk_forward"}
+  - {id: "hike_powell",            from: "2018-10", to: "2019-06", evaluacion: "walk_forward"}
+  - {id: "pivot_cuts",             from: "2019-07", to: "2020-02", evaluacion: "walk_forward"}
+  - {id: "covid_zlb",              from: "2020-03", to: "2022-02", evaluacion: "walk_forward"}
+  - {id: "hike_agresivo",          from: "2022-03", to: "2023-07", evaluacion: "walk_forward"}
+  - {id: "hold",                   from: "2023-08", to: "2024-08", evaluacion: "walk_forward"}
+  - {id: "cut_cycle",              from: "2024-09", to: "now",     evaluacion: "walk_forward"}
 
 fail_loud:
   skill_min_rolling24m: 0.05          # vs rival_implied

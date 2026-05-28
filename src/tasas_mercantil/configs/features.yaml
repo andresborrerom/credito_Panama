@@ -1,0 +1,238 @@
+# Features que alimentan el modelo. Cada feature declara DESDE CUÁNDO se puede
+# usar (fecha en que la serie existe con calidad reproducible). El motor de
+# snapshot.py respeta estas fechas al servir un point-in-time.
+
+# Convencion: source_kind = fred | bloomberg | cme | scraper | derived
+# vintage_aware: true | false  -> si true, se busca el valor "tal como se conocia"
+# en as_of_date, no la revision actual.
+
+features:
+
+  # === Tasas de politica ===
+  fed_funds_effective:
+    source_kind: fred
+    series_id: DFF
+    available_from: "1954-07-01"
+    vintage_aware: false  # FRED no revisa DFF
+    units: percent
+    freq: daily
+    use_for_pieces: [B]
+    notes: "Effective Fed Funds Rate. Sirve como realizacion de la prediccion."
+
+  fed_funds_target_upper:
+    source_kind: fred
+    series_id: DFEDTARU
+    available_from: "2008-12-16"  # despues de la crisis se hace upper/lower
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [B]
+    notes: "Target upper bound. Pre-2008 era target unico, usar DFEDTAR."
+
+  fed_funds_target_pre2008:
+    source_kind: fred
+    series_id: DFEDTAR
+    available_from: "1982-09-27"   # primer target oficial
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [B]
+    notes: "Target unico pre-2008."
+
+  iorb:
+    source_kind: fred
+    series_id: IORB
+    available_from: "2008-10-01"
+    vintage_aware: false
+    units: percent
+    freq: daily
+
+  # === UST nominal ===
+  ust_2y:
+    source_kind: fred
+    series_id: DGS2
+    available_from: "1976-06-01"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [A, B, D]
+
+  ust_5y:
+    source_kind: fred
+    series_id: DGS5
+    available_from: "1962-01-02"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [A, B, D]
+
+  ust_10y:
+    source_kind: fred
+    series_id: DGS10
+    available_from: "1962-01-02"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [A, B, D]
+
+  ust_30y:
+    source_kind: fred
+    series_id: DGS30
+    available_from: "1977-02-15"   # con gap 2002-2006 (descontinuada y restaurada)
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [D]
+    notes: "Gap 2002-02 a 2006-02 cuando Treasury suspendio el 30Y."
+
+  # === Curva real (TIPS) ===
+  tips_5y:
+    source_kind: fred
+    series_id: DFII5
+    available_from: "2003-01-02"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [D]
+
+  tips_10y:
+    source_kind: fred
+    series_id: DFII10
+    available_from: "2003-01-02"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [D]
+
+  tips_30y:
+    source_kind: fred
+    series_id: DFII30
+    available_from: "2010-02-22"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [D]
+
+  # === Breakevens ===
+  breakeven_5y:
+    source_kind: fred
+    series_id: T5YIE
+    available_from: "2003-01-02"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [B, D]
+
+  breakeven_10y:
+    source_kind: fred
+    series_id: T10YIE
+    available_from: "2003-01-02"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [B, D]
+
+  breakeven_5y5y_forward:
+    source_kind: fred
+    series_id: T5YIFR
+    available_from: "2003-01-02"
+    vintage_aware: false
+    units: percent
+    freq: daily
+    use_for_pieces: [B, D]
+    notes: "5y5y forward breakeven — lectura de inflacion esperada de largo plazo."
+
+  # === Macro vintage (point-in-time critico) ===
+  cpi_core_yoy:
+    source_kind: fred
+    series_id: CPILFESL
+    available_from: "1957-01-01"
+    vintage_aware: true   # CPI se revisa con cada nuevo release
+    units: index
+    freq: monthly
+    transform: yoy_pct_change
+    use_for_pieces: [B]
+
+  pce_core_yoy:
+    source_kind: fred
+    series_id: PCEPILFE
+    available_from: "1959-01-01"
+    vintage_aware: true
+    units: index
+    freq: monthly
+    transform: yoy_pct_change
+    use_for_pieces: [B]
+
+  unemployment_u3:
+    source_kind: fred
+    series_id: UNRATE
+    available_from: "1948-01-01"
+    vintage_aware: true
+    units: percent
+    freq: monthly
+    use_for_pieces: [B]
+
+  nonfarm_payrolls:
+    source_kind: fred
+    series_id: PAYEMS
+    available_from: "1939-01-01"
+    vintage_aware: true
+    units: thousands
+    freq: monthly
+    transform: mom_change_thousands
+    use_for_pieces: [B]
+
+  gdp_now:
+    source_kind: fred
+    series_id: GDPNOW
+    available_from: "2011-07-29"
+    vintage_aware: true
+    units: percent_annualized
+    freq: as_published
+    use_for_pieces: [B]
+    notes: "Atlanta Fed GDPNow — nowcast del trimestre vigente."
+
+  # === SOFR era (Bloomberg + CME) ===
+  sofr_overnight:
+    source_kind: bloomberg
+    ticker: "SOFRRATE Index"
+    available_from: "2018-04-03"
+    vintage_aware: false
+    units: percent
+    freq: daily
+
+  sr3_strip:
+    source_kind: cme
+    contract_family: SR3
+    num_contracts: 8
+    available_from: "2018-05-07"
+    vintage_aware: false
+    notes: "Strip de futuros SOFR 3M, primeros 8 vencimientos. Implied rate = 100 - price."
+    use_for_pieces: [A]
+
+  cme_fedwatch_probs:
+    source_kind: derived
+    derived_from: [sr3_strip]
+    available_from: "2018-05-07"
+    notes: "Reconstruido desde SR3 prices. Pre-2018 se usa proxy EuroDollar (LIBOR)."
+    use_for_pieces: [A]
+
+  dot_plot_sep:
+    source_kind: scraper
+    target_url: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+    available_from: "2012-01-25"  # primera publicacion de SEP con dots
+    vintage_aware: false
+    freq: quarterly
+    use_for_pieces: [A]
+
+# Caveats por feature — se reportan en el deck si aplican
+caveats:
+  pre_sofr_proxy:
+    applies_when: as_of_date < 2018-05-07
+    instruction: "Sustituir SR3 por EuroDollar futures (LIBOR proxy). Marcar 'data_caveat = libor_proxy'."
+  pre_target_explicito:
+    applies_when: as_of_date < 1994-02-04
+    instruction: "Reportar en backtest separadamente con label 'pre_target_explicito'."
+  pre_tips:
+    applies_when: as_of_date < 2003-01-02
+    instruction: "Pieza D (decomposicion term-premium) no disponible. Modelo reverte a A+B."

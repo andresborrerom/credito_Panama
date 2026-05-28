@@ -88,17 +88,22 @@ considerar regímenes ni breaks estructurales (lección de SAA).
 
 ### Decisión de ventanas
 
-- **Universo de datos brutos**: desde **1994-01** (target Fed Funds explícito).
-  16+ años incluso si arrancamos solo macro; los datos pre-1994 los excluimos del
-  training porque el régimen de política era distinto. Anexo cualitativo
-  describirá cómo "se vería" el modelo en pre-1994 sin meterlo en el motor.
-- **Ventana de calibración de hiperparámetros**: **2000-01 a 2009-12**.
-  Cubre el cycle dot-com, Greenspan put, 2003 zero-bound suave, 2004-2006 hike,
-  2007-2008 crisis. **Se congelan después** y no se vuelven a tunear.
+- **Universo de datos brutos**: desde **1985-01** (Volcker disinflation post-shock).
+  Cubre 40+ años y captura toda la era moderna del rate-setting Fed.
+- **Régimen pre-1985 (Volcker shock 1979-1982)**: explícitamente **excluido del
+  training**. La política monetaria fue de monetary targeting, no rate-targeting,
+  y los niveles de tasa son cualitativamente otros. Discusión cualitativa en
+  anexo del doc de robustez.
+- **Ventana de calibración de hiperparámetros**: **1995-01 a 2009-12** (15 años,
+  cubre Greenspan post-target completo + Bernanke pre y durante crisis + zero-bound).
+  Se congelan después y no se vuelven a tunear.
 - **Ventana de evaluación walk-forward (rolling)**: **2010-01 a la fecha**.
-  Cubre QE, taper tantrum, 2015-2018 normalización, 2018 hike Powell, 2019
-  cuts, 2020-2021 COVID, 2022-2023 hike agresivo, 2024 hold, 2025+ cut cycle.
-  ~16 años, ~190 cortes mensuales.
+  ~16 años, ~190 cortes mensuales. Esta ventana **no se toca** para no
+  contaminar la evaluación.
+- **Régimen 1985-1994 (pre-target explícito)** entra al training del modelo
+  pero **se reporta separadamente** en el backtest y **se monitorea**: si el
+  modelo falla brutalmente en esos años (skill < −0.30), evaluamos si esa
+  data hace más daño que bien y reportamos la decisión.
 - **Para features modernas (SOFR, SR3, FedWatch)**: backtest desde **2019-01**.
   Pre-2018 usamos EuroDollar (LIBOR-based) como proxy con `data_caveat = "libor_proxy"`.
 - **Para horizonte 12M con features post-2018**: backtest desde **2020-01**
@@ -106,19 +111,35 @@ considerar regímenes ni breaks estructurales (lección de SAA).
 
 ### Regímenes explícitos que el backtest debe segmentar
 
-Reportes separados de skill por cada régimen:
-1. **2010–2013** — ZLB + QE.
-2. **2013–2014** — taper tantrum.
-3. **2015–2018** — normalización lenta Yellen.
-4. **2018** — hike cycle Powell.
-5. **2019** — pivot dovish + cuts.
-6. **2020–2021** — COVID + zero-bound estricto.
-7. **2022–2023** — hike agresivo (+525 bps en 16 meses).
-8. **2024** — hold.
-9. **2025+** — cut cycle.
+Reportes separados de skill por cada régimen. Pre-2010 entran como
+"training-time" (no walk-forward) y se reportan in-sample con caveat:
+
+**Pre-2010 (in-sample, in-training, reportados con caveat):**
+1. **Volcker disinflation** — 1985–1987.
+2. **Greenspan pre-target** — 1987–1993.
+3. **Greenspan post-target** — 1994–2005.
+4. **Bernanke pre-crisis** — 2006–2007.
+5. **Crisis + early QE** — 2008–2009.
+
+**Post-2010 (walk-forward genuino, sin contaminación):**
+6. **ZLB + QE** — 2010–2013.
+7. **Taper tantrum** — 2013–2014.
+8. **Normalización Yellen** — 2015–2018.
+9. **Hike Powell** — 2018–2019.
+10. **Pivot dovish + cuts** — 2019–2020.
+11. **COVID + ZLB estricto** — 2020–2022.
+12. **Hike agresivo** — 2022–2023.
+13. **Hold** — 2024.
+14. **Cut cycle** — 2025+.
 
 **Anti-patrón evitado**: reportar solo el agregado. Un modelo puede ganar al
-implied path en agregado y perder en 5 de 9 regímenes. Eso lo declaramos.
+implied path en agregado y perder en 5 de 14 regímenes. Eso lo declaramos.
+
+**Regla para incluir vs excluir periodos pre-1994 del training**:
+- Si el modelo agregado pasa el fail-loud (skill rolling 24M > 5% en walk-forward 2010+),
+  los regímenes pre-1994 entran al training.
+- Si no lo pasa, revisamos si excluirlos del training mejora el skill walk-forward.
+- En cualquier caso, ambas variantes se reportan en el doc de robustez.
 
 ---
 

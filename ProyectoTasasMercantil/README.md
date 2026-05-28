@@ -50,8 +50,10 @@ ProyectoTasasMercantil/
 ├── 10_MODELO_ARQUITECTURA.md          ← stack, carpetas, YAML, plan de fases del modelo
 ├── 11_MODELO_ROBUSTEZ.md              ← esqueleto del doc de robustez (técnico + ejecutivo)
 ├── 12_DATA_AUDIT_FINDINGS.md          ← bitácora de problemas/decisiones de datos
+├── 13_GLOBALES_Y_OTROS_PAISES.md      ← qué bancos centrales modelamos vs solo reportamos
 ├── plantilla_bloomberg/               ← Excel plug-and-play para el analista
 │   ├── README.md
+│   ├── correo_analista.md             ← plantilla del correo mensual al analista
 │   ├── build_bloomberg_template.py    ← script reproducible que genera el xlsx
 │   └── BloombergTemplate_TasasMercantil.xlsx
 └── cortes/                            ← un subfolder por corte mensual
@@ -93,7 +95,7 @@ ProyectoTasasMercantil/
 - **Curvas cubiertas:** nominal (UST), **real (TIPS)**, **breakevens** y **swap SOFR OIS** — los 4 a 5Y/10Y/30Y, más curvas de soberanos G7 y EM principales.
 - **Venezuela:** se incluye paralelo además del oficial.
 - **Expectativas Fed:** se muestran 3 lecturas en paralelo — (a) implied path de futuros SOFR, (b) probabilidades CME FedWatch por reunión, (c) modelo propio Mercantil con backtest honesto.
-- **Modelo predictivo:** universo de datos desde 1994 (Fed Funds target explícito); calibración 2000–2009; walk-forward 2010–presente; 9 regímenes evaluados separados; rivales explícitos (implied path, FedWatch, Taylor naive, naive, dot plot mediana). Detalle en `07_MODELO_PREDICTIVO.md`.
+- **Modelo predictivo:** universo de datos desde 1985 (Volcker disinflation post-shock); calibración 1995–2009; walk-forward 2010–presente; 14 regímenes evaluados separados (5 pre-2010 in-sample + 9 post-2010 walk-forward); rivales explícitos (implied path, FedWatch, Taylor naive, naive, dot plot mediana). Modelo propio solo para Fed (USA) en v1.0; extensión escalonada a BCV y ECB en v2.0+. Detalle en `07_MODELO_PREDICTIVO.md` y `13_GLOBALES_Y_OTROS_PAISES.md`.
 - **Distribución:** PDF/slides por correo + GitHub Pages **privado** (acceso por allowlist de correos).
 
 ---
