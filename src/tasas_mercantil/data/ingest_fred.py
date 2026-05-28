@@ -26,8 +26,8 @@ FRED_CSV_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 ALFRED_CSV_BASE = "https://alfred.stlouisfed.org/graph/alfredgraph.csv"
 USER_AGENT = "Mercantil-Tasas-ETL/0.1 (contact: andres.borrerom@gmail.com)"
 
-# Throttle entre requests (segundos). Conservador.
-THROTTLE_SECONDS = 1.0
+# Throttle entre requests (segundos). 0.3s = ~3 req/seg, todavia respetuoso.
+THROTTLE_SECONDS = 0.3
 
 
 @dataclass(frozen=True)
@@ -37,8 +37,8 @@ class FREDConfig:
     user_agent: str = USER_AGENT
 
 
-def _http_get(url: str, config: FREDConfig, max_retries: int = 3) -> str:
-    """GET con timeout, user-agent y reintentos con backoff exponencial.
+def _http_get(url: str, config: FREDConfig, max_retries: int = 2) -> str:
+    """GET con timeout AGRESIVO (10s), user-agent y 2 reintentos.
     Lanza si HTTP != 200 tras agotar reintentos.
     """
     last_exc = None
@@ -47,15 +47,15 @@ def _http_get(url: str, config: FREDConfig, max_retries: int = 3) -> str:
             resp = requests.get(
                 url,
                 headers={"User-Agent": config.user_agent},
-                timeout=60,
+                timeout=(5, 10),  # connect 5s, read 10s
             )
             resp.raise_for_status()
             return resp.text
         except (requests.Timeout, requests.ConnectionError) as e:
             last_exc = e
-            time.sleep(2 ** attempt)  # 1, 2, 4 segundos
-        except requests.HTTPError as e:
-            # 404 etc no se reintenta — el vintage no existe
+            if attempt < max_retries - 1:
+                time.sleep(1)
+        except requests.HTTPError:
             raise
     raise last_exc
 
@@ -151,17 +151,18 @@ def fetch_series_vintage(
     """
     frames = []
     skipped = 0
-    for vd in vintage_dates:
+    total = len(vintage_dates)
+    for i, vd in enumerate(vintage_dates, start=1):
         try:
             df = fetch_series_alfred_one_vintage(
                 series_id, vd, start=start, end=end, config=config
             )
             frames.append(df)
-        except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
-            # vintage_date pre-primer-release devuelve HTTP error o vacio. Skip silencioso.
+        except (requests.HTTPError, requests.Timeout, requests.ConnectionError):
             skipped += 1
-    if skipped > 0:
-        print(f"  [{series_id}] {skipped} vintages saltados (sin data en ALFRED)")
+        # Progreso cada 20 vintages
+        if i % 20 == 0 or i == total:
+            print(f"    [{series_id}] {i}/{total} ({skipped} skip)", flush=True)
     if not frames:
         return pd.DataFrame(columns=["feature_name", "obs_date", "value", "vintage_date"])
     return pd.concat(frames, ignore_index=True)
