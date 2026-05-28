@@ -46,6 +46,38 @@ auditoría de un corte verifica que `FECHA_GUARDADO_VALUES` esté presente.
 
 ---
 
+## 2026-05-28 — FRED y ALFRED accesibles vía CSV público sin API key
+
+**Síntoma**: la documentación inicial del proyecto asumía que `FRED_API_KEY`
+era requisito para bajar datos macro de FRED y ALFRED. Eso bloqueaba el
+arranque del backfill hasta que un humano registrara una key.
+
+**Causa**: confusión entre la API REST de FRED (`api.stlouisfed.org/fred/*`,
+que SÍ requiere key) y los endpoints públicos CSV
+(`fred.stlouisfed.org/graph/fredgraph.csv` y
+`alfred.stlouisfed.org/graph/alfredgraph.csv`), que NO requieren auth.
+
+**Impacto en el modelo / reporte**: positivo. Toda la ingesta macro y de
+tasas FRED se puede automatizar sin intervención humana. Vintage data
+(ALFRED) también es accesible vía CSV con parámetro `vintage_date`.
+
+**Mitigación adoptada**: `src/tasas_mercantil/data/ingest_fred.py` implementado
+con HTTP GET a los endpoints CSV. Throttle conservador de 1 req/seg para
+respetar Terms of Use. `User-Agent` identificado. Probado contra DGS10
+(267 KB CSV, ~16,400 filas desde 1962) y CPILFESL con `vintage_date=2010-06-15`
+— ambos HTTP 200.
+
+**Decisión metodológica**: documentar en `11_MODELO_ROBUSTEZ.md` que la
+ingesta FRED es "self-service sin credenciales". Anotar caveat: si en algún
+momento necesitamos metadatos estructurados o búsqueda de series, ahí sí
+requeriremos API key — pero no para bajar valores.
+
+URLs verificadas:
+- https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10
+- https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=CPILFESL&vintage_date=2010-06-15
+
+---
+
 ## 2026-05-28 — Decisión de ventana histórica del modelo
 
 **Síntoma**: tentación inicial de fijar ventana corta (2020+, 6 años).
