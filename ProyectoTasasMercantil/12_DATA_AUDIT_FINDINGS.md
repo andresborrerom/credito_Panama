@@ -46,6 +46,70 @@ auditoría de un corte verifica que `FECHA_GUARDADO_VALUES` esté presente.
 
 ---
 
+## 2026-05-29 — Audit primera carga histórica Bloomberg (Antulio)
+
+**Síntoma**: recibido `BloombergHistorico_TasasMercantil_FULL_2026-05-29.xlsx`
+(4.4 MB, 11 hojas, 56 instrumentos). Audit con pandas detectó 3 tickers
+problemáticos + 1 issue de parser. El resto (53 instrumentos) cargó limpio.
+
+**Carga global**:
+- ✅ Paste Special → Values aplicado (sin fórmulas vivas).
+- ✅ `Dts=S` funcionó (fechas visibles).
+- ✅ 0 `#N/A` en valores de los 53 instrumentos OK.
+- ✅ UST 3M/2Y/5Y/10Y/30Y desde 1985-01-02 con 99% cobertura — backbone completo.
+- ✅ TIPS, Breakevens, SR3 futures, EuroDollar futures completos.
+- ✅ Antulio dejó notas detalladas con las sustituciones que hizo.
+
+**Issues a regresar a Antulio (3)**:
+
+1. **`IORB`** — Antulio sustituyó mi `FRRRIORB Index` (propuesta inicial) por
+   `IORB Index`. Pero los valores devueltos son 104.5 / 104.83 / 105.17 — eso
+   parece índice/precio, no la tasa real (que debería ser ~5% hoy, ~0.25% en
+   2013). Hipótesis: `IORB Index` en BBG no es una tasa. Acción: pedir a
+   Antulio que valide en `DES <GO>` cuál ticker da la tasa IORB (probable
+   `FRRRIORB Index` original o `IOER Index`).
+
+2. **`ON_RRP`** — Antulio probó `RRPONRAT Index` y devolvió
+   `#N/A Invalid Security`. Acción: pedirle el ticker correcto del Overnight
+   Reverse Repurchase Award Rate.
+
+3. **`TERM_SOFR_6M`** — Antulio sustituyó `USOSFR6Z BGN Curncy` por
+   `TSFR12M Index` — pero ese es 12 meses, no 6. La hoja `TERM_SOFR_6M`
+   contiene en realidad la serie de 12M (1169 obs desde 2021-09-21).
+   Posible confusión. Acción: confirmar si existe `TSFR6M Index`; alternativa
+   es derivarlo del strip SR3 o reportar solo 1M/3M/12M.
+
+**Mitigación inmediata sin esperar a Antulio**: IORB y ON RRP se pueden bajar
+de FRED (series `IORB` y `RRPONTSYD`) — endpoint CSV público, sin key.
+Term SOFR 6M se deriva del SR3 o se omite. Bloqueo cero para el avance del
+modelo y del deck.
+
+**Issue de parser (no del dato)**:
+
+- **`FED_FUNDS_TARGET_PRE2008`**: el dato vino correcto (8.25% en 1985, etc.)
+  pero las fechas vinieron como números enteros sin formato date (31048,
+  31049, ...). Estos son serial dates de Excel. Mi audit con pandas las
+  rechazó. Fix en parser: detectar enteros en columnas de fecha y convertir
+  con `pd.to_datetime(serial, origin='1899-12-30', unit='D')`.
+
+**Limitaciones esperadas (no son bugs)**:
+- `UST_1M` desde 2001-07: el instrumento se introdujo ese año.
+- `UST_20Y` desde 2020-05: Treasury suspendió 1986-2020.
+- `UST_7Y` cobertura 61%: descontinuado 1993-2009.
+- `USSW2/5/10/30_LIBOR` solo 2009-2023: limitación de ticker continuous + cessation LIBOR.
+- `SOFR_OIS` desde 2007: Bloomberg back-fillea sintéticamente pre-2018 desde Fed Funds OIS. Útil pero etiquetar.
+
+**Decisión metodológica**: documentar en `11_MODELO_ROBUSTEZ.md` § 3 (Universo
+de datos) la procedencia híbrida Bloomberg + FRED para tasas Fed
+(FF/EFFR/IORB/ONRRP) y la convención de back-fill sintético en SOFR OIS
+pre-2018. Cuando Antulio reporte tickers corregidos, regenerar plantillas y
+actualizar `instrumentos.yaml`.
+
+**Resumen CSV**: `/tmp/audit_bloomberg_historico.csv` con una fila por
+instrumento × {inicio, fin, n_obs, n_nan_val, cobertura_pct}.
+
+---
+
 ## 2026-05-28 — BDH con `Dts=H` oculta la columna de fechas (segunda lección heredada de SAA)
 
 **Síntoma**: Antulio, operador Bloomberg de Mercantil, al abrir
