@@ -1,37 +1,69 @@
 # 09 · Deck y entregables
 
+> Spec actualizada al **deck v1.0** según `13b_BENCHMARK_REPORTES.md` (9 láminas, modelo Apollo+PIMCO+BlackRock).
+
 ## Lo que producimos cada mes
 
 | Entregable | Formato | Destino |
 |---|---|---|
-| Deck ejecutivo | PDF (16:9) | Correo a directivos |
-| Sitio interactivo | HTML estático con gráficos Plotly | GitHub Pages privado |
+| Deck ejecutivo (interno grupo) | PDF 16:9, 9 láminas, ≤5 MB | Correo a directivos |
+| Sitio interactivo | HTML estático con Plotly + apéndice de tablas | GitHub Pages privado |
 | Plantilla Bloomberg con valores | XLSX | archivo en repo (`cortes/YYYY-MM/input/`) |
 | Cierre del corte | Markdown | repo + lectura del próximo mes |
 
-El **deck** es el entregable canónico. El HTML es el "estudio detrás del deck"
-para quien quiera profundizar.
+El **deck interno** es el entregable canónico. El HTML es el apéndice para
+quien quiera profundizar — tablas, series, descargas CSV.
 
-## Estructura del deck (Fase 1 completa + esbozos 2–5 + corporativas)
+## Decisiones de voz, conviction y forks
 
-| # | Lámina | Tiempo de lectura |
+1. **Voz: primera persona del plural del grupo** — "creemos que…",
+   "vigilamos…", "rotamos…". Camilo + Andrés son los dueños editoriales del
+   reporte. Tercera persona neutral ("el mercado descuenta…") solo para
+   data factual.
+2. **Conviction tags obligatorios** en cada vista táctica y en cada mensaje del TL;DR:
+   `Alta` / `Media` / `Baja`. Esto distingue opinión calibrada de
+   recomendación y protege parcialmente del riesgo regulatorio.
+3. **Fork "Wealth Management" — en roadmap, no en v1.0**. Cuando se decida
+   distribuir externamente a clientes, no basta suavizar la voz: hay que
+   **filtrar toda la estrategia del grupo** (lámina 8 Impacto Mercantil
+   completa, conviction Alta que pueda interpretarse como recomendación a
+   un cliente específico, mención a posición propia/tesorería). Son
+   prácticamente dos documentos distintos con el mismo dataset.
+
+## Estructura del deck v1.0 — 9 láminas
+
+| # | Título | 4Ws entregados (mínimo 2 por lámina) |
 |---|---|---|
-| 1 | Portada — `Reporte de Tasas · MM YYYY · Mercantil SFI` | — |
-| 2 | Mensajes clave del mes (3–5 bullets) | 30s |
-| 3 | **Fase 1 USA** — Política monetaria + mercado: Fed Funds, IORB, SOFR, UST 2/5/10 | 60s |
-| 4 | **Fase 1 USA** — Curva UST: cierre año anterior + mes anterior + mes en curso | 60s |
-| 5 | **Fase 1 USA** — Tres lecturas de expectativas Fed (implied / FedWatch / modelo Mercantil) | 90s |
-| 6 | **Fase 1 USA** — Lectura e implicaciones | 60s |
-| 7 | **Fase 2 Global** — Tasas política + curvas 10Y + FX | 60s |
-| 8 | **Fase 3 Panamá** — Curva soberana + spread vs UST + corporativos locales | 60s |
-| 9 | **Capítulo Corporativas** — Tabla regiones × ratings × plazos | 90s |
-| 10 | **Fase 4 Mercantil** — Impactos por unidad (cualitativo inicialmente) | 90s |
-| 11 | **Fase 5 Venezuela** — BCV + FX oficial vs paralelo + brecha | 60s |
-| 12 | Calendario del próximo mes (FOMC, BCE, CPI, etc.) | 30s |
-| 13 | Apéndice / Disclaimers | — |
+| 1 | **TL;DR · 3 mensajes del mes + conviction tags** | WHAT (todos) |
+| 2 | **Tactical View Table** | WHAT + TRIGGER |
+| 3 | **Fed + curva UST** (dot plot vs OIS implícito + sweet spot) | WHAT IF RIGHT |
+| 4 | **Spreads corporativos IG/HY + EMBI** | WHAT IF WRONG (widening +50 bps) |
+| 5 | **Global** — BCE/BoE + DXY | TRIGGER (próxima reunión) |
+| 6 | **Panamá** soberana + corporativos locales | WHAT IF RIGHT/WRONG por tesorería PA |
+| 7 | **Venezuela** — BCV vs paralelo + bonos | TRIGGER (eventos políticos/sanciones) |
+| 8 | **Impacto Grupo Mercantil** por unidad | WHAT IF RIGHT + WHAT IF WRONG por unidad |
+| 9 | **Calendario + qué nos haría cambiar de opinión** | TRIGGER explícito |
 
-≈ 12 minutos de lectura completa. Cada lámina lleva: título → gráfico/tabla
-principal → 1 bullet de conclusión.
+**Vs borrador inicial de 13 láminas**: eliminadas portada (mata el TL;DR),
+apéndice descriptivo (vive como HTML); fusionadas mensajes clave + lectura
+(→ lámina 1), tres lecturas Fed dentro de Fed+curva (→ lámina 3). 30%
+menos volumen, 100% del valor accionable preservado.
+
+## Patrones obligatorios (de `13b_BENCHMARK_REPORTES.md`)
+
+1. **Una idea por lámina.** Si no tiene una frase que empiece "creemos que…", se borra o se fusiona.
+2. **Sweet spot explícito** con nivel/target ("2-5Y UST target 4.20-4.50%"), no vaguedades como "favorecemos duración".
+3. **Definición operativa antes de la opinión** ("definimos shock al spread como ampliación >50 bps en 30 días").
+4. **Trigger calendar al inicio** (lámina 1-2), no al final.
+5. **Conviction Alta/Media/Baja** explícito en cada vista táctica y en cada bullet del TL;DR.
+
+## Anti-patrones prohibidos
+
+1. **Apéndice descriptivo** sin lectura (típico LatAm). Vive como HTML, no en el PDF.
+2. **"Por un lado / por otro lado"** sin cerrar. Balanceo institucional = ruido.
+3. **Recapitular noticias** del mes. El directivo ya las leyó en Bloomberg.
+4. **Portada decorativa** que ocupa lámina entera.
+5. **Más de 2 tipografías o 4 colores** institucionales. Plantilla genérica = pérdida de credibilidad antes del primer dato.
 
 ## Reglas gráficas
 
