@@ -45,7 +45,11 @@ Se entrega al analista cada mes. El analista edita una sola celda (`AS_OF` en la
 hoja `01_Parametros`), espera que Bloomberg resuelva, y devuelve el `.xlsx` con
 valores (ver `99_Envio` adentro del archivo).
 
-**Versión actual:** v0.1 — 64 instrumentos + 8 futuros SOFR + FedWatch (paste manual).
+**Versión actual:** v0.2 — **76 instrumentos** + 8 futuros SOFR + FedWatch (paste manual). Cambios vs v0.1:
+- Agregadas curvas **TIPS real (5Y/10Y/20Y/30Y)** — 4 instrumentos.
+- Agregados **breakevens (2Y/5Y/10Y/30Y)** — 4 instrumentos.
+- Agregada **curva SOFR OIS swap (2Y/5Y/10Y/30Y)** — 4 instrumentos.
+- Fix bug "today" / `=TODAY()`: `FECHA_CARGA` y `FECHA_GUARDADO_VALUES` ahora son input manual; hoja de instrucciones exige Paste Special → Values antes de devolver el archivo.
 
 ### Estructura final (implementada en v0.1)
 
@@ -66,9 +70,17 @@ menos sitios donde el analista puede equivocarse.
 **Categorías cubiertas en `02_Datos`:**
 - `policy` — Fed, ECB, BoE, BoJ, PBoC, BCB, Banxico, BanRep (8 instrumentos)
 - `money_market` — SOFR ON / averages / term (7 instrumentos)
-- `yield_curve` — UST 1M–30Y + Bund/Gilt/JGB/BR/MX/CO 10Y (17 instrumentos)
+- `yield_curve` — UST 1M–30Y nominal + Bund/Gilt/JGB/BR/MX/CO 10Y (17 instrumentos)
+- `real_curve` — TIPS 5Y/10Y/20Y/30Y (4 instrumentos)
+- `breakeven` — US 2Y/5Y/10Y/30Y inflación esperada (4 instrumentos)
+- `swap_curve` — SOFR OIS 2Y/5Y/10Y/30Y (4 instrumentos)
 - `fx` — G10 + LatAm + USDVES oficial (10 instrumentos)
 - `credit_index` — EMBI/CEMBI subíndices + ICE BofA IG y HY por rating (16 instrumentos)
+
+Total: **76 instrumentos**. La descomposición *nominal = real + breakeven + term
+premium* (que alimenta la Pieza D del modelo predictivo, ver
+`07_MODELO_PREDICTIVO.md`) requiere las 3 curvas TIPS/BE/swap a los mismos
+tenors. Por eso se incluyen explícitamente en la plantilla del analista.
 
 **Nota:** los datos del BCV (Fase 5) y bolívar paralelo **no** vienen por Bloomberg.
 Tienen extractores web separados (ver `04_PLAYBOOK_MENSUAL.md`).

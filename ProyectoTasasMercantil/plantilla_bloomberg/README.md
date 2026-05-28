@@ -45,7 +45,21 @@ Cada celda de valor usa:
 
 ## Versión y mantenimiento
 
-- v0.1 — primera versión (mayo 2026). 64 instrumentos + 8 futuros SOFR + FedWatch manual.
-- Tickers marcados con "— confirmar" en la columna `nota` deben validarse con el primer
-  analista que corra la plantilla; cualquier ticker corregido se actualiza en el script
-  `build_bloomberg_template.py` y se regenera el xlsx.
+- **v0.2** (2026-05-28) — agregadas TIPS (4), breakevens (4), SOFR OIS swap (4).
+  76 instrumentos totales. Fix del bug "today"/`=TODAY()` heredado de la lección
+  de `mercantil-saa`: la hoja de instrucciones ahora exige Paste Special → Values
+  antes de devolver el archivo, y `FECHA_CARGA`/`FECHA_GUARDADO_VALUES` son
+  inputs manuales.
+- v0.1 (2026-05-28) — primera versión. 64 instrumentos.
+
+Tickers marcados con "— confirmar" en la columna `nota` deben validarse con el
+primer analista que corra la plantilla; cualquier ticker corregido se actualiza
+en el script `build_bloomberg_template.py` y se regenera el xlsx.
+
+## Regla operativa crítica
+
+**El archivo se entrega con valores cuajados, no con fórmulas vivas.** Después
+de cargar los datos, el analista debe hacer Paste Special → Values en las
+hojas `02_Datos`, `03_SOFR_Futures` y `04_FedWatch`. Razón: si no, al reabrir
+el archivo sin Bloomberg, las celdas muestran `#N/A Requesting Data` y se
+pierde el snapshot. Lección heredada del proyecto `mercantil-saa`.

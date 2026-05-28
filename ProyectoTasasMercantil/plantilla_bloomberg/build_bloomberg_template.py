@@ -45,18 +45,36 @@ INSTRUMENTOS = [
     ("money_market", "US", "TERM_SOFR_6M", "6M", 0.5, "USOSFR6Z BGN Curncy", "PX_LAST", "percent", "Term SOFR 6M - CME"),
     ("money_market", "US", "TERM_SOFR_12M", "12M", 1.0, "USOSFR12Z BGN Curncy", "PX_LAST", "percent", "Term SOFR 12M - CME"),
 
-    # Fase 1 - USA - UST curve
-    ("yield_curve", "US", "UST", "1M", 0.083, "USGG1M Index", "PX_LAST", "percent", "US Treasury 1M"),
-    ("yield_curve", "US", "UST", "3M", 0.25, "USGG3M Index", "PX_LAST", "percent", "US Treasury 3M"),
-    ("yield_curve", "US", "UST", "6M", 0.5, "USGG6M Index", "PX_LAST", "percent", "US Treasury 6M"),
-    ("yield_curve", "US", "UST", "1Y", 1.0, "USGG12M Index", "PX_LAST", "percent", "US Treasury 1Y"),
-    ("yield_curve", "US", "UST", "2Y", 2.0, "USGG2YR Index", "PX_LAST", "percent", "US Treasury 2Y"),
-    ("yield_curve", "US", "UST", "3Y", 3.0, "USGG3YR Index", "PX_LAST", "percent", "US Treasury 3Y"),
-    ("yield_curve", "US", "UST", "5Y", 5.0, "USGG5YR Index", "PX_LAST", "percent", "US Treasury 5Y"),
-    ("yield_curve", "US", "UST", "7Y", 7.0, "USGG7YR Index", "PX_LAST", "percent", "US Treasury 7Y"),
-    ("yield_curve", "US", "UST", "10Y", 10.0, "USGG10YR Index", "PX_LAST", "percent", "US Treasury 10Y"),
-    ("yield_curve", "US", "UST", "20Y", 20.0, "USGG20YR Index", "PX_LAST", "percent", "US Treasury 20Y"),
-    ("yield_curve", "US", "UST", "30Y", 30.0, "USGG30YR Index", "PX_LAST", "percent", "US Treasury 30Y"),
+    # Fase 1 - USA - UST nominal curve (constant maturity, fixed-rate)
+    ("yield_curve", "US", "UST", "1M", 0.083, "USGG1M Index", "PX_LAST", "percent", "US Treasury 1M nominal"),
+    ("yield_curve", "US", "UST", "3M", 0.25, "USGG3M Index", "PX_LAST", "percent", "US Treasury 3M nominal"),
+    ("yield_curve", "US", "UST", "6M", 0.5, "USGG6M Index", "PX_LAST", "percent", "US Treasury 6M nominal"),
+    ("yield_curve", "US", "UST", "1Y", 1.0, "USGG12M Index", "PX_LAST", "percent", "US Treasury 1Y nominal"),
+    ("yield_curve", "US", "UST", "2Y", 2.0, "USGG2YR Index", "PX_LAST", "percent", "US Treasury 2Y nominal"),
+    ("yield_curve", "US", "UST", "3Y", 3.0, "USGG3YR Index", "PX_LAST", "percent", "US Treasury 3Y nominal"),
+    ("yield_curve", "US", "UST", "5Y", 5.0, "USGG5YR Index", "PX_LAST", "percent", "US Treasury 5Y nominal"),
+    ("yield_curve", "US", "UST", "7Y", 7.0, "USGG7YR Index", "PX_LAST", "percent", "US Treasury 7Y nominal"),
+    ("yield_curve", "US", "UST", "10Y", 10.0, "USGG10YR Index", "PX_LAST", "percent", "US Treasury 10Y nominal"),
+    ("yield_curve", "US", "UST", "20Y", 20.0, "USGG20YR Index", "PX_LAST", "percent", "US Treasury 20Y nominal"),
+    ("yield_curve", "US", "UST", "30Y", 30.0, "USGG30YR Index", "PX_LAST", "percent", "US Treasury 30Y nominal"),
+
+    # Fase 1 - USA - TIPS real curve (constant maturity, real yields)
+    ("real_curve", "US", "TIPS", "5Y", 5.0, "USGGT05Y Index", "PX_LAST", "percent", "US TIPS 5Y real yield CMT - confirmar ticker"),
+    ("real_curve", "US", "TIPS", "10Y", 10.0, "USGGT10Y Index", "PX_LAST", "percent", "US TIPS 10Y real yield CMT - confirmar ticker"),
+    ("real_curve", "US", "TIPS", "20Y", 20.0, "USGGT20Y Index", "PX_LAST", "percent", "US TIPS 20Y real yield CMT - confirmar ticker"),
+    ("real_curve", "US", "TIPS", "30Y", 30.0, "USGGT30Y Index", "PX_LAST", "percent", "US TIPS 30Y real yield CMT - confirmar ticker"),
+
+    # Fase 1 - USA - Breakeven inflation (lectura de mercado de la inflacion esperada)
+    ("breakeven", "US", "BE_INFL", "2Y", 2.0, "USGGBE02 Index", "PX_LAST", "percent", "US 2Y breakeven inflation"),
+    ("breakeven", "US", "BE_INFL", "5Y", 5.0, "USGGBE05 Index", "PX_LAST", "percent", "US 5Y breakeven inflation"),
+    ("breakeven", "US", "BE_INFL", "10Y", 10.0, "USGGBE10 Index", "PX_LAST", "percent", "US 10Y breakeven inflation"),
+    ("breakeven", "US", "BE_INFL", "30Y", 30.0, "USGGBE30 Index", "PX_LAST", "percent", "US 30Y breakeven inflation"),
+
+    # Fase 1 - USA - SOFR OIS swap curve (fixed leg = expectativa de SOFR forward)
+    ("swap_curve", "US", "SOFR_OIS", "2Y", 2.0, "USOSFR2 BGN Curncy", "PX_LAST", "percent", "USD SOFR OIS 2Y - confirmar convencion"),
+    ("swap_curve", "US", "SOFR_OIS", "5Y", 5.0, "USOSFR5 BGN Curncy", "PX_LAST", "percent", "USD SOFR OIS 5Y - confirmar convencion"),
+    ("swap_curve", "US", "SOFR_OIS", "10Y", 10.0, "USOSFR10 BGN Curncy", "PX_LAST", "percent", "USD SOFR OIS 10Y - confirmar convencion"),
+    ("swap_curve", "US", "SOFR_OIS", "30Y", 30.0, "USOSFR30 BGN Curncy", "PX_LAST", "percent", "USD SOFR OIS 30Y - confirmar convencion"),
 
     # Fase 2 - Global - Politica monetaria
     ("policy", "EU", "ECB_DFR", "—", 0.0, "EURR002W Index", "PX_LAST", "percent", "ECB Deposit Facility Rate"),
@@ -161,21 +179,39 @@ def sheet_instrucciones(wb):
         ("", "blank"),
         ("Que es esto", "h2"),
         ("Plantilla que se corre cada mes para extraer datos de Bloomberg al cierre del ultimo dia habil.", "body"),
-        ("Output: este mismo archivo con celdas resueltas (valores en lugar de #N/A).", "body"),
+        ("Output: este mismo archivo con valores cuajados (no formulas vivas).", "body"),
         ("", "blank"),
-        ("Como usarlo (3 pasos)", "h2"),
+        ("LECCION DEL PROYECTO HERMANO (mercantil-saa) — IMPORTANTE", "h2"),
+        ("NO usar 'today' como string en formulas BDH (=BDH(...,'today',...)).", "body"),
+        ("NO usar =TODAY() en ninguna celda del archivo.", "body"),
+        ("Ambos se RECALCULAN al reabrir el archivo y rompen la reproducibilidad: los datos del", "body"),
+        ("snapshot del cierre de mes pueden mutarse a la fecha en que alguien lo abre semanas despues.", "body"),
+        ("La plantilla esta diseñada para evitar esto: todas las formulas referencian la celda AS_OF de", "body"),
+        ("la hoja 01_Parametros, que es input manual fijo. Aun asi, el paso de Paste Special -> Values", "body"),
+        ("antes de devolver el archivo es OBLIGATORIO. Vea el paso 9 abajo.", "body"),
+        ("", "blank"),
+        ("Como usarlo (paso a paso)", "h2"),
         ("1. Abrir el archivo en Excel con Bloomberg add-in activo.", "body"),
         ("2. Ir a la hoja '01_Parametros' y EDITAR la celda B3 (AS_OF) al ultimo dia habil del mes a reportar.", "body"),
         ("   El resto de fechas (mes anterior, cierre año anterior, inicio 12M) se calculan solas.", "body"),
-        ("3. Esperar a que las formulas resuelvan (puede tomar 30-90 segundos en la primera carga).", "body"),
-        ("4. Verificar que NO haya celdas '#N/A Requesting Data' visibles. Si las hay:", "body"),
+        ("3. Escribir ANALISTA (B8), FECHA_CARGA (B9, fecha en que estas corriendo Bloomberg).", "body"),
+        ("4. Esperar a que las formulas resuelvan (puede tomar 30-90 segundos en la primera carga).", "body"),
+        ("5. Verificar que NO haya celdas '#N/A Requesting Data' visibles. Si las hay:", "body"),
         ("   - Revisar conexion Bloomberg.", "body"),
         ("   - Si un ticker especifico esta marcado 'confirmar ticker' en la columna 'nota', es posible que ese ticker", "body"),
         ("     en particular requiera ajuste. Avisar a Andres/Camilo si pasa esto.", "body"),
-        ("5. Ir a la hoja '04_FedWatch' y completar la tabla MANUALMENTE con paste desde la pantalla WIRP.", "body"),
-        ("6. Llenar la hoja '05_Notas_Analista' con cualquier anomalia o cambio de contexto observado.", "body"),
-        ("7. Guardar el archivo con el nombre: BloombergTemplate_TasasMercantil_<YYYY-MM>.xlsx", "body"),
-        ("8. Devolverlo por correo o subirlo directamente a GitHub (instrucciones en hoja '99_Envio').", "body"),
+        ("6. Ir a la hoja '04_FedWatch' y completar la tabla MANUALMENTE con paste desde la pantalla WIRP.", "body"),
+        ("7. Llenar la hoja '05_Notas_Analista' con cualquier anomalia o cambio de contexto observado.", "body"),
+        ("8. CRITICO — Paste Special -> Values: una vez resueltas las formulas, ir a cada hoja de datos", "body"),
+        ("   (02_Datos, 03_SOFR_Futures, 04_FedWatch) y hacer:", "body"),
+        ("     a. Ctrl+A (seleccionar todo)", "body"),
+        ("     b. Ctrl+C (copiar)", "body"),
+        ("     c. Edit -> Paste Special -> Values (Alt+E, S, V en Excel clasico; o boton 'Pegar valores' en cinta)", "body"),
+        ("   Esto reemplaza las formulas =BDH(...) por sus valores literales y CONGELA el snapshot.", "body"),
+        ("   Si no haces esto, cuando otra persona abra el archivo sin Bloomberg veran #N/A en todas las celdas.", "body"),
+        ("9. Escribir FECHA_GUARDADO_VALUES (B10) — la fecha del paso 8.", "body"),
+        ("10. Guardar el archivo con el nombre: BloombergTemplate_TasasMercantil_<YYYY-MM>.xlsx", "body"),
+        ("11. Devolverlo por correo o subirlo directamente a GitHub (instrucciones en hoja '99_Envio').", "body"),
         ("", "blank"),
         ("Notas tecnicas", "h2"),
         ("- Las formulas BDH devuelven valores con fill backward: si la fecha cae feriado, toma el dia habil anterior.", "body"),
@@ -190,8 +226,10 @@ def sheet_instrucciones(wb):
         ("- Dot plot SEP de la Fed: se actualiza solo 4 veces al año, lo cargamos nosotros tras cada FOMC.", "body"),
         ("- Datos internos del libro del banco: fuera del alcance de esta plantilla (ver docs del proyecto).", "body"),
         ("", "blank"),
-        ("Tiempo estimado de carga", "h2"),
-        ("Primera vez: 30-90 segundos. En reaperturas con cache: <10 segundos.", "body"),
+        ("Tiempo estimado", "h2"),
+        ("Carga de formulas BDH: 30-90 segundos en la primera vez; <10 seg con cache.", "body"),
+        ("Paste Special -> Values (paso 8): 1-2 minutos para las 3 hojas de datos.", "body"),
+        ("Total: ~5 minutos por corte.", "body"),
     ]
     for i, (text, kind) in enumerate(rows, start=1):
         cell = ws.cell(row=i, column=1, value=text)
@@ -274,16 +312,22 @@ def sheet_parametros_v2(wb):
         style_header(c)
 
     # filas: (name, value_or_formula, kind, desc, is_input, number_format)
+    #
+    # NOTA CRITICA: NO usar =TODAY() ni "today" en ninguna celda. =TODAY() se
+    # recalcula al reabrir el archivo y rompe la reproducibilidad del snapshot.
+    # FECHA_CARGA y FECHA_GUARDADO_VALUES son inputs manuales que el analista
+    # escribe a mano.
     rows = [
-        ("AS_OF",            None,                              "input", "Ultimo dia habil del mes a reportar — EDITAR esta celda", True,  "yyyy-mm-dd"),
-        ("MES_REPORTE",      '=TEXT(B3,"yyyy-mm")',             "auto",  "YYYY-MM del corte",                                       False, None),
-        ("MES_ANT",          "=EOMONTH(B3,-1)",                 "auto",  "Ultimo dia del mes anterior",                             False, "yyyy-mm-dd"),
-        ("YE_ANT",           "=DATE(YEAR(B3)-1,12,31)",         "auto",  "31-dic del año anterior",                                 False, "yyyy-mm-dd"),
-        ("INI_12M",          "=EDATE(B3,-12)",                  "auto",  "12 meses antes de AS_OF",                                 False, "yyyy-mm-dd"),
-        ("ANALISTA",         None,                              "input", "Nombre del analista que corre la plantilla",              True,  None),
-        ("FECHA_CARGA",      "=TODAY()",                        "auto",  "Fecha en que se guardo este archivo",                     False, "yyyy-mm-dd"),
-        ("BBG_UUID",         None,                              "input", "BBG UUID (opcional)",                                     True,  None),
-        ("NOTAS_RAPIDAS",    None,                              "input", "Cualquier anomalia detectada al cargar",                  True,  None),
+        ("AS_OF",                  None,                              "input", "Ultimo dia habil del mes a reportar — EDITAR esta celda", True,  "yyyy-mm-dd"),
+        ("MES_REPORTE",            '=TEXT(B3,"yyyy-mm")',             "auto",  "YYYY-MM del corte",                                       False, None),
+        ("MES_ANT",                "=EOMONTH(B3,-1)",                 "auto",  "Ultimo dia del mes anterior",                             False, "yyyy-mm-dd"),
+        ("YE_ANT",                 "=DATE(YEAR(B3)-1,12,31)",         "auto",  "31-dic del año anterior",                                 False, "yyyy-mm-dd"),
+        ("INI_12M",                "=EDATE(B3,-12)",                  "auto",  "12 meses antes de AS_OF",                                 False, "yyyy-mm-dd"),
+        ("ANALISTA",               None,                              "input", "Nombre del analista que corre la plantilla",              True,  None),
+        ("FECHA_CARGA",            None,                              "input", "Fecha en que se cargaron los datos — ESCRIBIR a mano (NO =TODAY())", True, "yyyy-mm-dd"),
+        ("FECHA_GUARDADO_VALUES",  None,                              "input", "Fecha en que se hizo Paste Special -> Values — ESCRIBIR a mano", True, "yyyy-mm-dd"),
+        ("BBG_UUID",               None,                              "input", "BBG UUID (opcional)",                                     True,  None),
+        ("NOTAS_RAPIDAS",          None,                              "input", "Cualquier anomalia detectada al cargar",                  True,  None),
     ]
     for i, (n, v, k, d, is_input, fmt) in enumerate(rows, start=3):
         ws.cell(row=i, column=1, value=n).font = Font(bold=True)

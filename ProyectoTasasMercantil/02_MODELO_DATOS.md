@@ -52,7 +52,7 @@ PK: `(instrument, tenor_days, as_of_date, snapshot_date)`.
 
 ---
 
-### `yield_curve` — puntos de curva soberana / corporativa
+### `yield_curve` — puntos de curva nominal soberana / corporativa
 
 | col | tipo |
 |---|---|
@@ -71,6 +71,72 @@ PK: `(curve_id, tenor_label, as_of_date, snapshot_date)`.
 Vista materializada por corte: `curve_snapshot_<YYYY-MM>` que contiene las 3 curvas
 canónicas (cierre año anterior, cierre mes anterior, cierre mes en curso) por
 `curve_id`.
+
+---
+
+### `real_curve` — curva real (TIPS) y curvas reales soberanas
+
+Misma forma que `yield_curve` pero el `yield` reportado es **real** (descontando
+inflación esperada implícita). Separamos para distinguir conceptualmente y para
+evitar mezclar nominales con reales en queries.
+
+| col | tipo |
+|---|---|
+| `curve_id` | str (TIPS, UKGGI, FRRR, ...) |
+| `country` | str |
+| `tenor_label` | str (5Y, 10Y, 20Y, 30Y) |
+| `tenor_years` | float |
+| `as_of_date` | date |
+| `real_yield` | float (porcentaje) |
+| `source` | str |
+| `snapshot_date` | date |
+
+PK: `(curve_id, tenor_label, as_of_date, snapshot_date)`.
+
+---
+
+### `breakeven` — inflación implícita de mercado
+
+Diferencia entre yield nominal y real al mismo tenor. Es la mejor lectura
+de **expectativa de inflación que cotiza el mercado** y entra como feature
+clave del modelo predictivo (reaction function).
+
+| col | tipo |
+|---|---|
+| `country` | str (US, GB, FR, ...) |
+| `tenor_label` | str (2Y, 5Y, 10Y, 30Y) |
+| `tenor_years` | float |
+| `as_of_date` | date |
+| `breakeven_rate` | float (porcentaje, ej. 2.35 = 2.35% inflación esperada a 5Y) |
+| `source` | str |
+| `snapshot_date` | date |
+
+PK: `(country, tenor_label, as_of_date, snapshot_date)`.
+
+Derivado opcional: `5y5y_forward_breakeven` = breakeven 5Y forward 5Y → métrica
+estándar de "inflación esperada de largo plazo descontada por mercado".
+
+---
+
+### `swap_curve` — curva de swap (USD SOFR OIS, EURIBOR, SONIA, …)
+
+La curva swap fixed-leg es la mejor proxy de **expectativa de tasa flotante
+forward** del horizonte respectivo (más limpia que UST porque está exenta de
+credit risk del soberano y de term premium puro de UST). Lectura clave del
+modelo: el spread UST – Swap (asset swap spread) y la pendiente del swap.
+
+| col | tipo |
+|---|---|
+| `swap_family` | str (SOFR_OIS, EONIA_OIS, ESTR_OIS, SONIA_OIS, EURIBOR_3M, ...) |
+| `country` | str |
+| `tenor_label` | str (1Y, 2Y, 5Y, 10Y, 30Y) |
+| `tenor_years` | float |
+| `as_of_date` | date |
+| `rate` | float (porcentaje) |
+| `source` | str |
+| `snapshot_date` | date |
+
+PK: `(swap_family, tenor_label, as_of_date, snapshot_date)`.
 
 ---
 
