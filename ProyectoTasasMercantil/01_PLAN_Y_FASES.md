@@ -147,12 +147,44 @@ Detalle metodológico completo en `08_CORPORATIVAS_SPREADS.md`.
 
 | Corte | Tipo | Foco principal |
 |---|---|---|
-| 2026-01 | backfill | construir Fase 1 USA completa; placeholders 2–5 + corporativas; primer test del modelo predictivo |
-| 2026-02 | backfill | profundizar Fase 2 Global |
-| 2026-03 | backfill | profundizar Fase 3 Panamá |
-| 2026-04 | backfill | profundizar Fase 4 Mercantil (cualitativo) |
+| 2026-01 | backfill de informe | construir Fase 1 USA completa; placeholders 2–5 + corporativas |
+| 2026-02 | backfill de informe | profundizar Fase 2 Global |
+| 2026-03 | backfill de informe | profundizar Fase 3 Panamá |
+| 2026-04 | backfill de informe | profundizar Fase 4 Mercantil (cualitativo) |
 | 2026-05 | en vivo | primer corte "real" — todas las fases con cierre at-mes |
 | 2026-06+ | recurrente | ciclo mensual estable |
 
-Los backfills 2026-01 a 2026-04 son críticos para tener (a) histórico publicable y
-(b) **datos para entrenar y backtestear el modelo predictivo**.
+Los backfills 2026-01 a 2026-04 son críticos para tener **histórico publicable
+del informe** y poder mostrar la ventana 12M completa desde el primer corte
+publicado.
+
+## Backfill de DATOS para el modelo (≠ backfill de informes)
+
+**El modelo predictivo se entrena con una serie histórica mucho más larga que
+los 5 cortes mensuales del informe**. Esta es una distinción importante:
+
+| | Backfill de informes | Backfill de datos para el modelo |
+|---|---|---|
+| Propósito | publicar cortes mensuales retroactivos | entrenar y backtestear el modelo Mercantil |
+| Ventana | ene 2026 → hoy (5 meses) | **desde 2010 o 2015 → hoy** (10–16 años) |
+| Granularidad | mensual (1 snapshot por mes) | diaria |
+| Fuente | Bloomberg (plantilla del analista) + scrapers | FRED + ALFRED (vintage) + Bloomberg histórico |
+| Almacenamiento | un folder por corte | tablas en `data/external/tasas_mercantil/*.parquet` |
+
+El modelo predictivo necesita **vintage data**: lo que se sabía en cada `as_of_date`
+pasada. Eso lo provee FRED ALFRED para macro (CPI, payrolls, GDP) y Bloomberg
+histórico para tasas (que **no** se revisan, por lo que el price observable hoy
+para una fecha pasada == lo que se observaba ese día). Ver `02_MODELO_DATOS.md`
+§ Backtesting honesto y `07_MODELO_PREDICTIVO.md`.
+
+## Ventana temporal por corte (lectura del informe)
+
+Cada corte publicado muestra los siguientes ejes temporales:
+
+- **Year-to-date corrido** — desde 01-ene del año hasta `as_of_date`.
+- **Últimos 12 meses corridos** — desde `as_of_date - 12 meses` hasta `as_of_date`. Esta es la ventana principal de los gráficos de series.
+- **Comparación con mes anterior** — `as_of_date(mes_anterior)` como referencia para tabla de deltas.
+- **Comparación con cierre del año anterior** — 31-dic-(YYYY-1) como referencia para curva (cierre año / mes anterior / mes en curso).
+
+Por lo tanto, para publicar el corte de mayo 2026 necesitamos serie diaria al
+menos desde mayo 2025 para los gráficos. El backfill de datos lo provee.

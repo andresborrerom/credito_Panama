@@ -62,10 +62,11 @@ ProyectoTasasMercantil/
 
 | Hito | Estado |
 |---|---|
-| Estructura del proyecto + docs base | ✅ creada en este commit |
-| Plantilla Bloomberg `BloombergTemplate_TasasMercantil.xlsx` | ⏳ próxima sesión |
+| Estructura del proyecto + docs base | ✅ creada |
+| Plantilla Bloomberg `BloombergTemplate_TasasMercantil.xlsx` (v0.1) | ✅ generada — `plantilla_bloomberg/` |
+| Backfill de datos para modelo (FRED/BBG, desde 2010) | ⏳ pendiente |
 | Pipeline ETL Fase 1 (USA: Fed/SOFR/UST/FedWatch/SOFR futures) | ⏳ pendiente |
-| Backfill cortes ene–may 2026 (sin look-ahead) | ⏳ pendiente |
+| Backfill informes ene–may 2026 (cortes publicables) | ⏳ pendiente |
 | Deck Fase 1 publicable | ⏳ pendiente |
 | Esbozos Fases 2–5 | ⏳ pendiente |
 | Capítulo spreads corporativos | ⏳ pendiente |

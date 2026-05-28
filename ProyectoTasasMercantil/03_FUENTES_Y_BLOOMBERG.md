@@ -38,56 +38,66 @@
 
 ## Plantilla Bloomberg `BloombergTemplate_TasasMercantil.xlsx`
 
-Se entrega al analista cada mes con la `as_of_date` fijada. El analista la corre
-en una terminal con Bloomberg API conectado, guarda los valores y devuelve el
-archivo por correo (lo subimos a `cortes/YYYY-MM/input/`).
+✅ **Archivo generado.** Vive en `plantilla_bloomberg/BloombergTemplate_TasasMercantil.xlsx`.
+Regenerable corriendo `python3 plantilla_bloomberg/build_bloomberg_template.py`.
 
-### Estructura de hojas
+Se entrega al analista cada mes. El analista edita una sola celda (`AS_OF` en la
+hoja `01_Parametros`), espera que Bloomberg resuelva, y devuelve el `.xlsx` con
+valores (ver `99_Envio` adentro del archivo).
 
-| Hoja | Propósito | Tipo de fórmula |
-|---|---|---|
-| `00_Parametros` | celdas únicas: `AS_OF`, `MES_ANT`, `YE_ANTERIOR` | manual |
-| `01_USA_Policy` | Fed Funds upper/lower, IORB, ON RRP | `=BDP` para spot + `=BDH` para serie diaria |
-| `02_USA_SOFR_UST` | SOFR ON/1M/3M/6M/12M y UST 1M..30Y para 3 fechas | `=BDP` + `=BDH` |
-| `03_USA_SOFR_Futures` | strip de SR3 próximos 8 vencimientos, precio + implied rate | `=BDP` |
-| `04_USA_FedWatch` | tabla cruzada meetings × decisions con probs | `=BDP("...","WIRP_...")` o tabla manual |
-| `05_Global_Policy` | tasas política BCE/BoE/BoJ/PBoC/BCB/Banxico/BanRep | `=BDP` |
-| `06_Global_Curves` | curva 10Y de 7 países | `=BDP` |
-| `07_FX` | G10 + LatAm spot y NDF | `=BDP` |
-| `08_EMBI` | índices y subíndices | `=BDP` |
-| `09_Corp_Indices` | ICE BofA + CEMBI por rating y plazo | `=BDP` |
-| `10_VEN_FX` | Tipo de cambio oficial BCV (referencial si BBG lo tiene) | `=BDP` o manual |
-| `99_Output_LongFormat` | resultado consolidado pivot, una fila por (tabla, instrument, tenor, as_of_date, value) | fórmula |
+**Versión actual:** v0.1 — 64 instrumentos + 8 futuros SOFR + FedWatch (paste manual).
 
-La hoja `99_Output_LongFormat` es lo que parsea el pipeline. Los analistas solo
-revisan que `=BDP` no haya devuelto `#N/A` y guardan.
+### Estructura final (implementada en v0.1)
 
-**Nota:** los datos del BCV (Fase 5) **no** vienen por Bloomberg. Tienen un
-extractor web separado que corre automático (ver `04_PLAYBOOK_MENSUAL.md`).
+Se simplificó a un **único formato long en la hoja `02_Datos`** en vez de hojas
+por categoría. Razón: más fácil de parsear, más fácil de mantener el catálogo,
+menos sitios donde el analista puede equivocarse.
 
-### Convenciones de campos Bloomberg
+| Hoja | Propósito |
+|---|---|
+| `00_Instrucciones` | Cómo correr la plantilla (texto para el analista) |
+| `01_Parametros` | `AS_OF` (input), demás fechas se calculan solas |
+| `02_Datos` | Una fila por instrumento × ticker; columnas con valores a `AS_OF`, `MES_ANT`, `YE_ANT`, `INI_12M`. **64 instrumentos** cubriendo Fases 1–5 + capítulo corporativo |
+| `03_SOFR_Futures` | Strip SR3 próximos 8 vencimientos (continuous tickers `SFR1` ... `SFR8`) |
+| `04_FedWatch` | Paste manual desde pantalla WIRP (no hay BDP confiable para esto) |
+| `05_Notas_Analista` | Tickers que fallaron + eventos + sugerencias |
+| `99_Envio` | Instrucciones de cómo devolver el archivo |
 
-- Tasas: `PX_LAST` para spot; `LAST_PRICE` para algunos índices.
-- Yields de UST: usamos `BLP` constant maturity (`USGG2YR Index ... PX_LAST`).
-- Para histórico: `=BDH("USGG10YR Index","PX_LAST", as_of_date, as_of_date)`.
-- Para FedWatch: la analítica WIRP devuelve la tabla. Si la versión de Excel del
-  cliente no soporta WIRP, el analista paste-as-values desde la pantalla WIRP.
+**Categorías cubiertas en `02_Datos`:**
+- `policy` — Fed, ECB, BoE, BoJ, PBoC, BCB, Banxico, BanRep (8 instrumentos)
+- `money_market` — SOFR ON / averages / term (7 instrumentos)
+- `yield_curve` — UST 1M–30Y + Bund/Gilt/JGB/BR/MX/CO 10Y (17 instrumentos)
+- `fx` — G10 + LatAm + USDVES oficial (10 instrumentos)
+- `credit_index` — EMBI/CEMBI subíndices + ICE BofA IG y HY por rating (16 instrumentos)
 
-### Spec del archivo de output que el analista devuelve
+**Nota:** los datos del BCV (Fase 5) y bolívar paralelo **no** vienen por Bloomberg.
+Tienen extractores web separados (ver `04_PLAYBOOK_MENSUAL.md`).
 
-El analista nos devuelve el `.xlsx` con valores cuajados (no fórmulas). Solo
-necesitamos que la hoja `99_Output_LongFormat` esté completa. Esquema de columnas:
+### Convenciones de fórmulas implementadas
 
+Cada celda de valor en `02_Datos` usa:
+
+```excel
+=IFERROR(
+   INDEX(BDH(ticker, field, fecha, fecha, "Days=A", "Fill=B", "Dir=H"), 1, 2),
+   BDH(ticker, field, fecha, fecha, "Days=A", "Fill=B")
+)
 ```
-table_name | country | instrument | tenor_label | tenor_years | as_of_date | value | unit | notes
-```
 
-Ejemplo de fila válida:
-```
-yield_curve | US | UST | 10Y | 10.0 | 2026-01-30 | 4.18 | percent |
-sofr_futures | US | SR3M6 | — | 0.25 | 2026-01-30 | 96.05 | price |
-fx_rates | — | EURUSD | SPOT | 0.0 | 2026-01-30 | 1.0823 | rate |
-```
+- `BDH` con `start=end=fecha` para un solo día.
+- `Days=A` + `Fill=B` para tomar día hábil anterior si la fecha es feriado.
+- `INDEX(..., 1, 2)` extrae solo el valor (la primera columna del array es la fecha).
+- `IFERROR` con fallback para versiones de Excel sin dynamic arrays.
+
+Detalle completo en `plantilla_bloomberg/README.md`.
+
+### Spec del archivo que el analista devuelve
+
+El analista devuelve el `.xlsx` con valores cargados (las fórmulas se vuelven
+valores al guardar si la conexión BBG funcionó). El parser lee `02_Datos`
+columnas `[#, categoria, region, instrument, tenor_label, tenor_years, ticker,
+field, unit, val_AS_OF, val_MES_ANT, val_YE_ANT, val_INI_12M, nota]` directamente
+— no necesita una hoja "pivot long format" aparte porque `02_Datos` ya es long.
 
 ## Fuentes públicas para backfill
 

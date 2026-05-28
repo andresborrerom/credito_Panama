@@ -2,6 +2,20 @@
 
 Un subfolder por corte mensual. Convención: `YYYY-MM` (año-mes del cierre).
 
+## Cada corte muestra una ventana de 12 meses corridos
+
+El informe del mes `YYYY-MM` (cierre = último día hábil del mes) muestra:
+
+- **YTD corrido**: 01-ene-YYYY → `as_of_date`.
+- **Últimos 12 meses corridos**: (`as_of_date` − 12 meses) → `as_of_date`. Esta es la
+  ventana primaria de los gráficos de series temporales.
+- **Comparación principal**: vs cierre del mes anterior y vs 31-dic-(YYYY-1).
+
+Esto aplica a todos los cortes — incluido los de backfill. Por ejemplo, el corte
+de **enero 2026** muestra gráficos con datos diarios de enero 2025 a enero 2026.
+Por eso el pipeline de datos arranca mucho antes que el primer corte publicable
+(ver `01_PLAN_Y_FASES.md` § Backfill de datos para el modelo).
+
 ## Lifecycle de un corte
 
 ```

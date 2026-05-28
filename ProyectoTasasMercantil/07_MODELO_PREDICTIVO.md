@@ -68,11 +68,27 @@ backtest. Comenzamos con pesos manuales y los iteramos.
 
 ## Backtest honesto — diseño
 
-### Universo de evaluación
+### Universo de entrenamiento y evaluación
 
-- Periodo de prueba: enero 2020 a diciembre 2025 (6 años).
-- Granularidad: cierre de cada mes.
-- Total de cortes evaluados: ~72.
+- **Universo de datos crudos:** desde **2010-01-01** hasta hoy. ~16 años de serie diaria.
+  Esta es la "memoria" que el modelo necesita.
+  - Si conseguir limpio el periodo 2010–2014 cuesta mucho, se acepta arrancar en 2015-01-01 — pero **no se arranca en 2020** porque dejaríamos al modelo sin ver el régimen pre-COVID.
+- **Universo de evaluación (backtest):** rolling window desde **2015-01** hasta el corte vigente.
+  - Granularidad: cierre de cada mes.
+  - Total de cortes evaluados al inicio: ~132.
+- **Régimenes que el backtest debe cubrir explícitamente:**
+  - (a) Post-GFC zero-lower bound suave (2015–2018).
+  - (b) Hike cycle Powell 2018.
+  - (c) Pivot dovish + cuts 2019.
+  - (d) Crisis COVID + zero-bound estricto (2020–2021).
+  - (e) Hike cycle agresivo (2022–2023).
+  - (f) Hold (2024).
+  - (g) Cut cycle (2025+).
+
+**Importante:** el modelo se **entrena continuamente** (no se congela). Cada
+nuevo corte mensual incorpora el dato realizado al training set y reentrena.
+Por eso necesitamos el pipeline de **datos diarios corriendo desde el día 1** —
+no esperar a tener "todos los datos" para empezar.
 
 ### Procedimiento
 
