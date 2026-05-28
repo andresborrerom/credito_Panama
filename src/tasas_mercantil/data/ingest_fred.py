@@ -37,15 +37,27 @@ class FREDConfig:
     user_agent: str = USER_AGENT
 
 
-def _http_get(url: str, config: FREDConfig) -> str:
-    """GET con timeout y user-agent. Lanza si HTTP != 200."""
-    resp = requests.get(
-        url,
-        headers={"User-Agent": config.user_agent},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return resp.text
+def _http_get(url: str, config: FREDConfig, max_retries: int = 3) -> str:
+    """GET con timeout, user-agent y reintentos con backoff exponencial.
+    Lanza si HTTP != 200 tras agotar reintentos.
+    """
+    last_exc = None
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(
+                url,
+                headers={"User-Agent": config.user_agent},
+                timeout=60,
+            )
+            resp.raise_for_status()
+            return resp.text
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last_exc = e
+            time.sleep(2 ** attempt)  # 1, 2, 4 segundos
+        except requests.HTTPError as e:
+            # 404 etc no se reintenta — el vintage no existe
+            raise
+    raise last_exc
 
 
 def fetch_series(
@@ -138,16 +150,18 @@ def fetch_series_vintage(
     suave con rate limit respetado.
     """
     frames = []
+    skipped = 0
     for vd in vintage_dates:
         try:
             df = fetch_series_alfred_one_vintage(
                 series_id, vd, start=start, end=end, config=config
             )
             frames.append(df)
-        except requests.HTTPError as e:
-            # Algunos vintage_dates podrian no existir (antes del primer release).
-            # Lo registramos y seguimos.
-            print(f"[WARN] {series_id} @ {vd}: {e}")
+        except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
+            # vintage_date pre-primer-release devuelve HTTP error o vacio. Skip silencioso.
+            skipped += 1
+    if skipped > 0:
+        print(f"  [{series_id}] {skipped} vintages saltados (sin data en ALFRED)")
     if not frames:
         return pd.DataFrame(columns=["feature_name", "obs_date", "value", "vintage_date"])
     return pd.concat(frames, ignore_index=True)
