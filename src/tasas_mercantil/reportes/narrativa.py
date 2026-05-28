@@ -15,6 +15,20 @@ Conviction = Literal["Alta", "Media", "Baja"]
 
 
 @dataclass
+class Editorial:
+    """Bloque al pie de cada lámina con cuatro lecturas estructuradas.
+
+    Patrón Apollo + nuestro: cada lámina aclara qué dice, de dónde sale, qué
+    acción dispara, y cómo se lee si hay gráfico. Sin esto la lámina cae en
+    la trampa de "interpretar libre".
+    """
+    que_dice: str        # la conclusión central de la lámina
+    por_que: str         # de dónde sale (fuente, cálculo, observación)
+    para_que: str        # qué acción concreta dispara
+    como_se_lee: str = ""  # explicación del gráfico/tabla — vacío si trivial
+
+
+@dataclass
 class TLDRMessage:
     """Un mensaje del TL;DR. Maximo 3 por corte."""
     headline: str            # 1 frase, max 130 caracteres. Empieza con "Creemos que..."

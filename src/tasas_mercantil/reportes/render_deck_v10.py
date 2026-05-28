@@ -1,18 +1,14 @@
-"""Render deck v1.0 — 9 laminas accionables segun 13b_BENCHMARK_REPORTES.md.
+"""Render deck v1.0.2 — fuentes grandes + editorial estructurado por subplot.
 
-Aplica los 5 patrones obligatorios:
-1. Una idea por lamina.
-2. Sweet spot explicito con nivel/target.
-3. Definicion operativa antes de la opinion.
-4. Trigger calendar al inicio (lamina 1-2), no al final.
-5. Conviction tags Alta/Media/Baja en cada vista y mensaje del TL;DR.
+Cambios sobre v1.0.1:
+- Editorial al pie es un SUBPLOT, no annotation flotante. Por construccion
+  no se superpone con la visual principal.
+- Editorial estructurado en 4 lecturas: Que dice / Por que / Para que /
+  Como se lee.
+- Fuentes mas grandes (titulo 30, header tabla 17, cell 16, editorial 16).
+- Cada lamina define su Editorial explicitamente.
 
-Voz: primera persona del grupo ("creemos que...", "vigilamos..."). Camilo + Andres
-son los duenios editoriales.
-
-Uso:
-    python -m src.tasas_mercantil.reportes.render_deck_v10 \
-        --as-of 2026-05-29 --corte 2026-05
+Voz: primera persona del grupo. Disclaimer corto en index.
 """
 from __future__ import annotations
 
@@ -33,6 +29,7 @@ from ..data.queries import (
 )
 from ..modelo.pieces.implied_path import compute_implied_path
 from .narrativa import (
+    Editorial,
     Narrativa,
     TLDRMessage,
     TacticalView,
@@ -45,14 +42,14 @@ from .narrativa import (
 # Diseno visual
 # ============================================================================
 COLORS = {
-    "primary":   "#0E2A47",  # azul Mercantil SFI (placeholder hasta paleta oficial)
+    "primary":   "#0E2A47",
     "secondary": "#5A8FB0",
     "accent":    "#D9A24D",
     "muted":     "#999999",
     "danger":    "#C2455D",
     "success":   "#3E8B6A",
     "bg":        "#FAFAFA",
-    "editorial": "#EDF1F6",  # fondo del bloque editorial al pie
+    "editorial": "#EDF1F6",
     "text":      "#222",
     "subtle":    "#555",
 }
@@ -71,26 +68,27 @@ DIRECTION_COLOR = {
     "Neutral":     COLORS["muted"],
 }
 
-# Tamanos de fuente — escalados para deck 16:9 leible en presentacion
-TITLE_SIZE = 26
-SUBTITLE_SIZE = 16
-TABLE_HEADER_SIZE = 15
-TABLE_CELL_SIZE = 14
-EDITORIAL_SIZE = 15
-AXIS_LABEL_SIZE = 14
-TICK_SIZE = 13
+# Fuentes escaladas para deck 1920x1080 leible en presentacion
+TITLE_SIZE = 30
+SUBTITLE_SIZE = 18
+SECTION_SIZE = 22       # anotaciones tipo "Curva UST · 3 cortes"
+TABLE_HEADER_SIZE = 17
+TABLE_CELL_SIZE = 16
+EDITORIAL_HEADER_SIZE = 17
+EDITORIAL_CELL_SIZE = 16
+AXIS_LABEL_SIZE = 16
+TICK_SIZE = 15
 
-FONT = {"family": "Helvetica, Arial, sans-serif", "size": 14, "color": COLORS["text"]}
+FONT = {"family": "Helvetica, Arial, sans-serif", "size": 16, "color": COLORS["text"]}
 LAYOUT_DEFAULTS = {
     "font": FONT,
     "plot_bgcolor": "white",
     "paper_bgcolor": "white",
-    "margin": {"l": 70, "r": 40, "t": 110, "b": 200},  # bottom para editorial
+    "margin": {"l": 80, "r": 50, "t": 130, "b": 60},
 }
 
 
 def _slide_title(text: str, subtitle: str = "") -> dict:
-    """Titulo grande, subtitulo en linea separada con espacio."""
     full = f"<b>{text}</b>"
     if subtitle:
         full += (
@@ -104,59 +102,52 @@ def _slide_title(text: str, subtitle: str = "") -> dict:
     )
 
 
-def _add_editorial(fig: go.Figure, text: str) -> go.Figure:
-    """Agrega bloque editorial al pie (texto plano corto, sin HTML)."""
-    fig.add_annotation(
-        text=text,
-        x=0.5, y=-0.22,
-        xref="paper", yref="paper",
-        xanchor="center", yanchor="top",
-        showarrow=False,
-        font=dict(size=EDITORIAL_SIZE, color=COLORS["text"]),
-        align="left",
-        bgcolor=COLORS["editorial"],
-        bordercolor=COLORS["primary"],
-        borderwidth=1,
-        borderpad=18,
-        width=1500,
+def _editorial_table(ed: Editorial) -> go.Table:
+    """Construye la tabla editorial al pie. 3 o 4 columnas segun como_se_lee."""
+    headers = ["Qué dice", "Por qué", "Para qué"]
+    values = [[ed.que_dice], [ed.por_que], [ed.para_que]]
+    if ed.como_se_lee:
+        headers.append("Cómo se lee")
+        values.append([ed.como_se_lee])
+
+    return go.Table(
+        columnwidth=[1] * len(headers),
+        header=dict(
+            values=headers,
+            fill_color=COLORS["primary"],
+            font=dict(color="white", size=EDITORIAL_HEADER_SIZE, family=FONT["family"]),
+            align="left",
+            height=42,
+        ),
+        cells=dict(
+            values=values,
+            fill_color=COLORS["editorial"],
+            font=dict(size=EDITORIAL_CELL_SIZE, color=COLORS["text"], family=FONT["family"]),
+            align="left",
+            height=180,  # alto generoso para texto multilinea
+        ),
     )
-    return fig
 
 
 # ============================================================================
-# LAMINA 1 — TL;DR (3 mensajes + conviction tags)
+# LAMINA 1 — TL;DR
 # ============================================================================
 def lamina_1_tldr(narrativa: Narrativa) -> go.Figure:
-    """TL;DR con los 3 mensajes del mes + conviction tags. Sin HTML inline en cells."""
     n_msgs = len(narrativa.tldr_messages)
     fig = make_subplots(
-        rows=n_msgs, cols=1,
-        specs=[[{"type": "table"}]] * n_msgs,
-        vertical_spacing=0.05,
+        rows=n_msgs + 1, cols=1,
+        row_heights=[0.27] * n_msgs + [0.19],  # 3 mensajes + editorial
+        specs=[[{"type": "table"}]] * (n_msgs + 1),
+        vertical_spacing=0.04,
     )
 
     for i, msg in enumerate(narrativa.tldr_messages, start=1):
         style = CONVICTION_STYLE[msg.conviction]
-
-        # Headers: aqui Plotly si soporta HTML para que se vea grande/bold
-        header_values = [
-            f"Mensaje {i}",
-            f"Convicción {style['label']}",
-            msg.relevant_unit,
-        ]
-
-        # Cells: texto PLANO, sin <b>, sin <i>. El formato sale via font + fill.
-        cell_values = [
-            [msg.headline],
-            [f"Trigger: {msg.trigger}"],
-            [""],
-        ]
-
         fig.add_trace(
             go.Table(
                 columnwidth=[55, 22, 23],
                 header=dict(
-                    values=header_values,
+                    values=[f"Mensaje {i}", f"Convicción {style['label']}", msg.relevant_unit],
                     fill_color=[COLORS["primary"], style["bg"], COLORS["bg"]],
                     font=dict(
                         color=["white", style["fg"], COLORS["text"]],
@@ -164,32 +155,33 @@ def lamina_1_tldr(narrativa: Narrativa) -> go.Figure:
                         family=FONT["family"],
                     ),
                     align="left",
-                    height=42,
+                    height=46,
                 ),
                 cells=dict(
-                    values=cell_values,
+                    values=[[msg.headline], [f"Trigger: {msg.trigger}"], [""]],
                     fill_color="white",
                     align="left",
-                    height=60,
-                    font=dict(size=TABLE_CELL_SIZE + 1, color=COLORS["text"]),
+                    height=80,
+                    font=dict(size=TABLE_CELL_SIZE + 1, color=COLORS["text"], family=FONT["family"]),
                 ),
             ),
             row=i, col=1,
         )
+
+    ed = Editorial(
+        que_dice="Tres ideas que mueven el reporte de este mes; cada una con su nivel de convicción y el evento concreto que la confirma o la rompe.",
+        por_que="Síntesis editorial de Camilo + Andrés, validada contra los datos de mercado del cierre y el path implícito del modelo Mercantil.",
+        para_que="Si solo se lee una página del deck, esta es. Define el marco de discusión para el comité y orienta los movimientos del mes en cada unidad relevante.",
+    )
+    fig.add_trace(_editorial_table(ed), row=n_msgs + 1, col=1)
 
     fig.update_layout(
         title=_slide_title(
             "TL;DR — 3 mensajes del mes",
             f"Corte {narrativa.report_month} · {narrativa.autor_principal}",
         ),
-        height=280 * n_msgs + 200,
+        height=1080,
         **LAYOUT_DEFAULTS,
-    )
-    _add_editorial(
-        fig,
-        "Tres ideas que mueven el reporte de este mes. Cada una con su nivel de "
-        "convicción y el evento concreto que la confirma o la rompe. Si solo lee "
-        "una página del deck, esta es."
     )
     return fig
 
@@ -198,10 +190,16 @@ def lamina_1_tldr(narrativa: Narrativa) -> go.Figure:
 # LAMINA 2 — Tactical View Table
 # ============================================================================
 def lamina_2_tactical_view_table(narrativa: Narrativa) -> go.Figure:
-    """Tabla con vistas tacticas. Texto PLANO en cells. Color via font.color por columna."""
     views = narrativa.tactical_views
 
-    # Columnas como listas (texto plano, sin tags)
+    fig = make_subplots(
+        rows=2, cols=1,
+        row_heights=[0.65, 0.35],
+        specs=[[{"type": "table"}], [{"type": "table"}]],
+        vertical_spacing=0.06,
+    )
+
+    # Tabla principal — texto plano + colores por columna
     col_activo     = [v.activo for v in views]
     col_direccion  = [v.direccion for v in views]
     col_horizonte  = [v.horizonte for v in views]
@@ -211,31 +209,24 @@ def lamina_2_tactical_view_table(narrativa: Narrativa) -> go.Figure:
     col_if_wrong   = [v.if_wrong for v in views]
     col_trigger    = [v.trigger for v in views]
 
-    # Color del texto por columna (listas de length=n_filas)
     text = COLORS["text"]
-    fc_activo     = [text] * len(views)
-    fc_direccion  = [DIRECTION_COLOR.get(v.direccion.split()[0], COLORS["muted"]) for v in views]
-    fc_horizonte  = [text] * len(views)
-    fc_conviction = [CONVICTION_STYLE[v.conviction]["fg"] for v in views]
-    fc_what       = [text] * len(views)
-    fc_if_right   = [text] * len(views)
-    fc_if_wrong   = [text] * len(views)
-    fc_trigger    = [text] * len(views)
+    fc_default     = [text] * len(views)
+    fc_direccion   = [DIRECTION_COLOR.get(v.direccion.split()[0], COLORS["muted"]) for v in views]
+    fc_conviction  = [CONVICTION_STYLE[v.conviction]["fg"] for v in views]
 
-    # Fill por columna; conviction tiene fill propio para destacar
     def alt_fill(n): return ["#FFFFFF" if i % 2 == 0 else COLORS["bg"] for i in range(n)]
     fill_default   = alt_fill(len(views))
     fill_conviction = [CONVICTION_STYLE[v.conviction]["bg"] for v in views]
 
-    fig = go.Figure(data=[go.Table(
-        columnwidth=[12, 10, 6, 9, 18, 16, 16, 13],
+    fig.add_trace(go.Table(
+        columnwidth=[11, 11, 6, 9, 18, 16, 16, 13],
         header=dict(
             values=["Activo", "Dirección", "Horiz.", "Convicción",
                     "WHAT", "WHAT IF RIGHT", "WHAT IF WRONG", "TRIGGER"],
             fill_color=COLORS["primary"],
             font=dict(color="white", size=TABLE_HEADER_SIZE, family=FONT["family"]),
             align="left",
-            height=44,
+            height=46,
         ),
         cells=dict(
             values=[col_activo, col_direccion, col_horizonte, col_conviction,
@@ -243,37 +234,39 @@ def lamina_2_tactical_view_table(narrativa: Narrativa) -> go.Figure:
             fill_color=[fill_default, fill_default, fill_default, fill_conviction,
                         fill_default, fill_default, fill_default, fill_default],
             font=dict(
-                color=[fc_activo, fc_direccion, fc_horizonte, fc_conviction,
-                       fc_what, fc_if_right, fc_if_wrong, fc_trigger],
+                color=[fc_default, fc_direccion, fc_default, fc_conviction,
+                       fc_default, fc_default, fc_default, fc_default],
                 size=TABLE_CELL_SIZE,
                 family=FONT["family"],
             ),
             align="left",
-            height=110,
+            height=125,
         ),
-    )])
+    ), row=1, col=1)
+
+    ed = Editorial(
+        que_dice="Cuatro vistas tácticas vigentes: UST 5-10Y overweight (alta), TIPS 10Y neutral (media), SOFR forwards short (baja), spread Panamá en revisión.",
+        por_que="Cada vista nace de un dato del cierre + el contraste contra el path implícito. La convicción la marca el balance entre upside esperado y costo de equivocarse.",
+        para_que="Es el mapa de posiciones que defendemos esta semana. La columna TRIGGER es el chequeo de calibración del próximo mes: si el dato sale del rango, revisamos.",
+        como_se_lee="Cada fila es una vista. WHAT es la afirmación; WHAT IF RIGHT el upside; WHAT IF WRONG el costo del error mitigado; TRIGGER el dato que la confirma o rompe.",
+    )
+    fig.add_trace(_editorial_table(ed), row=2, col=1)
+
     fig.update_layout(
         title=_slide_title(
             "Tactical Views — las posiciones que defendemos hoy",
-            "Cada vista lleva los 4 Ws: qué afirmamos · qué pasa si acertamos · qué cuesta si erramos · qué nos haría revisar",
+            "Cada vista lleva los 4 Ws: WHAT · WHAT IF RIGHT · WHAT IF WRONG · TRIGGER",
         ),
-        height=200 + 130 * len(views) + 220,  # extra para editorial
+        height=1080,
         **LAYOUT_DEFAULTS,
-    )
-    _add_editorial(
-        fig,
-        "Estas son las posiciones de mesa del mes, cuatro vistas tácticas. Las "
-        "publicamos juntas para que se vea el balance — no todo es Alta convicción. "
-        "Si una vista no aguanta el costo del error, se cambia o se elimina."
     )
     return fig
 
 
 # ============================================================================
-# LAMINA 3 — Fed + curva UST (fusion de antiguas 3+4+5)
+# LAMINA 3 — Fed + curva UST
 # ============================================================================
 def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
-    """Curva UST 3 cortes (izq) + implied path Fed Funds (der). Sin subplot_titles que se superponen."""
     ye_anterior = date(as_of.year - 1, 12, 31)
     mes_anterior_ts = as_of - pd.DateOffset(months=1)
     mes_anterior = mes_anterior_ts.date() if isinstance(mes_anterior_ts, pd.Timestamp) else mes_anterior_ts
@@ -285,13 +278,19 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
     ]
     tenors_order = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y", "20Y", "30Y"]
 
-    # SIN subplot_titles (eso es lo que se superponia con el title general)
     fig = make_subplots(
-        rows=1, cols=2,
+        rows=2, cols=2,
+        row_heights=[0.65, 0.35],
         column_widths=[0.55, 0.45],
-        horizontal_spacing=0.10,
+        specs=[
+            [{"type": "xy"}, {"type": "xy"}],
+            [{"type": "table", "colspan": 2}, None],
+        ],
+        horizontal_spacing=0.12,
+        vertical_spacing=0.10,
     )
 
+    # Curva UST (izq)
     for corte_date, label, color in cortes:
         df = get_curve_ust(store, corte_date).dropna(subset=["value"]).copy()
         df["order"] = df["tenor"].map({t: i for i, t in enumerate(tenors_order)})
@@ -300,14 +299,14 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
             go.Scatter(
                 x=df["tenor"], y=df["value"],
                 mode="lines+markers", name=label,
-                line=dict(color=color, width=2.8),
-                marker=dict(size=9),
+                line=dict(color=color, width=3),
+                marker=dict(size=10),
                 legendgroup="curva", legendgrouptitle_text="Curva UST",
             ),
             row=1, col=1,
         )
 
-    # Implied path
+    # Implied path (der)
     pred = compute_implied_path(store, as_of)
     horizontes = [0, 1, 3, 6, 12, 24]
     valores = [
@@ -318,9 +317,9 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
     fig.add_trace(
         go.Scatter(
             x=horizontes, y=valores, mode="lines+markers",
-            name=f"Path implícito (SR3)",
-            line=dict(color=COLORS["accent"], width=3),
-            marker=dict(size=11),
+            name="Path implícito (SR3)",
+            line=dict(color=COLORS["accent"], width=3.5),
+            marker=dict(size=12),
             legendgroup="path", legendgrouptitle_text="Expectativa Fed",
         ),
         row=1, col=2,
@@ -329,21 +328,21 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
         y=pred.fed_funds_now, line=dict(color=COLORS["muted"], dash="dash", width=1.5),
         annotation_text=f"Fed Funds hoy: {pred.fed_funds_now:.2f}%",
         annotation_position="bottom right",
-        annotation_font=dict(size=13, color=COLORS["subtle"]),
+        annotation_font=dict(size=14, color=COLORS["subtle"]),
         row=1, col=2,
     )
 
-    # Anotaciones grandes "izquierda" y "derecha" arriba de cada subplot
+    # Subtitulos de subplots
     fig.add_annotation(
         text="<b>Curva UST · 3 cortes</b>",
-        x=0.22, y=1.04, xref="paper", yref="paper",
-        showarrow=False, font=dict(size=18, color=COLORS["primary"]),
+        x=0.22, y=1.02, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
         xanchor="center",
     )
     fig.add_annotation(
         text="<b>Tasa Fed que descuenta el mercado</b>",
-        x=0.78, y=1.04, xref="paper", yref="paper",
-        showarrow=False, font=dict(size=18, color=COLORS["primary"]),
+        x=0.80, y=1.02, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
         xanchor="center",
     )
 
@@ -362,125 +361,140 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
                      gridcolor="#EEEEEE", ticksuffix="%", row=1, col=2,
                      tickfont=dict(size=TICK_SIZE))
 
+    ed = Editorial(
+        que_dice="Curva UST con pendiente positiva (2s10s +43 bps) y un sweet spot 5-10Y; el mercado descuenta tasas Fed estables a ligeramente alcistas en los próximos 24 meses.",
+        por_que="Curva: datos diarios Bloomberg de constant-maturity UST en 3 fechas — cierre 2025, cierre abril 2026 y hoy. Path: precio del strip SR3 (8 futuros trimestrales) leído como tasa promedio para cada trimestre futuro.",
+        para_que="Refuerza la vista UST 5-10Y overweight (lámina 2). Si la pendiente se aplana <20 bps o el path implícito baja >25 bps, revisamos duración objetivo.",
+        como_se_lee="Izquierda: cuanto más alta y empinada la curva, mejor el carry por plazo. Derecha: el eje horizontal es tiempo futuro; cada punto naranja es la tasa Fed que el mercado paga hoy por cubrirse en ese horizonte.",
+    )
+    fig.add_trace(_editorial_table(ed), row=2, col=1)
+
     fig.update_layout(
         title=_slide_title(
             "Fed Funds + curva UST",
             "Sweet spot 5-10Y · target yield 4.20-4.50%",
         ),
-        height=820,
-        legend=dict(orientation="h", y=-0.20, font=dict(size=13)),
+        height=1080,
+        legend=dict(orientation="h", y=0.46, font=dict(size=14)),
         **LAYOUT_DEFAULTS,
-    )
-    _add_editorial(
-        fig,
-        "Izquierda: la curva UST en tres fotos para ver cómo se movió en el año y "
-        "en el último mes. Hoy es positivamente inclinada (2s10s +43 bps). "
-        "Derecha: lo que el mercado paga hoy por la tasa Fed esperada en cada "
-        "horizonte futuro, leído del strip de futuros SR3. El path descuenta "
-        "tasas estables a ligeramente alcistas; el cut cycle parece terminado."
     )
     return fig
 
 
 # ============================================================================
-# LAMINA SKELETON — para Spreads, Global, Panama, Venezuela, Mercantil
-# Skeletons dimensionados con titulo + bullet de "pendiente" para que el
-# usuario pueda iterar la narrativa en sesion.
+# Skeleton para laminas 4-8 (pendientes de data/narrativa)
 # ============================================================================
-def _lamina_skeleton(titulo: str, subtitulo: str, editorial: str, height: int = 750) -> go.Figure:
-    """Skeleton para laminas pendientes. Texto grande, claro, sin labels confusos."""
-    fig = go.Figure()
+def _lamina_skeleton(titulo: str, subtitulo: str, ed: Editorial) -> go.Figure:
+    fig = make_subplots(
+        rows=2, cols=1,
+        row_heights=[0.60, 0.40],
+        specs=[[{"type": "xy"}], [{"type": "table"}]],
+        vertical_spacing=0.08,
+    )
+
+    fig.add_trace(go.Scatter(x=[0], y=[0], mode="markers", marker=dict(size=0.1), showlegend=False), row=1, col=1)
     fig.add_annotation(
         text="Lámina en construcción",
         showarrow=False,
-        x=0.5, y=0.62,
-        xref="paper", yref="paper",
-        font=dict(size=32, color=COLORS["muted"]),
+        x=0.5, y=0.78, xref="paper", yref="paper",
+        font=dict(size=36, color=COLORS["muted"]),
         xanchor="center",
     )
     fig.add_annotation(
         text="contenido y data llegan en próxima iteración",
         showarrow=False,
-        x=0.5, y=0.45,
-        xref="paper", yref="paper",
-        font=dict(size=16, color=COLORS["subtle"]),
+        x=0.5, y=0.66, xref="paper", yref="paper",
+        font=dict(size=18, color=COLORS["subtle"]),
         xanchor="center",
     )
-    fig.update_xaxes(visible=False)
-    fig.update_yaxes(visible=False)
+    fig.update_xaxes(visible=False, row=1, col=1)
+    fig.update_yaxes(visible=False, row=1, col=1)
+
+    fig.add_trace(_editorial_table(ed), row=2, col=1)
+
     fig.update_layout(
         title=_slide_title(titulo, subtitulo),
-        height=height,
+        height=1080,
+        showlegend=False,
         **LAYOUT_DEFAULTS,
     )
-    _add_editorial(fig, editorial)
     return fig
 
 
 def lamina_4_spreads_corporativos() -> go.Figure:
+    ed = Editorial(
+        que_dice="Va a mostrar el estado de los spreads corporativos USA IG, USA HY y EMBI LatAm vs su media histórica.",
+        por_que="Tabla pivot región × rating × plazo con yield, spread vs UST y percentil 5Y construida desde los subíndices ICE BofA (C0A0–C0A4 para IG, H0A0–H0A3 para HY) y CEMBI vía Bloomberg.",
+        para_que="Disparador de la vista WHAT IF WRONG en la lámina 2: si los spreads se amplían > 50 bps en 30 días, la posición long duration en UST se beneficia (flight-to-quality).",
+        como_se_lee="Pendiente. Diseño previsto: heatmap con color por percentil + sparkline 12M en cada celda relevante.",
+    )
     return _lamina_skeleton(
         "Spreads corporativos — IG, HY, EMBI",
         "Definimos shock al spread como ampliación >50 bps en 30 días",
-        "Va a ser una tabla pivot región × rating × plazo con yield, spread vs UST "
-        "y percentil histórico 5Y. Más un sparkline mostrando los buckets que más se "
-        "movieron este mes. La data llega cuando Antulio confirme acceso a los "
-        "subíndices ICE BofA (C0A0-C0A4 para IG, H0A0-H0A3 para HY) y CEMBI."
+        ed,
     )
 
 
 def lamina_5_global() -> go.Figure:
+    ed = Editorial(
+        que_dice="Va a mostrar el diferencial de política monetaria Fed vs BCE/BoE/BoJ y su impacto en el DXY a 12 meses.",
+        por_que="Lectura del mercado, no modelo propio. Para los bancos centrales no-Fed, en v1.0 no aplica el modelo Mercantil predictivo (ver 13_GLOBALES_Y_OTROS_PAISES.md).",
+        para_que="Contexto del marco global para las decisiones USD del grupo. Un DXY que rompe rango cambia la conversación de la aseguradora con activos EUR y del WM en EM USD.",
+        como_se_lee="Pendiente. Diseño previsto: line plot de spreads de política + DXY a 12M con anotaciones de cada decisión BCE/BoE.",
+    )
     return _lamina_skeleton(
         "Global — BCE/BoE + USD index",
-        "Vigilamos divergencia Fed–BCE y su impacto en DXY",
-        "Aquí va el diferencial de tasa política Fed vs BCE / BoE / BoJ, curva 10Y "
-        "soberana G7 y DXY a 12 meses. Lectura del mercado, no modelo propio: para "
-        "BCE/BoE/BoJ el modelo predictivo Mercantil no aplica en v1.0 (decisión en "
-        "13_GLOBALES_Y_OTROS_PAISES.md)."
+        "Vigilamos divergencia Fed-BCE y su impacto en DXY",
+        ed,
     )
 
 
 def lamina_6_panama() -> go.Figure:
+    ed = Editorial(
+        que_dice="Va a mostrar la curva soberana Panamá vs UST, el spread vs UST en percentil histórico, y los buckets de VCN, Letras del Tesoro y Bonos Hipotecarios locales.",
+        por_que="Datos ya existentes en el proyecto credito_Panama: curves_monthly.parquet, trades.parquet (84,191 operaciones con 18,210 YTM calculados). Trabajo de integración, no nueva ingesta.",
+        para_que="Es la lámina más relevante para Mercantil Banco Panamá. Define si el libro de inversiones recibe duración nueva o si esperamos repricing.",
+        como_se_lee="Pendiente. Diseño previsto: curva Panamá superpuesta con UST + tabla de spreads percentil 5Y + 5 hechos relevantes del mes en Latinex.",
+    )
     return _lamina_skeleton(
         "Panamá — soberana + corporativos locales",
         "Spread PAN 10Y vs UST hoy ~130 bps · mediana 5Y 240 bps",
-        "Conecta con el dataset que ya existe en credito_Panama "
-        "(curves_monthly.parquet, trades.parquet con 18 mil YTMs calculados). "
-        "Lámina con la curva soberana Panamá vs UST, spread vs UST, hechos "
-        "relevantes del mes en Latinex y los buckets de VCN, Letras del Tesoro y "
-        "Bonos Hipotecarios. Es trabajo de integración, no nueva ingesta."
+        ed,
     )
 
 
 def lamina_7_venezuela() -> go.Figure:
+    ed = Editorial(
+        que_dice="Va a mostrar tasa de política BCV, encaje legal, tipo de cambio oficial vs paralelo (promedio de 3 fuentes públicas) y precio de bonos VEN / PDVSA.",
+        por_que="Scrapers propios para BCV (publica con lag) y promedio Monitor Dólar + EnParaleloVzla + DolarToday para el paralelo. Bonos VEN/PDVSA reportados a precio porque están en default.",
+        para_que="Define el marco de Banco Mercantil Venezuela: brecha cambiaria condiciona la lectura del balance dolarizado y el riesgo regulatorio de la operación local.",
+        como_se_lee="Pendiente. Diseño previsto: dual axis (oficial vs paralelo) + tabla con encaje, tasa BCV y posición soberana defaulteada.",
+    )
     return _lamina_skeleton(
         "Venezuela — BCV vs paralelo + bonos",
         "Brecha cambiaria oficial-paralelo y status PDVSA / VENZ defaulteados",
-        "Aquí va tasa de política BCV, encaje legal, tipo de cambio oficial vs "
-        "promedio de 3 fuentes públicas para el paralelo (Monitor Dólar, "
-        "EnParaleloVzla, DolarToday). Bonos VEN / PDVSA reportados a precio, no "
-        "yield (están en default). La data exige scrapers propios — implementación "
-        "en M-3."
+        ed,
     )
 
 
 def lamina_8_impacto_mercantil() -> go.Figure:
+    ed = Editorial(
+        que_dice="Va a ser la lámina más rica del deck. 5 unidades del grupo y para cada una el what if right + what if wrong del mensaje principal del mes.",
+        por_que="Construido a partir del mapa de unidades en 06_GRUPO_MERCANTIL.md (Banco Mercantil VE · Mercantil Banco PA · Mercantil Seguros · Wealth Management · Tesorería). Requiere sesión narrativa contigo y Camilo.",
+        para_que="Cierra el ciclo: el directivo de cada unidad sabe qué hacer distinto el lunes si nuestra tesis se materializa, y qué tiene mitigado si no.",
+        como_se_lee="Pendiente. Diseño previsto: matriz 5 columnas × 2 filas con colores por dirección esperada del impacto.",
+    )
     return _lamina_skeleton(
         "Impacto Grupo Mercantil por unidad",
         "Cómo le pega el mensaje del mes a cada unidad del grupo",
-        "Esta es la lámina más rica del deck. Mapa con 5 columnas — Banco Mercantil "
-        "VE · Mercantil Banco PA · Mercantil Seguros · Wealth Management · Tesorería "
-        "del grupo — y dos filas por unidad: qué pasa si nuestra tesis funciona y "
-        "qué pasa si nos equivocamos. Requiere sesión narrativa contigo y Camilo "
-        "para mapear cada unidad antes de poblar.",
-        height=820,
+        ed,
     )
 
 
 # ============================================================================
-# LAMINA 9 — Calendario + qué nos haría cambiar de opinión
+# LAMINA 9 — Calendario
 # ============================================================================
 def lamina_9_calendario(narrativa: Narrativa) -> go.Figure:
-    """Calendario del proximo mes. Texto plano + color por columna."""
     items = narrativa.calendar
 
     col_fecha       = [item.fecha for item in items]
@@ -488,7 +502,6 @@ def lamina_9_calendario(narrativa: Narrativa) -> go.Figure:
     col_relevante   = [item.relevante_para for item in items]
     col_importancia = [CONVICTION_STYLE[item.importancia]["label"] for item in items]
 
-    # Color de texto: importancia destaca con su color
     text = COLORS["text"]
     fc_default     = [text] * len(items)
     fc_importancia = [CONVICTION_STYLE[item.importancia]["fg"] for item in items]
@@ -497,14 +510,21 @@ def lamina_9_calendario(narrativa: Narrativa) -> go.Figure:
     fill_default = alt_fill(len(items))
     fill_imp     = [CONVICTION_STYLE[item.importancia]["bg"] for item in items]
 
-    fig = go.Figure(data=[go.Table(
+    fig = make_subplots(
+        rows=2, cols=1,
+        row_heights=[0.62, 0.38],
+        specs=[[{"type": "table"}], [{"type": "table"}]],
+        vertical_spacing=0.06,
+    )
+
+    fig.add_trace(go.Table(
         columnwidth=[15, 25, 45, 15],
         header=dict(
             values=["Fecha", "Evento", "Relevante para", "Importancia"],
             fill_color=COLORS["primary"],
             font=dict(color="white", size=TABLE_HEADER_SIZE, family=FONT["family"]),
             align="left",
-            height=44,
+            height=46,
         ),
         cells=dict(
             values=[col_fecha, col_evento, col_relevante, col_importancia],
@@ -515,22 +535,25 @@ def lamina_9_calendario(narrativa: Narrativa) -> go.Figure:
                 family=FONT["family"],
             ),
             align="left",
-            height=58,
+            height=64,
         ),
-    )])
+    ), row=1, col=1)
+
+    ed = Editorial(
+        que_dice="Cinco eventos críticos del próximo mes que pueden cambiar el mensaje principal del deck.",
+        por_que="Calendario oficial Fed (FOMC + SEP), BLS (NFP, CPI), BEA (PCE) y BCE. La columna 'Relevante para' mapea cada evento a la lámina y vista específica que afecta.",
+        para_que="Si algo material pasa en una fila marcada ALTA, revisamos el deck dentro de la semana siguiente, no esperamos al corte mensual. La columna es nuestra disciplina de revisión.",
+        como_se_lee="Cada fila es un evento. La columna Importancia tiene el mismo código de color que las vistas tácticas. ALTA exige acción intra-mes.",
+    )
+    fig.add_trace(_editorial_table(ed), row=2, col=1)
+
     fig.update_layout(
         title=_slide_title(
             "Calendario · qué nos haría cambiar de opinión",
             "Cada vista de la lámina 2 tiene un trigger. Aquí están las fechas.",
         ),
-        height=200 + 75 * len(items) + 220,
+        height=1080,
         **LAYOUT_DEFAULTS,
-    )
-    _add_editorial(
-        fig,
-        "Las fechas críticas del próximo mes y a qué vista táctica afecta cada "
-        "evento. Si algo material pasa en una fila marcada ALTA, revisamos el deck "
-        "dentro de la semana siguiente, no esperamos al corte mensual."
     )
     return fig
 
@@ -538,17 +561,7 @@ def lamina_9_calendario(narrativa: Narrativa) -> go.Figure:
 # ============================================================================
 # Runner
 # ============================================================================
-LAMINAS_ORDEN = [
-    ("01_tldr",                "lamina_1_tldr"),
-    ("02_tactical_views",      "lamina_2_tactical_view_table"),
-    ("03_fed_curva_ust",       "lamina_3_fed_y_curva"),
-    ("04_spreads_corp",        "lamina_4_spreads_corporativos"),
-    ("05_global",              "lamina_5_global"),
-    ("06_panama",              "lamina_6_panama"),
-    ("07_venezuela",           "lamina_7_venezuela"),
-    ("08_impacto_mercantil",   "lamina_8_impacto_mercantil"),
-    ("09_calendario",          "lamina_9_calendario"),
-]
+LAMINA_DIMS = (1920, 1080)  # 16:9 Full HD para PNG
 
 
 def render_all(store: MasterStore, as_of: date, narrativa: Narrativa, out_dir: Path) -> dict:
@@ -574,28 +587,28 @@ def render_all(store: MasterStore, as_of: date, narrativa: Narrativa, out_dir: P
         png_path = figs_dir / f"{name}.png"
         pio.write_html(fig, html_path, include_plotlyjs="cdn", full_html=True)
         try:
-            pio.write_image(fig, png_path, width=1600, height=900)
+            pio.write_image(fig, png_path, width=LAMINA_DIMS[0], height=LAMINA_DIMS[1])
         except Exception as e:
             print(f"  [warn] PNG {name} fallo: {e}")
         paths[name] = {"html": html_path, "png": png_path}
 
-    # Index unificado
+    # Index
     index_html = out_dir / "index.html"
     body = "<br>".join([
         f'<h2>Lámina {name.split("_")[0]} — {name.split("_", 1)[1].replace("_", " ").title()}</h2>'
-        f'<iframe src="{name}.html" width="100%" height="780" frameborder="0"></iframe>'
+        f'<iframe src="{name}.html" width="100%" height="1080" frameborder="0"></iframe>'
         for name in figs
     ])
     index_html.write_text(
         f"<!DOCTYPE html><html lang='es'><head>"
         f'<meta charset="utf-8"><meta name="robots" content="noindex">'
         f"<title>Tasas Mercantil — {narrativa.report_month}</title>"
-        f'<style>body{{font-family:Helvetica,Arial,sans-serif;max-width:1600px;margin:24px auto;color:#222;padding:0 24px}}'
+        f'<style>body{{font-family:Helvetica,Arial,sans-serif;max-width:1920px;margin:24px auto;color:#222;padding:0 24px}}'
         f'h1{{color:{COLORS["primary"]}}}h2{{color:{COLORS["primary"]};border-bottom:1px solid #ddd;padding-bottom:6px;margin-top:32px}}'
         f'.disclaimer{{color:#888;font-size:12px;border-top:1px solid #eee;padding-top:12px;margin-top:48px}}</style>'
         f'</head><body>'
         f'<h1>Tasas Mercantil · {narrativa.report_month}</h1>'
-        f'<p><i>Render v1.0 · {narrativa.autor_principal}</i></p>'
+        f'<p><i>Render v1.0.2 · {narrativa.autor_principal}</i></p>'
         f"{body}"
         f"<div class='disclaimer'>Documento interno de gestión. No constituye recomendación a clientes.</div>"
         f"</body></html>"
@@ -621,18 +634,15 @@ def main():
     store = load_master_store()
     print(f"  {len(store.features)} features, {len(store.df):,} filas")
 
-    # Narrativa: hardcoded para mayo 2026; en cortes futuros se lee de YAML
     if args.corte == "2026-05":
         narrativa = narrativa_2026_05()
     else:
         raise ValueError(f"Narrativa no hardcoded para corte {args.corte}")
 
-    print(f"Renderizando deck v1.0 para as_of={as_of}, corte={args.corte}")
+    print(f"Renderizando deck v1.0.2 para as_of={as_of}, corte={args.corte}")
     paths = render_all(store, as_of, narrativa, out_dir)
 
     print(f"\n[OK] Output en {out_dir}")
-    for k, v in paths.items():
-        print(f"  {k}: {v}")
 
 
 if __name__ == "__main__":
