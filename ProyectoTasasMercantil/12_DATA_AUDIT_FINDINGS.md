@@ -46,6 +46,45 @@ auditoría de un corte verifica que `FECHA_GUARDADO_VALUES` esté presente.
 
 ---
 
+## 2026-05-28 — BDH con `Dts=H` oculta la columna de fechas (segunda lección heredada de SAA)
+
+**Síntoma**: Antulio, operador Bloomberg de Mercantil, al abrir
+`BloombergHistorico_TasasMercantil_FULL.xlsx` (primera versión) preguntó:
+*"las fechas están ocultas a propósito o cambio la fórmula para que las
+traiga?"*.
+
+**Causa**: la fórmula original era:
+```
+=BDH(ticker, "PX_LAST", FROM, TO, "Dir=V", "Dts=H", "Fill=B", "cols=2;rows=12000")
+```
+El parámetro `Dts=H` significa **Dates Hidden** — Bloomberg oculta la
+primera columna del array (fechas) y solo desborda los valores. Sin la
+columna de fechas, el parser (y el analista) no puede saber a qué `obs_date`
+corresponde cada `value`. Convención heredada de SAA (`v1_extraction_spec.md`)
+sin reflexión sobre si servía para nuestro caso.
+
+**Impacto en el modelo / reporte**: alto. Si el archivo se hubiera devuelto
+con `Dts=H` y valores ya cuajados (post Paste-Special-Values), perderíamos
+el alineamiento temporal de la serie y todo el backfill sería inutilizable.
+
+**Mitigación adoptada**: cambio inmediato a `Dts=S` (Dates Shown) en
+`build_bloomberg_historico_template.py`. Regeneración de ambos xlsx (FULL y
+ALT_20Y). Comentario inline en el script que explica por qué no usar `Dts=H`.
+
+**Decisión metodológica**: agregar al checklist de generación de plantillas
+Bloomberg la regla: *si la fórmula es `=BDH` con rango (serie temporal), `Dts`
+debe ser `S` o estar ausente (default = Shown)*. Sólo `=BDP` o `=BDH` con
+`start=end` y wrap `INDEX(...,1,2)` pueden suprimir la columna de fechas
+porque el output es un escalar.
+
+**Receta para arreglar archivos en curso sin rehacer la carga**:
+1. Find & Replace en Excel: `Dts=H` → `Dts=S`.
+2. Las fórmulas se reevalúan automáticamente, traen ahora las fechas.
+3. **Antes** de hacer Paste Special → Values.
+Esto salva el trabajo de Bloomberg ya hecho si el analista ya empezó.
+
+---
+
 ## 2026-05-28 — FRED y ALFRED accesibles vía CSV público sin API key
 
 **Síntoma**: la documentación inicial del proyecto asumía que `FRED_API_KEY`

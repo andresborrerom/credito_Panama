@@ -247,10 +247,14 @@ def sheet_datos_categoria(wb, categoria: str, instrumentos: list, row_buffer: in
         # Tooltip-style notes en fila 2.5 (usamos comentario)
         c1.comment = None  # podriamos agregar comments
         # Formula BDH en fila 4 col actual (la 1a de las 2)
+        # Dts=S (Shown) — IMPORTANTE: NO usar Dts=H que oculta la columna de
+        # fechas. Es la misma leccion que SAA aprendio (ver
+        # 12_DATA_AUDIT_FINDINGS.md). Sin las fechas visibles, el parser no
+        # puede alinear la serie y el analista no puede sanity-check.
         formula = (
             f'=BDH("{ticker}","PX_LAST",'
             f"'01_Parametros'!$B$3,'01_Parametros'!$B$4,"
-            f'"Dir=V","Dts=H","Fill=B","cols=2;rows={row_buffer}")'
+            f'"Dir=V","Dts=S","Fill=B","cols=2;rows={row_buffer}")'
         )
         ws.cell(row=4, column=col, value=formula).fill = FORMULA_FILL
         # Nota / descripcion en fila 5
