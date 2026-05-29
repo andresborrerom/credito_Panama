@@ -122,7 +122,7 @@ evento ocurre ~70% del tiempo".
 
 ---
 
-## Apéndice A · Bootstrap del backtest (2026-05-28, modelo v0.3.0)
+## Apéndice A · Bootstrap del backtest (2026-05-28, modelo v0.3.0, vintage MENSUAL)
 
 Block bootstrap (block_size = 6 meses, 1000 réplicas) sobre 37 fechas
 mensuales (2022-04 a 2025-04) que cubren los tres regímenes
@@ -130,22 +130,47 @@ hike-agresivo / hold / cut-cycle.
 
 | Horizonte | n_obs | Skill mediano | IC 80% | P(skill>0) | P(pasa fail-loud) |
 |---|---:|---:|---|---:|---:|
-| 1M  | 37 | +17.4% | [+6.2%, +34.3%] | 99% | 92% |
-| 3M  | 37 | +10.6% | [+5.1%, +21.3%] | 100% | 91% |
-| 6M  | 37 | +23.3% | [+19.8%, +28.1%] | 100% | **100%** |
-| 12M | 37 | +45.5% | [+38.5%, +53.4%] | 100% | **100%** |
+| 1M  | 37 | +18.1% | [+7.3%, +33.4%] | 99% | 94% |
+| 3M  | 37 | +12.3% | [+6.9%, +22.5%] | 100% | 98% |
+| 6M  | 37 | +24.5% | [+21.5%, +28.7%] | 100% | **100%** |
+| 12M | 37 | +46.0% | [+40.4%, +52.4%] | 100% | **100%** |
 
 **Lectura honesta**:
 - **6M y 12M**: certificable. El modelo supera el umbral fail-loud (+5%
   skill vs naive) en el 100% de las réplicas. Mensajes de horizonte
   semestral / anual pueden firmarse con convicción Alta sin caveat.
-- **1M y 3M**: borderline. Probabilidad de pasar fail-loud ~91-92%, IC 80%
-  amplio. La ventaja existe pero la magnitud tiene incertidumbre real.
-  Mensajes de horizonte corto (próxima reunión Fed) deben firmarse con
-  convicción Media, no Alta.
+- **1M y 3M**: ya casi certificable (94% / 98%). Mensajes de horizonte
+  corto deben firmarse con convicción Media-Alta, no Alta.
 - El régimen actual (cut continuando) es donde el modelo funciona mejor
   según el backtest por régimen, pero la muestra incluye también hike
   rápido 2022-23 donde el modelo apenas supera al naive.
+
+**Audit no look-ahead — verificado empíricamente 2026-05-28**:
+
+| Fecha as_of | Vintage PCE efectivo | Valor PCE jun-22 |
+|---|---|---:|
+| 2022-07-31 | 2022-07-31 (primer release) | 122.948 |
+| 2022-09-30 | 2022-09-30 | 123.258 |
+| 2024-01-31 (post BEA re-anchor) | 2024-01-31 | 114.297 |
+| Hoy 2026-05-28 | 2026-04-30 | 114.376 |
+
+El número cambia con la fecha del corte porque BEA revisa la serie y
+re-anchorea la base. El store nunca usa vintage_date > as_of + T3. El
+backtest a 2022-07-31 usó 122.948, no 114.376 (el valor de hoy).
+
+**Backfill mensual vs trimestral — comparativa**:
+
+| Horizonte | Skill mediano QE (antes) | Skill mediano ME (mejorado) |
+|---|---:|---:|
+| 1M | +17.4% | +18.1% |
+| 3M | +10.6% | +12.3% (P(fail-loud) 91% → 98%) |
+| 6M | +23.3% | +24.5% |
+| 12M | +45.5% | +46.0% |
+
+La diferencia es pequeña pero el cambio metodológico es correcto: en
+cada fecha del backtest, el modelo ahora ve el dato del día del release
+(no el de 3 meses después). Forma documentada en
+`12_DATA_AUDIT_FINDINGS.md` (entrada 2026-05-29).
 
 ## Apéndice B · Sensibilidad de la Pieza B a R* y NAIRU (2026-05-28)
 

@@ -82,6 +82,51 @@ error habría llegado al PDF firmado.
 
 ---
 
+## 2026-05-29 — Audit no look-ahead + re-backfill vintage mensual
+
+**Síntoma**: el usuario pidió auditoría explícita de que el backtest no
+usaba info futura. El audit reveló que el backfill vintage inicial era
+trimestral (`freq=QE`), que dejaba huecos en fechas justo post-release.
+
+**Comportamiento observado**:
+- El store **filtra correctamente** por `vintage_date <= as_of + T3` (T3
+  = ventana de presentación del reporte).
+- Pero con vintage trimestral, en `as_of=2022-07-31` no había PCE jun-22
+  disponible (la primera vintage capturada para esa observación era
+  2022-09-30, posterior a as_of+T3). El modelo entonces caía a el último
+  PCE conocido, que era mayo 2022.
+
+**Causa**: backfill `freq=QE` por velocidad (~13 min en lugar de ~40 min).
+Decisión correcta para arrancar; **incorrecta para auditoría rigurosa**.
+
+**Mitigación adoptada**:
+- Re-backfill mensual `freq=ME` desde 2018-01-01 hasta 2026-05-29.
+- Resultado: 23,650 filas con vintages mensuales. En cada `as_of` el
+  modelo ve el dato del día del release.
+- Re-bootstrap del modelo: skill scores marginalmente mejores
+  (+0.5 a +1.7 pp). P(pasa fail-loud) en horizonte 3M sube de 91% a 98%.
+
+**Verificación empírica**:
+Caso PCE core jun-22 visto desde distintas as_of:
+
+| as_of | Vintage efectivo | Valor |
+|---|---|---:|
+| 2022-07-31 | 2022-07-31 (primer release) | **122.948** |
+| 2022-09-30 | 2022-09-30 (1ra revisión) | 123.258 |
+| 2024-01-31 (post BEA re-anchor) | 2024-01-31 | **114.297** |
+| Hoy 2026-05-28 | 2026-04-30 | 114.376 |
+
+El número que ve el modelo cambia con la fecha del corte. Confirma que
+el store respeta el vintage point-in-time.
+
+**Decisión metodológica**: backfill vintage `freq=ME` queda como estándar
+para el período SOFR (2018+). Para épocas anteriores (pre-2018) podemos
+seguir con `QE` porque el régimen monetario era distinto y la
+sensibilidad del modelo Pieza B al primer release vs revisiones es
+menor (la inflación pre-COVID se revisaba con menos magnitud).
+
+---
+
 ## 2026-05-29 — Audit primera carga histórica Bloomberg (Antulio)
 
 **Síntoma**: recibido `BloombergHistorico_TasasMercantil_FULL_2026-05-29.xlsx`
