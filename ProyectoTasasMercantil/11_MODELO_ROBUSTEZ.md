@@ -122,6 +122,76 @@ evento ocurre ~70% del tiempo".
 
 ---
 
+## Apéndice A · Bootstrap del backtest (2026-05-28, modelo v0.3.0)
+
+Block bootstrap (block_size = 6 meses, 1000 réplicas) sobre 37 fechas
+mensuales (2022-04 a 2025-04) que cubren los tres regímenes
+hike-agresivo / hold / cut-cycle.
+
+| Horizonte | n_obs | Skill mediano | IC 80% | P(skill>0) | P(pasa fail-loud) |
+|---|---:|---:|---|---:|---:|
+| 1M  | 37 | +17.4% | [+6.2%, +34.3%] | 99% | 92% |
+| 3M  | 37 | +10.6% | [+5.1%, +21.3%] | 100% | 91% |
+| 6M  | 37 | +23.3% | [+19.8%, +28.1%] | 100% | **100%** |
+| 12M | 37 | +45.5% | [+38.5%, +53.4%] | 100% | **100%** |
+
+**Lectura honesta**:
+- **6M y 12M**: certificable. El modelo supera el umbral fail-loud (+5%
+  skill vs naive) en el 100% de las réplicas. Mensajes de horizonte
+  semestral / anual pueden firmarse con convicción Alta sin caveat.
+- **1M y 3M**: borderline. Probabilidad de pasar fail-loud ~91-92%, IC 80%
+  amplio. La ventaja existe pero la magnitud tiene incertidumbre real.
+  Mensajes de horizonte corto (próxima reunión Fed) deben firmarse con
+  convicción Media, no Alta.
+- El régimen actual (cut continuando) es donde el modelo funciona mejor
+  según el backtest por régimen, pero la muestra incluye también hike
+  rápido 2022-23 donde el modelo apenas supera al naive.
+
+## Apéndice B · Sensibilidad de la Pieza B a R* y NAIRU (2026-05-28)
+
+Snapshot: mayo 2026, Mercantil v0.3.0 a 24M.
+
+| R* (%) | NAIRU (%) | Taylor en t | Mercantil 24M | Gap vs mercado |
+|---:|---:|---:|---:|---:|
+| 0.0 | 4.0 | 1.71% | 3.54% | +32 bps |
+| **0.5** | **4.0** | **2.21%** | **3.62%** | **+24 bps** (baseline) |
+| 1.0 | 4.0 | 2.71% | 3.71% | +16 bps |
+| 1.5 | 4.0 | 3.21% | 3.79% | +8 bps |
+
+(NAIRU varía ±0.5% mueve gap solo ±2-3 bps. R* domina.)
+
+**Lectura honesta**:
+- Asumimos R* = 0.5% (estimación pre-COVID).
+- Holston-Laubach-Williams (NY Fed) sugiere R* ~1.0% post-COVID.
+- Summers / Furman argumentan R* ~1.5-2.0% post-COVID.
+- Si el consenso académico es R* = 1.0%, **el gap real es +16 bps**, no +25 bps.
+- Si R* es 1.5%, **no hay tesis** (gap +8 bps, indistinguible del mercado).
+- El mensaje del corte 2026-05 declara explícitamente este caveat.
+
+## Apéndice C · Performance por régimen (backtest 2022-2025)
+
+| Régimen | h | Skill modelo agregado vs naive |
+|---|---:|---:|
+| Hike agresivo 2022-23 | 1M | **−0.1%** ❌ |
+| Hike agresivo 2022-23 | 3M | +2.1% |
+| Hike agresivo 2022-23 | 6M | +18.5% |
+| Hike agresivo 2022-23 | 12M | +34.4% |
+| Hold 2023-24 | 1M | +43.5% ✅ |
+| Hold 2023-24 | 3M | +29.4% ✅ |
+| Hold 2023-24 | 6M | +23.4% ✅ |
+| Hold 2023-24 | 12M | +56.0% ✅ |
+| Cut cycle 2024-25 | 1M | +36.4% ✅ |
+| Cut cycle 2024-25 | 3M | +34.0% ✅ |
+| Cut cycle 2024-25 | 6M | +49.8% ✅ |
+| Cut cycle 2024-25 | 12M | +63.0% ✅ |
+
+**Lectura honesta**: el modelo es excelente en hold y cut, débil en hike
+sorpresa. El régimen actual (cut continuando) es favorable. **Riesgo asimétrico**:
+si la Fed pivotea a hike por shock inflacionario, el modelo no lo detecta
+rápido en horizonte 1M.
+
+---
+
 ## Política de actualización
 
 | Trigger | Acción |

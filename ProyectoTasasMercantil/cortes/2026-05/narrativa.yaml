@@ -20,11 +20,15 @@ autor_principal: "Camilo Forero + Andrés Borrero"
 # ---------------------------------------------------------------------------
 tldr_messages:
   - headline: >-
-      Creemos que el cut cycle Fed terminó: el mercado descuenta tasas estables
-      a ligeramente alcistas en los próximos 24 meses (path implícito 3.63→3.85%).
-    conviction: "Media"
+      El mercado cree que las tasas se quedan donde están en los próximos 2
+      años (3.62 → 3.87%). Nuestro modelo Mercantil v0.3.0 cree que bajan
+      un poco más (3.69 → 3.62%). Gap modesto de 25 puntos básicos a 24M.
+    conviction: "Baja"
     relevant_unit: "Tesorería + Banco Panamá"
-    trigger: "Próximos CPI core y revisión del dot plot SEP de junio."
+    trigger: >-
+      Próximos CPI core y dot plot SEP de junio. Si R* neutral está más
+      cerca de 1.0% que de 0.5% (debate académico activo), el gap se
+      reduce a ~16 bps. Pendiente bootstrap del backtest para intervalos.
 
   - headline: >-
       UST 10Y a 4.45% con curva positivamente inclinada (2s10s +43 bps) ofrece

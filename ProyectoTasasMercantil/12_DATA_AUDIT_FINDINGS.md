@@ -46,6 +46,42 @@ auditoría de un corte verifica que `FECHA_GUARDADO_VALUES` esté presente.
 
 ---
 
+## 2026-05-28 — Mensaje narrativo citó cifra de Pieza B sola en lugar del agregado
+
+**Síntoma**: el agente propuso para el TL;DR del corte 2026-05 el mensaje
+"modelo Mercantil dice 3.36% en 24M vs mercado 3.85%, gap –49 bps". Al
+verificar contra el código, el agregado v0.3.0 a 24M es **3.62%**, no 3.36%.
+El 3.36% corresponde a la Pieza B (Taylor) sola. Gap real: **–25 bps**.
+
+**Causa**: error de integración entre la narrativa y el modelo. El agente
+arrastró el número visualmente más impactante (Pieza B) sin verificar
+que coincidiera con el modelo agregado que se publica como Mercantil v0.3.0.
+La cadena de cálculo en el código estaba correcta; la cita narrativa estaba mal.
+
+**Impacto potencial**: si el deck hubiera salido con "–49 bps" como mensaje
+ALTA convicción, el primer comité técnico que cruzara los números (banco
+Panamá, riesgos del grupo) habría detectado la inconsistencia. Costo de
+reputación significativo para un mensaje contrarian.
+
+**Mitigación adoptada**: la pregunta crítica del owner ("explícame a fondo
+la tesis, qué tan robustos hemos sido") forzó al agente a desarmar el
+cálculo y detectar el error antes de que saliera. Sin esa pregunta, el
+error habría llegado al PDF firmado.
+
+**Decisión metodológica**:
+1. **Patrón obligatorio del agente**: antes de proponer un mensaje
+   cuantitativo contrarian al consenso, validar que la cifra del mensaje
+   coincida con la cifra del modelo agregado publicado. Si no, parar.
+2. **Patrón obligatorio del owner**: antes de firmar cualquier mensaje
+   contrarian del TL;DR, preguntar "explícame a fondo cómo se construye
+   este número y qué tan robusto es". Documentado en
+   `15_LECCIONES_INTERACCION_CON_CLAUDE.md` lección 01.
+3. **Doc actualizado**: `narrativa.yaml` del corte 2026-05 corregido para
+   reflejar gap –25 bps y convicción Baja-Media (en lugar de Media) hasta
+   que se complete bootstrap + sensibilidad R\*.
+
+---
+
 ## 2026-05-29 — Audit primera carga histórica Bloomberg (Antulio)
 
 **Síntoma**: recibido `BloombergHistorico_TasasMercantil_FULL_2026-05-29.xlsx`
