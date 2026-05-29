@@ -51,6 +51,21 @@ NON_VINTAGE = {
     "fred_sofr":         "SOFR",      # 2018-04+
     "fred_sofr_30d_avg": "SOFR30DAYAVG",
     "fred_sofr_90d_avg": "SOFR90DAYAVG",
+    # === Globales — politica monetaria ===
+    "fred_ecb_dfr":             "ECBDFR",       # BCE Deposit Facility Rate (daily)
+    "fred_ecb_mro":             "ECBMRRFR",     # BCE Main Refi Rate (daily)
+    "fred_ecb_estr":            "ECBESTRVOLWGTTRMDMNRT",  # ESTR (overnight)
+    "fred_boe_bank_rate":       "IUDSOIA",      # BoE Bank Rate (daily)
+    # BoJ: las series FRED estan descontinuadas (call rate hasta 2023, discount rate hasta 2017).
+    # Mantener como historico; para el snapshot del mes hay que reportar manualmente.
+    "fred_boj_call_rate_hist":  "IRSTCB01JPM156N",
+    # === Globales — curvas soberanas 10Y (mensuales) ===
+    "fred_bund_10y":            "IRLTLT01DEM156N",
+    "fred_gilt_10y":            "IRLTLT01GBM156N",
+    "fred_jgb_10y":             "IRLTLT01JPM156N",
+    "fred_mexico_10y":          "IRLTLT01MXM156N",
+    # === FX ===
+    "fred_dxy_broad":           "DTWEXBGS",     # Broad Dollar Index (proxy DXY)
 }
 
 

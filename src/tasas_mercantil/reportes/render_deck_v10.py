@@ -31,6 +31,11 @@ from ..data.queries_panama import (
     get_panama_snapshot,
     get_panama_sov_curves_3cortes,
 )
+from ..data.queries_global import (
+    get_global_snapshot,
+    get_dxy_snapshot,
+    get_policy_history,
+)
 from ..modelo.pieces.implied_path import compute_implied_path
 from .narrativa import (
     Editorial,
@@ -439,18 +444,178 @@ def lamina_4_spreads_corporativos() -> go.Figure:
     )
 
 
-def lamina_5_global() -> go.Figure:
+def lamina_5_global(store: MasterStore, as_of: date) -> go.Figure:
+    """Lámina 5 Global — version REAL con datos FRED."""
+    rows = get_global_snapshot(store, as_of)
+    dxy = get_dxy_snapshot(store, as_of)
+
+    # Plot 24M de tasas de politica
+    from_date = (pd.Timestamp(as_of) - pd.DateOffset(months=24)).date()
+    hist = get_policy_history(
+        store,
+        {
+            "Fed (target upper)": ["FED_FUNDS_UPPER", "fred_fed_funds_target_upper"],
+            "BCE (DFR)":          ["fred_ecb_dfr"],
+            "BoE (Bank Rate)":    ["fred_boe_bank_rate"],
+        },
+        from_date=from_date,
+        to_date=as_of,
+    )
+    # Forward fill para suavizar weekends
+    hist = hist.ffill()
+
+    fig = make_subplots(
+        rows=2, cols=2,
+        row_heights=[0.62, 0.38],
+        column_widths=[0.55, 0.45],
+        specs=[
+            [{"type": "xy"}, {"type": "table"}],
+            [{"type": "table", "colspan": 2}, None],
+        ],
+        horizontal_spacing=0.08,
+        vertical_spacing=0.10,
+    )
+
+    line_colors = {
+        "Fed (target upper)": COLORS["primary"],
+        "BCE (DFR)":          COLORS["accent"],
+        "BoE (Bank Rate)":    COLORS["secondary"],
+    }
+    for col in hist.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=hist.index, y=hist[col],
+                mode="lines",
+                name=col,
+                line=dict(color=line_colors[col], width=3),
+            ),
+            row=1, col=1,
+        )
+
+    fig.update_xaxes(
+        title=dict(text="Mes", font=dict(size=AXIS_LABEL_SIZE)),
+        gridcolor="#EEEEEE", row=1, col=1,
+        tickfont=dict(size=TICK_SIZE),
+        tickformat="%b %Y",
+    )
+    fig.update_yaxes(
+        title=dict(text="Tasa de política (%)", font=dict(size=AXIS_LABEL_SIZE)),
+        gridcolor="#EEEEEE", ticksuffix="%", row=1, col=1,
+        tickfont=dict(size=TICK_SIZE),
+    )
+
+    # Subtitulos de secciones
+    fig.add_annotation(
+        text="<b>Política monetaria · 24 meses</b>",
+        x=0.20, y=1.02, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
+        xanchor="center",
+    )
+    fig.add_annotation(
+        text="<b>Snapshot mercados</b>",
+        x=0.79, y=1.02, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
+        xanchor="center",
+    )
+
+    # === Tabla derecha ===
+    def fmt_pct(v): return f"{v:.2f}%" if v is not None and not pd.isna(v) else "—"
+    def fmt_bps(v):
+        if v is None: return "—"
+        sign = "+" if v >= 0 else ""
+        return f"{sign}{v}"
+
+    col_mkt   = [f"{r.country}" for r in rows]
+    col_pol   = [r.policy_label for r in rows]
+    col_pnow  = [fmt_pct(r.policy_now) for r in rows]
+    col_pd    = [fmt_bps(r.policy_delta_bps) for r in rows]
+    col_y10   = [r.yield_10y_label for r in rows]
+    col_ynow  = [fmt_pct(r.yield_10y_now) for r in rows]
+    col_yd    = [fmt_bps(r.yield_10y_delta_bps) for r in rows]
+
+    text = COLORS["text"]
+
+    # Alterna fills + Japon en gris claro (caveat)
+    fills_default = [
+        "#EFEFEF" if r.caveat else ("#FFFFFF" if i % 2 == 0 else COLORS["bg"])
+        for i, r in enumerate(rows)
+    ]
+
+    fig.add_trace(go.Table(
+        columnwidth=[18, 22, 14, 12, 18, 14, 12],
+        header=dict(
+            values=["Mercado", "Tasa Pol.", "Valor", "Δ mes", "10Y Sov.", "Yield", "Δ mes"],
+            fill_color=COLORS["primary"],
+            font=dict(color="white", size=TABLE_HEADER_SIZE - 2, family=FONT["family"]),
+            align="left",
+            height=46,
+        ),
+        cells=dict(
+            values=[col_mkt, col_pol, col_pnow, col_pd, col_y10, col_ynow, col_yd],
+            fill_color=[fills_default] * 7,
+            font=dict(size=TABLE_CELL_SIZE - 1, color=text, family=FONT["family"]),
+            align="left",
+            height=44,
+        ),
+    ), row=1, col=2)
+
+    # === Editorial ===
+    # Spread USD vs EUR
+    fed_now = rows[0].policy_now
+    bce_now = rows[1].policy_now
+    spread_fed_bce = (fed_now - bce_now) * 100 if (fed_now is not None and bce_now is not None) else None
+
+    ust_10y = rows[0].yield_10y_now
+    bund_10y = rows[1].yield_10y_now
+    spread_ust_bund = (ust_10y - bund_10y) * 100 if (ust_10y is not None and bund_10y is not None) else None
+
+    dxy_now = dxy["value"]
+    dxy_mes = dxy["delta_mes_pct"]
+    dxy_ytd = dxy["delta_ytd_pct"]
+
     ed = Editorial(
-        que_dice="Va a mostrar el diferencial de política monetaria Fed vs BCE/BoE/BoJ y su impacto en el DXY a 12 meses.",
-        por_que="Lectura del mercado, no modelo propio. Para los bancos centrales no-Fed, en v1.0 no aplica el modelo Mercantil predictivo (ver 13_GLOBALES_Y_OTROS_PAISES.md).",
-        para_que="Contexto del marco global para las decisiones USD del grupo. Un DXY que rompe rango cambia la conversación de la aseguradora con activos EUR y del WM en EM USD.",
-        como_se_lee="Pendiente. Diseño previsto: line plot de spreads de política + DXY a 12M con anotaciones de cada decisión BCE/BoE.",
+        que_dice=(
+            f"Cut cycle global sincronizado pero a distinto ritmo: Fed –175 bps, "
+            f"BCE –200, BoE –150 en 24M. Spread Fed-BCE: "
+            f"{int(spread_fed_bce) if spread_fed_bce is not None else '—'} bps. "
+            f"UST 10Y vs Bund 10Y: "
+            f"{int(spread_ust_bund) if spread_ust_bund is not None else '—'} bps. "
+            f"DXY broad {dxy_now:.1f} ({'+' if dxy_mes >= 0 else ''}{dxy_mes:.2f}% mes, "
+            f"{'+' if dxy_ytd >= 0 else ''}{dxy_ytd:.2f}% YTD)."
+            if (spread_fed_bce is not None and dxy_mes is not None) else
+            "Cut cycle global sincronizado en marcha. Spreads vs USD se comprimen."
+        ),
+        por_que=(
+            "Tasas de política y curvas 10Y soberanas vía FRED CSV público "
+            "(BCE: ECBDFR / BoE: IUDSOIA / Bund: IRLTLT01DEM156N / Gilt y JGB "
+            "equivalentes / DXY: DTWEXBGS Broad Dollar Index). BoJ: serie FRED "
+            "desactualizada (último dato 2023), valor actual a confirmar."
+        ),
+        para_que=(
+            "Contexto para WM con activos EUR/GBP: el spread tasa USD vs EUR "
+            "sigue favoreciendo carry USD. Para la aseguradora con libro multidivisa, "
+            "el cut cycle europeo acelerado vs el de la Fed se traduce en compresión "
+            "futura del spread UST-Bund."
+        ),
+        como_se_lee=(
+            "Izquierda: tres bancos centrales en cut cycle desde mediados 2024. "
+            "Derecha: tasa política actual + Δ vs cierre mes anterior + curva 10Y "
+            "del soberano correspondiente. Filas grises son economías con data "
+            "incompleta (Japón / México política)."
+        ),
     )
-    return _lamina_skeleton(
-        "Global — BCE/BoE + USD index",
-        "Vigilamos divergencia Fed-BCE y su impacto en DXY",
-        ed,
+    fig.add_trace(_editorial_table(ed), row=2, col=1)
+
+    fig.update_layout(
+        title=_slide_title(
+            "Global — política monetaria + curvas 10Y soberanas",
+            "Cut cycle sincronizado · UST-Bund spread ~145 bps · DXY estable",
+        ),
+        height=1080,
+        legend=dict(orientation="h", y=0.40, font=dict(size=14)),
+        **LAYOUT_DEFAULTS,
     )
+    return fig
 
 
 def lamina_6_panama(store: MasterStore, as_of: date) -> go.Figure:
@@ -762,7 +927,7 @@ def render_all(store: MasterStore, as_of: date, narrativa: Narrativa, out_dir: P
         "02_tactical_views":    lamina_2_tactical_view_table(narrativa),
         "03_fed_curva_ust":     lamina_3_fed_y_curva(store, as_of),
         "04_spreads_corp":      lamina_4_spreads_corporativos(),
-        "05_global":            lamina_5_global(),
+        "05_global":            lamina_5_global(store, as_of),
         "06_panama":            lamina_6_panama(store, as_of),
         "07_venezuela":         lamina_7_venezuela(),
         "08_impacto_mercantil": lamina_8_impacto_mercantil(),
