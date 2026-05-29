@@ -66,6 +66,10 @@ NON_VINTAGE = {
     "fred_mexico_10y":          "IRLTLT01MXM156N",
     # === FX ===
     "fred_dxy_broad":           "DTWEXBGS",     # Broad Dollar Index (proxy DXY)
+    # === Term premium (Kim-Wright modelo del Fed Board) — Pieza D ===
+    "fred_kw_yield_10y":        "THREEFY10",    # KW model 10Y yield
+    "fred_kw_tp_10y":           "THREEFYTP10",  # KW term premium 10Y (en %)
+    "fred_kw_tp_5y":            "THREEFYTP5",   # KW term premium 5Y
 }
 
 

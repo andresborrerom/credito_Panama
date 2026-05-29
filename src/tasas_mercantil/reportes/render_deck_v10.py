@@ -38,6 +38,10 @@ from ..data.queries_global import (
 )
 from ..data.queries_venezuela import snapshot_2026_05_placeholder
 from ..modelo.pieces.implied_path import compute_implied_path
+from ..modelo.pieces.term_premium import (
+    compute_term_premium_decomposition,
+    compute_delta_decomposition,
+)
 from ..modelo.aggregate import compute_mercantil_aggregate
 from .narrativa import (
     Editorial,
@@ -408,34 +412,66 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
     # Divergencia clave: implied vs Mercantil a 24M
     div_24m_bps = int(round((vals_implied[-1] - vals_merc[-1]) * 100))
 
+    # Pieza D — Descomposición del Δ UST 10Y del mes y YTD
+    mes_anterior_dt = pd.Timestamp(as_of) - pd.DateOffset(months=1)
+    mes_anterior_d = mes_anterior_dt.date() if isinstance(mes_anterior_dt, pd.Timestamp) else mes_anterior_dt
+    ye_anterior_d = date(as_of.year - 1, 12, 31)
+    delta_mes = compute_delta_decomposition(store, mes_anterior_d, as_of)
+    delta_ytd = compute_delta_decomposition(store, ye_anterior_d, as_of)
+    snap_d = compute_term_premium_decomposition(store, as_of)
+
+    def fmt_bps(v):
+        if v is None:
+            return "—"
+        sign = "+" if v >= 0 else ""
+        return f"{sign}{v:.0f}"
+
+    descomp_str = (
+        f"Δ UST 10Y mes {fmt_bps(delta_mes.delta_ust_10y_bps)} bps: "
+        f"TP {fmt_bps(delta_mes.delta_kw_tp_10y_bps)} · "
+        f"Expectativa {fmt_bps(delta_mes.delta_kw_expected_short_bps)}. "
+        f"YTD {fmt_bps(delta_ytd.delta_ust_10y_bps)} bps: "
+        f"TP {fmt_bps(delta_ytd.delta_kw_tp_10y_bps)} · "
+        f"Expectativa {fmt_bps(delta_ytd.delta_kw_expected_short_bps)}."
+    )
+
+    tp_pct = snap_d.term_premium_fraction
+    tp_pct_str = f"{tp_pct:.0f}%" if tp_pct is not None else "—"
+
     ed = Editorial(
         que_dice=(
-            f"Divergencia entre mercado y modelo Mercantil: a 24M el "
-            f"implied SR3 cotiza {vals_implied[-1]:.2f}% (cut cycle terminado), "
-            f"el modelo Mercantil v{merc.model_version} pronostica "
-            f"{vals_merc[-1]:.2f}% (cut cycle continúa) — gap de {div_24m_bps} bps. "
-            f"Curva UST con pendiente positiva +43 bps · sweet spot 5-10Y."
+            f"Divergencia mercado vs modelo Mercantil: a 24M el implied SR3 "
+            f"cotiza {vals_implied[-1]:.2f}% (cut cycle terminado), el modelo "
+            f"v{merc.model_version} pronostica {vals_merc[-1]:.2f}% (cut cycle continúa) "
+            f"— gap {div_24m_bps:+d} bps. Descomposición UST 10Y: term premium "
+            f"{tp_pct_str} del nominal ({snap_d.kw_term_premium_10y:.2f}% sobre "
+            f"{snap_d.ust_10y_nominal:.2f}%). {descomp_str}"
         ),
         por_que=(
-            f"Curva: UST constant-maturity Bloomberg en 3 fechas. "
-            f"Las 3 lecturas: (1) Mercado = strip SR3 puro; "
-            f"(2) Mercantil v{merc.model_version} = "
-            f"{merc.w_a}·Implied + {merc.w_b}·Taylor con pesos calibrados en "
-            f"backtest 2022-2025; (3) Taylor solo = reaction function con "
-            f"PCE core vintage ({pred_b.pi_now_pct:.2f}% YoY) y U-3 "
-            f"({pred_b.u3_now_pct:.2f}%). Pasa fail-loud en todos los horizontes."
+            f"Tres lecturas Fed: (1) Mercado = strip SR3; (2) Mercantil "
+            f"v{merc.model_version} = {merc.w_a}·Implied + {merc.w_b}·Taylor (pesos "
+            f"calibrados en backtest 2022-2025, pasa fail-loud en todos los "
+            f"horizontes); (3) Taylor solo con PCE core "
+            f"{pred_b.pi_now_pct:.2f}% YoY y U-3 {pred_b.u3_now_pct:.2f}%. "
+            f"Descomposición Pieza D: Kim-Wright (Fed Board) para term premium e "
+            f"identidad Fisher (TIPS+BE) para nominal vs real vs inflación."
         ),
         para_que=(
-            "Si el modelo Mercantil acierta, hay valor en posiciones largas "
-            "de duración (UST 5-10Y, vista 1 lámina 2). Refuerza la convicción "
-            "ALTA. Si nos equivocamos y el mercado tiene razón, costo acotado "
-            "por el carry alto del 4.4-4.5%."
+            "Si el modelo Mercantil acierta, hay valor en duración (UST 5-10Y "
+            "OW, vista 1 lámina 2; refuerza convicción ALTA). Más importante: "
+            "el alza YTD del 10Y es term premium pure-play — el mercado nos "
+            "paga por la incertidumbre, no por más Fed. Si term premium se "
+            "comprime hacia mediana histórica, ganamos. Costo del error "
+            "acotado por carry 4.4%."
         ),
         como_se_lee=(
-            "Izquierda: curva UST en 3 fotos. Derecha: tres trayectorias "
-            "de tasa Fed esperada. La naranja es lo que cotiza el mercado; "
-            "la azul diamante es nuestro modelo; la verde punteada es "
-            "Taylor solo. Cuanto más se separan, más opinión propia tenemos."
+            "Izquierda: curva UST en 3 fotos. Derecha: tres trayectorias de "
+            "tasa Fed esperada. La naranja es lo que cotiza el mercado; la "
+            "azul diamante es nuestro modelo; la verde punteada es Taylor solo. "
+            "Cuanto más se separan, más opinión propia tenemos. La descomposición "
+            "de arriba dice de dónde sale cada bp del UST 10Y: TP="
+            "term premium (compensación por incertidumbre), Expectativa=tasa "
+            "Fed promedio próximos 10 años."
         ),
     )
     fig.add_trace(_editorial_table(ed), row=2, col=1)
