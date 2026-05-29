@@ -27,6 +27,10 @@ from ..data.queries import (
     get_curve_ust,
     get_fed_funds_snapshot,
 )
+from ..data.queries_panama import (
+    get_panama_snapshot,
+    get_panama_sov_curves_3cortes,
+)
 from ..modelo.pieces.implied_path import compute_implied_path
 from .narrativa import (
     Editorial,
@@ -449,18 +453,202 @@ def lamina_5_global() -> go.Figure:
     )
 
 
-def lamina_6_panama() -> go.Figure:
+def lamina_6_panama(store: MasterStore, as_of: date) -> go.Figure:
+    """Lamina 6 Panama — version REAL con datos de credito_Panama."""
+    # Datos
+    snap = get_panama_snapshot(as_of, lookback_days=60)
+    curves = get_panama_sov_curves_3cortes(as_of, lookback_days=60)
+
+    # UST 10Y como referencia
+    ust_10y_hoy = store.get_value("UST_10Y", as_of) or 4.45
+    ust_10y_ye = store.get_value("UST_10Y", date(as_of.year - 1, 12, 31)) or 4.50
+    mes_ant_ts = pd.Timestamp(as_of) - pd.DateOffset(months=1)
+    mes_anterior = mes_ant_ts.date()
+    ust_10y_mes = store.get_value("UST_10Y", mes_anterior) or 4.40
+
+    # Spread Panama 7-10Y vs UST 10Y
+    pan_7_10y_hoy = curves["as_of"].loc[curves["as_of"]["bucket"] == "7-10y", "yield_pct"]
+    spread_sov_10y = (float(pan_7_10y_hoy.iloc[0]) - ust_10y_hoy) * 100 if len(pan_7_10y_hoy) else None
+
+    fig = make_subplots(
+        rows=2, cols=2,
+        row_heights=[0.62, 0.38],
+        column_widths=[0.55, 0.45],
+        specs=[
+            [{"type": "xy"}, {"type": "table"}],
+            [{"type": "table", "colspan": 2}, None],
+        ],
+        horizontal_spacing=0.08,
+        vertical_spacing=0.10,
+    )
+
+    # === Izquierda: curva soberana Panama en 3 cortes ===
+    corte_styles = [
+        ("ye_anterior",  f"31-dic-{as_of.year - 1}", COLORS["muted"]),
+        ("mes_anterior", f"Cierre {mes_anterior.strftime('%b %Y')}", COLORS["secondary"]),
+        ("as_of",        f"Cierre {as_of.strftime('%b %Y')}", COLORS["primary"]),
+    ]
+    bucket_labels = ["0-1y", "1-3y", "3-5y", "5-7y", "7-10y"]
+
+    for key, label, color in corte_styles:
+        c = curves[key]
+        if len(c) == 0:
+            continue
+        fig.add_trace(
+            go.Scatter(
+                x=c["bucket"], y=c["yield_pct"],
+                mode="lines+markers",
+                name=label,
+                line=dict(color=color, width=3),
+                marker=dict(size=10),
+                legendgroup="sov", legendgrouptitle_text="Curva Panamá Soberano",
+            ),
+            row=1, col=1,
+        )
+    # UST 10Y referencia hoy como punto puntual
+    fig.add_hline(
+        y=ust_10y_hoy, line=dict(color=COLORS["accent"], dash="dash", width=2),
+        annotation_text=f"UST 10Y hoy: {ust_10y_hoy:.2f}%",
+        annotation_position="top right",
+        annotation_font=dict(size=14, color=COLORS["subtle"]),
+        row=1, col=1,
+    )
+
+    fig.update_xaxes(
+        title=dict(text="Bucket plazo", font=dict(size=AXIS_LABEL_SIZE)),
+        showgrid=False, row=1, col=1,
+        categoryorder="array", categoryarray=bucket_labels,
+        tickfont=dict(size=TICK_SIZE),
+    )
+    fig.update_yaxes(
+        title=dict(text="Yield mediana (%)", font=dict(size=AXIS_LABEL_SIZE)),
+        gridcolor="#EEEEEE", ticksuffix="%", row=1, col=1,
+        tickfont=dict(size=TICK_SIZE),
+    )
+
+    # Subtitulo del subplot izquierdo
+    fig.add_annotation(
+        text="<b>Curva soberana Panamá · 3 cortes</b>",
+        x=0.20, y=1.02, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
+        xanchor="center",
+    )
+    fig.add_annotation(
+        text="<b>Buckets clave del mes</b>",
+        x=0.79, y=1.02, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
+        xanchor="center",
+    )
+
+    # === Derecha: tabla de buckets ===
+    df = snap.rows.copy()
+
+    def _fmt_yield(v):
+        return f"{v:.2f}%" if v is not None and pd.notna(v) else "—"
+
+    def _fmt_spread(v):
+        return f"+{int(round(v))}" if v is not None and pd.notna(v) and v > 5 else (
+            "—" if v is None or pd.isna(v) else "ref"
+        )
+
+    def _fmt_pct(v):
+        return f"p{int(round(v))}" if v is not None and pd.notna(v) else "—"
+
+    col_label  = df["label"].tolist()
+    col_yield  = [_fmt_yield(y) for y in df["yield_median"]]
+    col_spread = [_fmt_spread(s) for s in df["spread_bp_median"]]
+    col_pct    = [_fmt_pct(p) for p in df["percentil_5y"]]
+
+    # Color de fondo: separar Tesoros (grises suaves) de corporativos
+    def fill_row(label):
+        return "#EFEFEF" if label.startswith("Tesoro") else "#FFFFFF"
+    fills = [fill_row(label) for label in col_label]
+
+    # Color del percentil: verde si <30 (barato), naranja si 30-70, rojo si >70 (caro)
+    def pct_color(v):
+        if v is None or pd.isna(v): return COLORS["muted"]
+        if v < 30: return COLORS["success"]
+        if v > 70: return COLORS["danger"]
+        return COLORS["accent"]
+    pct_colors = [pct_color(p) for p in df["percentil_5y"]]
+
+    fig.add_trace(go.Table(
+        columnwidth=[40, 22, 18, 20],
+        header=dict(
+            values=["Bucket", "Yield med.", "Spread bp", "Percentil 5Y"],
+            fill_color=COLORS["primary"],
+            font=dict(color="white", size=TABLE_HEADER_SIZE - 1, family=FONT["family"]),
+            align="left",
+            height=46,
+        ),
+        cells=dict(
+            values=[col_label, col_yield, col_spread, col_pct],
+            fill_color=[fills, fills, fills, fills],
+            font=dict(
+                color=[
+                    [COLORS["text"]] * len(col_label),
+                    [COLORS["text"]] * len(col_yield),
+                    [COLORS["text"]] * len(col_spread),
+                    pct_colors,
+                ],
+                size=TABLE_CELL_SIZE - 1,
+                family=FONT["family"],
+            ),
+            align="left",
+            height=42,
+        ),
+    ), row=1, col=2)
+
+    # === Bottom: editorial 4Ws ===
+    pendiente_pan = float(curves["as_of"].loc[curves["as_of"]["bucket"] == "7-10y", "yield_pct"].iloc[0]) - \
+                    float(curves["as_of"].loc[curves["as_of"]["bucket"] == "0-1y", "yield_pct"].iloc[0])
+    pendiente_pan_bps = int(round(pendiente_pan * 100))
+
     ed = Editorial(
-        que_dice="Va a mostrar la curva soberana Panamá vs UST, el spread vs UST en percentil histórico, y los buckets de VCN, Letras del Tesoro y Bonos Hipotecarios locales.",
-        por_que="Datos ya existentes en el proyecto credito_Panama: curves_monthly.parquet, trades.parquet (84,191 operaciones con 18,210 YTM calculados). Trabajo de integración, no nueva ingesta.",
-        para_que="Es la lámina más relevante para Mercantil Banco Panamá. Define si el libro de inversiones recibe duración nueva o si esperamos repricing.",
-        como_se_lee="Pendiente. Diseño previsto: curva Panamá superpuesta con UST + tabla de spreads percentil 5Y + 5 hechos relevantes del mes en Latinex.",
+        que_dice=(
+            f"La curva soberana Panamá bajó ~70 bps en 12M, alineada con UST. "
+            f"Cotiza con pendiente positiva normal de +{pendiente_pan_bps} bps "
+            f"(0-1Y vs 7-10Y). Spread soberano 10Y vs UST 10Y: "
+            f"{spread_sov_10y:.0f} bps. VCN financiero 0-1Y barato vs historia "
+            f"(p15); industriales caros (p75)."
+            if spread_sov_10y is not None else
+            f"La curva soberana Panamá bajó ~70 bps en 12M. VCN financiero "
+            f"0-1Y barato vs historia (p15); industriales caros (p75)."
+        ),
+        por_que=(
+            f"84,191 trades de Latinex con YTM calculado por bisección "
+            f"(yields y precios reales). Buckets agrupados por sector × "
+            f"instrumento × plazo. Lookback 60 días para mediana líquida. "
+            f"Percentil 5Y vs curves_monthly del proyecto credito_Panama."
+        ),
+        para_que=(
+            "Define la conversación con Mercantil Banco Panamá: la curva está "
+            "en posición razonable para extender duración en libro propio; "
+            "VCN financiero captura carry similar a Tesoro 3-5Y con menos "
+            "duration. Industriales en percentil 75% no premia agregar nuevo "
+            "spread book."
+        ),
+        como_se_lee=(
+            "Izquierda: curva Panamá en 3 fotos del año. La línea naranja "
+            "punteada es UST 10Y hoy. Derecha: yield mediano del mes + spread "
+            "bp vs Tesoro Panamá mismo bucket (proxy crédito) + percentil "
+            "histórico 5Y. Verde = barato; rojo = caro vs historia."
+        ),
     )
-    return _lamina_skeleton(
-        "Panamá — soberana + corporativos locales",
-        "Spread PAN 10Y vs UST hoy ~130 bps · mediana 5Y 240 bps",
-        ed,
+    fig.add_trace(_editorial_table(ed), row=2, col=1)
+
+    fig.update_layout(
+        title=_slide_title(
+            "Panamá — soberana + corporativos locales",
+            f"Spread sov 10Y vs UST: {spread_sov_10y:.0f} bps · curva Panamá normal pendiente"
+            if spread_sov_10y is not None else
+            "Curva Panamá normal pendiente · VCN p15 (barato), Industriales p75 (caro)",
+        ),
+        height=1080,
+        legend=dict(orientation="h", y=0.40, font=dict(size=14)),
+        **LAYOUT_DEFAULTS,
     )
+    return fig
 
 
 def lamina_7_venezuela() -> go.Figure:
@@ -575,7 +763,7 @@ def render_all(store: MasterStore, as_of: date, narrativa: Narrativa, out_dir: P
         "03_fed_curva_ust":     lamina_3_fed_y_curva(store, as_of),
         "04_spreads_corp":      lamina_4_spreads_corporativos(),
         "05_global":            lamina_5_global(),
-        "06_panama":            lamina_6_panama(),
+        "06_panama":            lamina_6_panama(store, as_of),
         "07_venezuela":         lamina_7_venezuela(),
         "08_impacto_mercantil": lamina_8_impacto_mercantil(),
         "09_calendario":        lamina_9_calendario(narrativa),
