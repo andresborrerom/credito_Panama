@@ -36,6 +36,7 @@ from ..data.queries_global import (
     get_dxy_snapshot,
     get_policy_history,
 )
+from ..data.queries_venezuela import snapshot_2026_05_placeholder
 from ..modelo.pieces.implied_path import compute_implied_path
 from .narrativa import (
     Editorial,
@@ -817,17 +818,155 @@ def lamina_6_panama(store: MasterStore, as_of: date) -> go.Figure:
 
 
 def lamina_7_venezuela() -> go.Figure:
+    """Lámina 7 Venezuela — input MANUAL del analista (no scrapers en cloud)."""
+    snap = snapshot_2026_05_placeholder()
+
+    fig = make_subplots(
+        rows=2, cols=2,
+        row_heights=[0.62, 0.38],
+        column_widths=[0.45, 0.55],
+        specs=[
+            [{"type": "table"}, {"type": "table"}],
+            [{"type": "table", "colspan": 2}, None],
+        ],
+        horizontal_spacing=0.06,
+        vertical_spacing=0.10,
+    )
+
+    def fmt_pct(v): return f"{v:.2f}%" if v is not None else "—"
+    def fmt_ves(v): return f"{v:,.2f}" if v is not None else "—"
+    def fmt_delta(v):
+        if v is None: return "—"
+        s = "+" if v >= 0 else ""
+        return f"{s}{v:.2f}%"
+
+    # === Izquierda: tabla BCV (política y encaje) ===
+    bcv_rows = [
+        ["Tasa de política",       fmt_pct(snap.bcv_tasa_politica_pct)],
+        ["Encaje legal",           fmt_pct(snap.bcv_encaje_legal_pct)],
+        ["Tasa activa máxima",     fmt_pct(snap.bcv_tasa_activa_max_pct)],
+        ["Tasa pasiva máxima",     fmt_pct(snap.bcv_tasa_pasiva_max_pct)],
+    ]
+    fig.add_trace(go.Table(
+        columnwidth=[55, 45],
+        header=dict(
+            values=["BCV — política y crédito", "Valor"],
+            fill_color=COLORS["primary"],
+            font=dict(color="white", size=TABLE_HEADER_SIZE, family=FONT["family"]),
+            align="left", height=46,
+        ),
+        cells=dict(
+            values=list(zip(*bcv_rows)),
+            fill_color=[["#FFFFFF" if i % 2 == 0 else COLORS["bg"] for i in range(len(bcv_rows))]],
+            font=dict(size=TABLE_CELL_SIZE, color=COLORS["text"], family=FONT["family"]),
+            align="left", height=48,
+        ),
+    ), row=1, col=1)
+
+    # === Derecha: tabla FX + bonos ===
+    fx_rows = [
+        ["FX oficial BCV (VES/USD)",   fmt_ves(snap.fx_oficial_ves_usd),
+         fmt_delta(snap.fx_oficial_delta_mes_pct)],
+        ["FX paralelo promedio (VES/USD)", fmt_ves(snap.fx_paralelo_ves_usd),
+         fmt_delta(snap.fx_paralelo_delta_mes_pct)],
+        ["Brecha oficial–paralelo",     f"{snap.fx_brecha_pct:.1f}%" if snap.fx_brecha_pct is not None else "—",
+         ""],
+        ["Bono VEN 2027 (precio)",      f"{snap.bono_ven_2027_precio:.2f}" if snap.bono_ven_2027_precio else "—",
+         f"{snap.bono_ven_2027_precio - snap.bono_ven_2027_mes_ant:+.2f}"
+         if (snap.bono_ven_2027_precio and snap.bono_ven_2027_mes_ant) else "—"],
+        ["Bono PDVSA 2037 (precio)",    f"{snap.bono_pdvsa_2037_precio:.2f}" if snap.bono_pdvsa_2037_precio else "—",
+         f"{snap.bono_pdvsa_2037_precio - snap.bono_pdvsa_2037_mes_ant:+.2f}"
+         if (snap.bono_pdvsa_2037_precio and snap.bono_pdvsa_2037_mes_ant) else "—"],
+    ]
+    fig.add_trace(go.Table(
+        columnwidth=[50, 25, 25],
+        header=dict(
+            values=["FX y bonos defaulteados", "Hoy", "Δ mes"],
+            fill_color=COLORS["primary"],
+            font=dict(color="white", size=TABLE_HEADER_SIZE, family=FONT["family"]),
+            align="left", height=46,
+        ),
+        cells=dict(
+            values=list(zip(*fx_rows)),
+            fill_color=[["#FFFFFF" if i % 2 == 0 else COLORS["bg"] for i in range(len(fx_rows))]],
+            font=dict(size=TABLE_CELL_SIZE, color=COLORS["text"], family=FONT["family"]),
+            align="left", height=48,
+        ),
+    ), row=1, col=2)
+
+    # Subtitulos secciones
+    fig.add_annotation(
+        text="<b>BCV — política y crédito</b>",
+        x=0.16, y=1.02, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
+        xanchor="center",
+    )
+    fig.add_annotation(
+        text="<b>FX oficial vs paralelo · bonos en default</b>",
+        x=0.73, y=1.02, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
+        xanchor="center",
+    )
+
+    # Caveat banner (importante)
+    fig.add_annotation(
+        text=(
+            "⚠ Valores ilustrativos en placeholder · El analista los confirma "
+            "en la sesión narrativa del corte (BCV publica con lag; paralelo "
+            "es promedio de tres fuentes públicas)."
+        ),
+        x=0.5, y=0.52,
+        xref="paper", yref="paper",
+        showarrow=False,
+        font=dict(size=13, color="#8A5A1A"),
+        align="center",
+        bgcolor="#FBE8C6",
+        bordercolor="#8A5A1A",
+        borderwidth=1,
+        borderpad=8,
+    )
+
+    # === Editorial 4Ws ===
+    brecha_str = f"{snap.fx_brecha_pct:.0f}%" if snap.fx_brecha_pct is not None else "—"
     ed = Editorial(
-        que_dice="Va a mostrar tasa de política BCV, encaje legal, tipo de cambio oficial vs paralelo (promedio de 3 fuentes públicas) y precio de bonos VEN / PDVSA.",
-        por_que="Scrapers propios para BCV (publica con lag) y promedio Monitor Dólar + EnParaleloVzla + DolarToday para el paralelo. Bonos VEN/PDVSA reportados a precio porque están en default.",
-        para_que="Define el marco de Banco Mercantil Venezuela: brecha cambiaria condiciona la lectura del balance dolarizado y el riesgo regulatorio de la operación local.",
-        como_se_lee="Pendiente. Diseño previsto: dual axis (oficial vs paralelo) + tabla con encaje, tasa BCV y posición soberana defaulteada.",
+        que_dice=(
+            f"Brecha cambiaria oficial-paralelo: {brecha_str}. Tasa BCV en "
+            f"{fmt_pct(snap.bcv_tasa_politica_pct)} con encaje en "
+            f"{fmt_pct(snap.bcv_encaje_legal_pct)}. Bonos VEN 2027 y PDVSA "
+            f"2037 cotizan a precios bajos (proceso de restructuring suspendido)."
+        ),
+        por_que=(
+            "Datos de input manual del analista. BCV publica con lag (semanal); "
+            "FX paralelo se construye como promedio de 3 fuentes públicas "
+            "(Monitor Dólar, EnParaleloVzla, DolarToday). Bonos VEN/PDVSA: "
+            "precios indicativos del mercado secundario, no yields (default). "
+            "Scrapers automáticos pendientes — el acceso desde cloud está bloqueado."
+        ),
+        para_que=(
+            "Define el marco de Banco Mercantil Venezuela. La brecha cambiaria "
+            "es la variable más sensible regulatoriamente: balance dolarizado "
+            "vs reporting en bolívares se afecta directamente. Tasa BCV vs "
+            "inflación define si la tasa real es positiva o destructiva."
+        ),
+        como_se_lee=(
+            "Tres tablas: política BCV, FX oficial vs paralelo (con delta mes), "
+            "y precios de los dos bonos soberanos referenciales. Bonos cotizan "
+            "como precio porque están en default — el yield no es informativo. "
+            "Valores ilustrativos hasta confirmación del analista."
+        ),
     )
-    return _lamina_skeleton(
-        "Venezuela — BCV vs paralelo + bonos",
-        "Brecha cambiaria oficial-paralelo y status PDVSA / VENZ defaulteados",
-        ed,
+    fig.add_trace(_editorial_table(ed), row=2, col=1)
+
+    fig.update_layout(
+        title=_slide_title(
+            "Venezuela — BCV, FX y bonos soberanos",
+            f"Brecha cambiaria {brecha_str} · tasa BCV {fmt_pct(snap.bcv_tasa_politica_pct)} · "
+            f"bonos en default",
+        ),
+        height=1080,
+        **LAYOUT_DEFAULTS,
     )
+    return fig
 
 
 def lamina_8_impacto_mercantil() -> go.Figure:
