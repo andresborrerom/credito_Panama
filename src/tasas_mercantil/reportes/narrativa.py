@@ -14,6 +14,11 @@ from typing import Literal
 Conviction = Literal["Alta", "Media", "Baja"]
 
 
+from pathlib import Path
+
+import yaml
+
+
 @dataclass
 class Editorial:
     """Bloque al pie de cada lámina con cuatro lecturas estructuradas.
@@ -71,8 +76,39 @@ class Narrativa:
 
 
 # ---------------------------------------------------------------------------
-# Narrativa hardcoded del corte 2026-05 — usada para el primer render v1.0.
-# Para cortes futuros esto sale a YAML / sesion con Claude.
+# Loader desde YAML (workflow recomendado para cortes recurrentes).
+# ---------------------------------------------------------------------------
+def load_narrativa(path: Path) -> Narrativa:
+    """Lee narrativa.yaml y devuelve Narrativa tipada.
+
+    Schema esperado del YAML:
+        corte: "YYYY-MM"
+        as_of: "YYYY-MM-DD"
+        autor_principal: "str"
+        tldr_messages:
+          - headline / conviction / relevant_unit / trigger
+        tactical_views:
+          - activo / direccion / horizonte / conviction / what / if_right / if_wrong / trigger
+        calendar:
+          - fecha / evento / relevante_para / importancia
+        venezuela:
+          fuente / bcv_tasa_politica_pct / bcv_encaje_legal_pct / ... (campos VenezuelaSnapshot)
+    """
+    with open(path) as f:
+        data = yaml.safe_load(f)
+
+    return Narrativa(
+        report_month=data["corte"],
+        as_of=data["as_of"],
+        autor_principal=data["autor_principal"],
+        tldr_messages=[TLDRMessage(**m) for m in data.get("tldr_messages", [])],
+        tactical_views=[TacticalView(**v) for v in data.get("tactical_views", [])],
+        calendar=[CalendarItem(**c) for c in data.get("calendar", [])],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Narrativa hardcoded del corte 2026-05 — usada como fallback / template.
 # ---------------------------------------------------------------------------
 def narrativa_2026_05() -> Narrativa:
     return Narrativa(

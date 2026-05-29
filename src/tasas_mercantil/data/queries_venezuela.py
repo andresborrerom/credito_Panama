@@ -7,6 +7,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
+
+import yaml
 
 
 @dataclass
@@ -55,6 +58,16 @@ class VenezuelaSnapshot:
         if self.fx_paralelo_ves_usd and self.fx_paralelo_mes_ant:
             return (self.fx_paralelo_ves_usd / self.fx_paralelo_mes_ant - 1) * 100
         return None
+
+
+def load_venezuela_snapshot(path: Path) -> VenezuelaSnapshot:
+    """Lee venezuela.yaml y devuelve VenezuelaSnapshot tipado."""
+    with open(path) as f:
+        data = yaml.safe_load(f)
+    # as_of viene como string YYYY-MM-DD, convertir a date
+    if isinstance(data["as_of"], str):
+        data["as_of"] = date.fromisoformat(data["as_of"])
+    return VenezuelaSnapshot(**data)
 
 
 def snapshot_2026_05_placeholder() -> VenezuelaSnapshot:

@@ -1,0 +1,34 @@
+# Snapshot manual de Venezuela para el corte mayo 2026.
+#
+# El analista llena este archivo cada mes con los datos del BCV, FX y bonos.
+# Las fuentes Venezuela (BCV, Monitor Dolar) estan bloqueadas desde cloud,
+# por eso entrada manual.
+#
+# Para corte nuevo: copia este archivo a cortes/YYYY-MM/venezuela.yaml,
+# actualiza los campos.
+
+as_of: "2026-05-28"
+fuente: "PLACEHOLDER — valores ilustrativos pendientes de confirmación con analista"
+
+# BCV — politica y credito
+bcv_tasa_politica_pct: 58.00
+bcv_encaje_legal_pct: 73.00
+bcv_tasa_activa_max_pct: 58.00
+bcv_tasa_pasiva_max_pct: 25.00
+
+# FX (VES por USD)
+fx_oficial_ves_usd: 185.50
+fx_paralelo_ves_usd: 225.80   # promedio Monitor Dolar / EnParaleloVzla / DolarToday
+fx_oficial_mes_ant: 176.20
+fx_paralelo_mes_ant: 212.30
+
+# Bonos defaulteados (precio, no yield)
+bono_ven_2027_precio: 14.50
+bono_pdvsa_2037_precio: 8.25
+bono_ven_2027_mes_ant: 13.80
+bono_pdvsa_2037_mes_ant: 8.10
+
+# Opcional
+m2_bs_billones: null
+
+notas_corte: "Restructuring proceso suspendido. Brecha cambiaria estable."

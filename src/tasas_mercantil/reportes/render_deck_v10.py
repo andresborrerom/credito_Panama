@@ -46,7 +46,9 @@ from .narrativa import (
     TacticalView,
     CalendarItem,
     narrativa_2026_05,
+    load_narrativa,
 )
+from ..data.queries_venezuela import load_venezuela_snapshot, snapshot_2026_05_placeholder, VenezuelaSnapshot
 
 
 # ============================================================================
@@ -876,9 +878,10 @@ def lamina_6_panama(store: MasterStore, as_of: date) -> go.Figure:
     return fig
 
 
-def lamina_7_venezuela() -> go.Figure:
+def lamina_7_venezuela(snap: VenezuelaSnapshot | None = None) -> go.Figure:
     """Lámina 7 Venezuela — input MANUAL del analista (no scrapers en cloud)."""
-    snap = snapshot_2026_05_placeholder()
+    if snap is None:
+        snap = snapshot_2026_05_placeholder()
 
     fig = make_subplots(
         rows=2, cols=2,
@@ -1115,7 +1118,13 @@ def lamina_9_calendario(narrativa: Narrativa) -> go.Figure:
 LAMINA_DIMS = (1920, 1080)  # 16:9 Full HD para PNG
 
 
-def render_all(store: MasterStore, as_of: date, narrativa: Narrativa, out_dir: Path) -> dict:
+def render_all(
+    store: MasterStore,
+    as_of: date,
+    narrativa: Narrativa,
+    out_dir: Path,
+    venezuela_snap: VenezuelaSnapshot | None = None,
+) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     figs_dir = out_dir / "figs"
     figs_dir.mkdir(parents=True, exist_ok=True)
@@ -1127,7 +1136,7 @@ def render_all(store: MasterStore, as_of: date, narrativa: Narrativa, out_dir: P
         "04_spreads_corp":      lamina_4_spreads_corporativos(),
         "05_global":            lamina_5_global(store, as_of),
         "06_panama":            lamina_6_panama(store, as_of),
-        "07_venezuela":         lamina_7_venezuela(),
+        "07_venezuela":         lamina_7_venezuela(venezuela_snap),
         "08_impacto_mercantil": lamina_8_impacto_mercantil(),
         "09_calendario":        lamina_9_calendario(narrativa),
     }
@@ -1185,13 +1194,32 @@ def main():
     store = load_master_store()
     print(f"  {len(store.features)} features, {len(store.df):,} filas")
 
-    if args.corte == "2026-05":
+    # Narrativa: prefer YAML del corte; fallback a hardcoded para 2026-05.
+    corte_dir = Path("ProyectoTasasMercantil/cortes") / args.corte
+    narrativa_yaml = corte_dir / "narrativa.yaml"
+    venezuela_yaml = corte_dir / "venezuela.yaml"
+
+    if narrativa_yaml.exists():
+        print(f"  Cargando narrativa desde {narrativa_yaml}")
+        narrativa = load_narrativa(narrativa_yaml)
+    elif args.corte == "2026-05":
+        print(f"  YAML no encontrado, usando hardcoded 2026-05")
         narrativa = narrativa_2026_05()
     else:
-        raise ValueError(f"Narrativa no hardcoded para corte {args.corte}")
+        raise FileNotFoundError(
+            f"No existe {narrativa_yaml}. Para un corte nuevo, copia el YAML del "
+            f"corte 2026-05 a {corte_dir}/narrativa.yaml y edita los campos."
+        )
 
-    print(f"Renderizando deck v1.0.2 para as_of={as_of}, corte={args.corte}")
-    paths = render_all(store, as_of, narrativa, out_dir)
+    venezuela_snap = None
+    if venezuela_yaml.exists():
+        print(f"  Cargando Venezuela desde {venezuela_yaml}")
+        venezuela_snap = load_venezuela_snapshot(venezuela_yaml)
+    elif args.corte == "2026-05":
+        print(f"  YAML Venezuela no encontrado, usando placeholder hardcoded")
+
+    print(f"Renderizando deck v1.0.7 para as_of={as_of}, corte={args.corte}")
+    paths = render_all(store, as_of, narrativa, out_dir, venezuela_snap)
 
     print(f"\n[OK] Output en {out_dir}")
 
