@@ -38,12 +38,35 @@ from ...data.queries import get_fed_funds_snapshot
 
 MODEL_VERSION = "0.2.0"
 
-# Parametros Taylor (constantes)
-R_STAR = 0.5         # real neutral rate (%)
-PI_STAR = 2.0        # inflation target (%)
-NAIRU = 4.0          # natural rate U-3 (%)
-RHO_FED = 0.80       # smoothing anual Fed
-RHO_U3 = 0.95        # persistencia U-3 mensual
+# Parametros Taylor (constantes default)
+R_STAR_DEFAULT = 0.5  # real neutral rate (%) si no hay R* dinamico
+PI_STAR = 2.0         # inflation target (%)
+NAIRU = 4.0           # natural rate U-3 (%)
+RHO_FED = 0.80        # smoothing anual Fed
+RHO_U3 = 0.95         # persistencia U-3 mensual
+
+# Compat: alias para codigo legacy
+R_STAR = R_STAR_DEFAULT
+
+
+def get_r_star_dynamic(store, as_of: date) -> float | None:
+    """R*(t) proxy = Cleveland Fed Real Interest Rate 10Y horizon.
+
+    Source: REAINTRATREARAT10Y (FRED, Cleveland Fed Haubrich-Pennacchi-Ritchken
+    model). Es la estimación de mercado del real rate promedio esperado a 10
+    años — incluye algo de term premium real (~0.3-0.7%) pero es la proxy
+    más limpia disponible vía CSV público.
+
+    Si no hay dato disponible, devuelve None. El caller decide si usar
+    R_STAR_DEFAULT como fallback.
+    """
+    try:
+        v = store.get_value("fred_cle_real_rate_10y", as_of)
+        if v is not None and not pd.isna(v):
+            return float(v)
+    except Exception:
+        pass
+    return None
 
 
 @dataclass
@@ -54,6 +77,8 @@ class TaylorPrediction:
     pi_now_pct: float
     u3_now_pct: float
     pi_expected_pct: float | None     # expectativa de inflacion (BE 5Y)
+    r_star_used: float                # R* efectivo usado en el cálculo
+    r_star_source: str                # "dynamic_cle_fed" | "static_default"
     r_taylor_now: float               # tasa Taylor sin smoothing, en t
     forecast_1m: float
     forecast_3m: float
@@ -85,12 +110,18 @@ def _last_value(series: pd.Series, as_of: date) -> float | None:
     return float(sub.iloc[-1]) if not sub.empty else None
 
 
-def compute_taylor_rule(store: MasterStore, as_of: date) -> TaylorPrediction:
+def compute_taylor_rule(
+    store: MasterStore,
+    as_of: date,
+    use_dynamic_r_star: bool = True,
+) -> TaylorPrediction:
     """Forecast Fed Funds con Pieza B Taylor rule + smoothing.
 
     Args:
         store: MasterStore con vintage macro (CPI core, PCE core, UNRATE).
         as_of: fecha de corte (modelo solo ve datos hasta as_of + T3).
+        use_dynamic_r_star: si True, usa R*(t) de Cleveland Fed (default).
+                           Si False, usa R_STAR_DEFAULT constante.
 
     Returns:
         TaylorPrediction con horizontes 1M/3M/6M/12M/24M.
@@ -98,6 +129,17 @@ def compute_taylor_rule(store: MasterStore, as_of: date) -> TaylorPrediction:
     Raises:
         ValueError: si faltan inputs criticos.
     """
+    # R* dinámico o estático
+    if use_dynamic_r_star:
+        r_star = get_r_star_dynamic(store, as_of)
+        if r_star is not None:
+            r_star_source = "dynamic_cle_fed"
+        else:
+            r_star = R_STAR_DEFAULT
+            r_star_source = "static_default_fallback"
+    else:
+        r_star = R_STAR_DEFAULT
+        r_star_source = "static_default"
     # === Inputs vintage ===
     # PCE core (nivel index) — calcular YoY
     try:
@@ -149,7 +191,7 @@ def compute_taylor_rule(store: MasterStore, as_of: date) -> TaylorPrediction:
         pi_expected = pi_now  # fallback
 
     # === Taylor rule en t ===
-    r_taylor_now = R_STAR + 1.5 * pi_now - u3_now + NAIRU - 0.5 * PI_STAR
+    r_taylor_now = r_star + 1.5 * pi_now - u3_now + NAIRU - 0.5 * PI_STAR
     # Sustituyendo NAIRU=4, PI_STAR=2, R_STAR=0.5: r_taylor = 3.5 + 1.5*pi - u3
 
     # === Forecasts con smoothing ===
@@ -165,7 +207,7 @@ def compute_taylor_rule(store: MasterStore, as_of: date) -> TaylorPrediction:
         u3_h = (rho_u_annual ** h_years) * u3_now + (1 - rho_u_annual ** h_years) * NAIRU
 
         # Taylor en h
-        r_taylor_h = R_STAR + 1.5 * pi_h - u3_h + NAIRU - 0.5 * PI_STAR
+        r_taylor_h = r_star + 1.5 * pi_h - u3_h + NAIRU - 0.5 * PI_STAR
 
         # Smoothing Fed
         r_h = (RHO_FED ** h_years) * r_now + (1 - RHO_FED ** h_years) * r_taylor_h
@@ -177,6 +219,8 @@ def compute_taylor_rule(store: MasterStore, as_of: date) -> TaylorPrediction:
         pi_now_pct=float(pi_now),
         u3_now_pct=float(u3_now),
         pi_expected_pct=float(pi_expected) if pi_expected is not None else None,
+        r_star_used=float(r_star),
+        r_star_source=r_star_source,
         r_taylor_now=float(r_taylor_now),
         forecast_1m=forecast_at_horizon(1),
         forecast_3m=forecast_at_horizon(3),
