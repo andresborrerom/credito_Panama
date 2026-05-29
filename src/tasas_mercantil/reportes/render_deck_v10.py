@@ -38,6 +38,7 @@ from ..data.queries_global import (
 )
 from ..data.queries_venezuela import snapshot_2026_05_placeholder
 from ..modelo.pieces.implied_path import compute_implied_path
+from ..modelo.aggregate import compute_mercantil_aggregate
 from .narrativa import (
     Editorial,
     Narrativa,
@@ -316,27 +317,58 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
             row=1, col=1,
         )
 
-    # Implied path (der)
-    pred = compute_implied_path(store, as_of)
+    # Implied (Pieza A) + Mercantil agregado (Pieza A + B) + Taylor solo (Pieza B)
+    merc = compute_mercantil_aggregate(store, as_of)
+    pred_a = merc.pieza_a
+    pred_b = merc.pieza_b
     horizontes = [0, 1, 3, 6, 12, 24]
-    valores = [
-        pred.fed_funds_now,
-        pred.forecast_1m, pred.forecast_3m, pred.forecast_6m,
-        pred.forecast_12m, pred.forecast_24m,
+
+    vals_implied = [
+        pred_a.fed_funds_now, pred_a.forecast_1m, pred_a.forecast_3m,
+        pred_a.forecast_6m, pred_a.forecast_12m, pred_a.forecast_24m,
     ]
+    vals_merc = [
+        merc.fed_funds_now, merc.forecast_1m, merc.forecast_3m,
+        merc.forecast_6m, merc.forecast_12m, merc.forecast_24m,
+    ]
+    vals_taylor = [
+        pred_b.fed_funds_now, pred_b.forecast_1m, pred_b.forecast_3m,
+        pred_b.forecast_6m, pred_b.forecast_12m, pred_b.forecast_24m,
+    ]
+
     fig.add_trace(
         go.Scatter(
-            x=horizontes, y=valores, mode="lines+markers",
-            name="Path implícito (SR3)",
-            line=dict(color=COLORS["accent"], width=3.5),
-            marker=dict(size=12),
-            legendgroup="path", legendgrouptitle_text="Expectativa Fed",
+            x=horizontes, y=vals_implied, mode="lines+markers",
+            name="Mercado (implied SR3)",
+            line=dict(color=COLORS["accent"], width=3),
+            marker=dict(size=10),
+            legendgroup="path", legendgrouptitle_text="Tres lecturas Fed",
+        ),
+        row=1, col=2,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=horizontes, y=vals_merc, mode="lines+markers",
+            name=f"Modelo Mercantil v{merc.model_version}",
+            line=dict(color=COLORS["primary"], width=3.5),
+            marker=dict(size=12, symbol="diamond"),
+            legendgroup="path",
+        ),
+        row=1, col=2,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=horizontes, y=vals_taylor, mode="lines+markers",
+            name="Taylor solo (Pieza B)",
+            line=dict(color=COLORS["success"], width=2, dash="dot"),
+            marker=dict(size=9),
+            legendgroup="path",
         ),
         row=1, col=2,
     )
     fig.add_hline(
-        y=pred.fed_funds_now, line=dict(color=COLORS["muted"], dash="dash", width=1.5),
-        annotation_text=f"Fed Funds hoy: {pred.fed_funds_now:.2f}%",
+        y=merc.fed_funds_now, line=dict(color=COLORS["muted"], dash="dash", width=1.5),
+        annotation_text=f"Fed Funds hoy: {merc.fed_funds_now:.2f}%",
         annotation_position="bottom right",
         annotation_font=dict(size=14, color=COLORS["subtle"]),
         row=1, col=2,
@@ -350,7 +382,7 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
         xanchor="center",
     )
     fig.add_annotation(
-        text="<b>Tasa Fed que descuenta el mercado</b>",
+        text="<b>Expectativa Fed · 3 lecturas comparadas</b>",
         x=0.80, y=1.02, xref="paper", yref="paper",
         showarrow=False, font=dict(size=SECTION_SIZE, color=COLORS["primary"]),
         xanchor="center",
@@ -371,21 +403,48 @@ def lamina_3_fed_y_curva(store: MasterStore, as_of: date) -> go.Figure:
                      gridcolor="#EEEEEE", ticksuffix="%", row=1, col=2,
                      tickfont=dict(size=TICK_SIZE))
 
+    # Divergencia clave: implied vs Mercantil a 24M
+    div_24m_bps = int(round((vals_implied[-1] - vals_merc[-1]) * 100))
+
     ed = Editorial(
-        que_dice="Curva UST con pendiente positiva (2s10s +43 bps) y un sweet spot 5-10Y; el mercado descuenta tasas Fed estables a ligeramente alcistas en los próximos 24 meses.",
-        por_que="Curva: datos diarios Bloomberg de constant-maturity UST en 3 fechas — cierre 2025, cierre abril 2026 y hoy. Path: precio del strip SR3 (8 futuros trimestrales) leído como tasa promedio para cada trimestre futuro.",
-        para_que="Refuerza la vista UST 5-10Y overweight (lámina 2). Si la pendiente se aplana <20 bps o el path implícito baja >25 bps, revisamos duración objetivo.",
-        como_se_lee="Izquierda: cuanto más alta y empinada la curva, mejor el carry por plazo. Derecha: el eje horizontal es tiempo futuro; cada punto naranja es la tasa Fed que el mercado paga hoy por cubrirse en ese horizonte.",
+        que_dice=(
+            f"Divergencia entre mercado y modelo Mercantil: a 24M el "
+            f"implied SR3 cotiza {vals_implied[-1]:.2f}% (cut cycle terminado), "
+            f"el modelo Mercantil v{merc.model_version} pronostica "
+            f"{vals_merc[-1]:.2f}% (cut cycle continúa) — gap de {div_24m_bps} bps. "
+            f"Curva UST con pendiente positiva +43 bps · sweet spot 5-10Y."
+        ),
+        por_que=(
+            f"Curva: UST constant-maturity Bloomberg en 3 fechas. "
+            f"Las 3 lecturas: (1) Mercado = strip SR3 puro; "
+            f"(2) Mercantil v{merc.model_version} = "
+            f"{merc.w_a}·Implied + {merc.w_b}·Taylor con pesos calibrados en "
+            f"backtest 2022-2025; (3) Taylor solo = reaction function con "
+            f"PCE core vintage ({pred_b.pi_now_pct:.2f}% YoY) y U-3 "
+            f"({pred_b.u3_now_pct:.2f}%). Pasa fail-loud en todos los horizontes."
+        ),
+        para_que=(
+            "Si el modelo Mercantil acierta, hay valor en posiciones largas "
+            "de duración (UST 5-10Y, vista 1 lámina 2). Refuerza la convicción "
+            "ALTA. Si nos equivocamos y el mercado tiene razón, costo acotado "
+            "por el carry alto del 4.4-4.5%."
+        ),
+        como_se_lee=(
+            "Izquierda: curva UST en 3 fotos. Derecha: tres trayectorias "
+            "de tasa Fed esperada. La naranja es lo que cotiza el mercado; "
+            "la azul diamante es nuestro modelo; la verde punteada es "
+            "Taylor solo. Cuanto más se separan, más opinión propia tenemos."
+        ),
     )
     fig.add_trace(_editorial_table(ed), row=2, col=1)
 
     fig.update_layout(
         title=_slide_title(
-            "Fed Funds + curva UST",
-            "Sweet spot 5-10Y · target yield 4.20-4.50%",
+            "Fed Funds + curva UST · 3 lecturas comparadas",
+            f"Mercado vs Modelo Mercantil v{merc.model_version}: gap {div_24m_bps:+d} bps a 24M",
         ),
         height=1080,
-        legend=dict(orientation="h", y=0.46, font=dict(size=14)),
+        legend=dict(orientation="h", y=0.42, font=dict(size=13)),
         **LAYOUT_DEFAULTS,
     )
     return fig

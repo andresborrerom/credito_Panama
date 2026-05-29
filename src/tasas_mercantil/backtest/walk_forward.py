@@ -123,6 +123,45 @@ def backtest_implied_path(
     return pd.DataFrame(rows)
 
 
+def backtest_taylor(
+    store: MasterStore,
+    as_of_dates: list[date],
+    horizons: list[int] = HORIZONS_MONTHS,
+) -> pd.DataFrame:
+    """Backtest Pieza B Taylor rule en N fechas."""
+    from ..modelo.pieces.reaction_fn import compute_taylor_rule
+
+    rows = []
+    for as_of in as_of_dates:
+        try:
+            pred = compute_taylor_rule(store, as_of)
+        except Exception as e:
+            print(f"  [{as_of}] FALLO compute_taylor_rule: {e}")
+            continue
+
+        forecasts = {
+            1: pred.forecast_1m, 3: pred.forecast_3m,
+            6: pred.forecast_6m, 12: pred.forecast_12m,
+            24: pred.forecast_24m,
+        }
+        for h in horizons:
+            horizon_end = _add_months(as_of, h)
+            window = timedelta(days=15)
+            realized = realized_fed_funds_average(
+                store, horizon_end - window, horizon_end + window,
+            )
+            f = forecasts.get(h)
+            err = (f - realized) * 100 if (f is not None and realized is not None) else None
+            rows.append({
+                "as_of": as_of, "model": "modelo_taylor_b",
+                "model_version": pred.model_version, "horizon_months": h,
+                "forecast": f, "realized": realized,
+                "error_bps": err, "abs_error_bps": abs(err) if err is not None else None,
+                "family": "taylor_rule",
+            })
+    return pd.DataFrame(rows)
+
+
 def backtest_naive(
     store: MasterStore,
     as_of_dates: list[date],
