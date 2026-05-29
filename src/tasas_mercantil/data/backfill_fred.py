@@ -70,6 +70,9 @@ NON_VINTAGE = {
     "fred_kw_yield_10y":        "THREEFY10",    # KW model 10Y yield
     "fred_kw_tp_10y":           "THREEFYTP10",  # KW term premium 10Y (en %)
     "fred_kw_tp_5y":            "THREEFYTP5",   # KW term premium 5Y
+    # === R* (real neutral rate) — proxy Cleveland Fed para Pieza B dinámica ===
+    "fred_cle_real_rate_10y":   "REAINTRATREARAT10Y",  # 10-year real interest rate
+    "fred_cle_real_rate_1y":    "REAINTRATREARAT1YE",  # 1-year real interest rate
 }
 
 
