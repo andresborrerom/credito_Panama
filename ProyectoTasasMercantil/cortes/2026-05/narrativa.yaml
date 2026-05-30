@@ -20,15 +20,13 @@ autor_principal: "Camilo Forero + Andrés Borrero"
 # ---------------------------------------------------------------------------
 tldr_messages:
   - headline: >-
-      El mercado cree que las tasas se quedan donde están en los próximos 2
-      años (3.62 → 3.87%). Nuestro modelo Mercantil v0.3.0 cree que bajan
-      un poco más (3.69 → 3.62%). Gap modesto de 25 puntos básicos a 24M.
-    conviction: "Baja"
+      Modelo y mercado en consenso: Fed Funds estables, +20 bps en 24 meses.
+      Sin tesis contraria este mes.
+    conviction: "Media"
     relevant_unit: "Tesorería + Banco Panamá"
     trigger: >-
-      Próximos CPI core y dot plot SEP de junio. Si R* neutral está más
-      cerca de 1.0% que de 0.5% (debate académico activo), el gap se
-      reduce a ~16 bps. Pendiente bootstrap del backtest para intervalos.
+      CPI core junio. Si vuelve a > 0.3% m/m, modelo se inclina más hawkish
+      que el mercado. Próximo dot plot SEP también re-ancla expectativas.
 
   - headline: >-
       UST 10Y a 4.45% con curva positivamente inclinada (2s10s +43 bps) ofrece
