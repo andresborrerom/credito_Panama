@@ -1,0 +1,7 @@
+# Audio/video extraido localmente no va a git (los .7z subidos sí están).
+# El transcript sí se commitea.
+*.mp4
+*.m4a
+*.mp3
+*.wav
+*.ogg
