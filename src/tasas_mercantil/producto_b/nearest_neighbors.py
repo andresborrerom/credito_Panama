@@ -230,33 +230,31 @@ class ScenarioSet:
     K: int
     n_neighbors_with_returns: int
     raw_returns: np.ndarray
+    risk: Scenario          # cola izq extrema (cutoff fijo)
+    bearish: Scenario       # entre risk y HDI low (empírica)
     expected: Scenario      # HDI 50% (optimizado)
-    bullish: Scenario       # masa entre HDI high y +∞ (probabilidad empírica)
-    bearish: Scenario       # masa entre risk cutoff y HDI low (probabilidad empírica)
-    risk: Scenario          # peor 5% por defecto (cutoff fijo en cola izquierda)
+    bullish: Scenario       # entre HDI high y upside (empírica)
+    upside: Scenario        # cola der extrema (cutoff fijo)
 
     def all_scenarios(self) -> list[Scenario]:
-        return [self.expected, self.bullish, self.bearish, self.risk]
+        return [self.risk, self.bearish, self.expected, self.bullish, self.upside]
 
 
 def build_scenarios(
     returns: np.ndarray, label: str, horizon_months: int, K: int,
-    risk_mass: float = 0.05,
+    tail_mass: float = 0.025,
 ) -> ScenarioSet | None:
-    """Particiona los retornos en 4 escenarios con framework riguroso:
+    """Particiona los retornos en 5 escenarios con framework simétrico:
 
-    1. **Esperado (HDI 50%)**: rango más angosto que contiene 50% de la masa.
-       Es lo único optimizado. Tiene libertad completa para sesgarse según
-       la distribución real (no forzado al centro).
-    2. **Riesgo**: cola izquierda con masa fija = risk_mass (default 5%).
-       Cutoff por percentil, no por target de probabilidad.
-    3. **Bajista**: TODO lo que queda entre Riesgo y HDI low. Probabilidad
-       se **calcula empíricamente**, no se impone.
-    4. **Alcista**: TODO lo que queda a la derecha del HDI. Probabilidad
-       empírica.
+    1. **Riesgo** (cola izquierda): peor `tail_mass` (default 2.5%) por percentil fijo.
+    2. **Bajista**: entre Riesgo y HDI low. Probabilidad empírica.
+    3. **Esperado (HDI 50%)**: rango más angosto que contiene 50% de la masa. ÚNICO optimizado.
+    4. **Alcista**: entre HDI high y Sorpresa positiva. Probabilidad empírica.
+    5. **Sorpresa positiva** (cola derecha): mejor `tail_mass` por percentil fijo.
 
-    Suma: 5% + Bajista_p + 50% + Alcista_p = 100% → Bajista_p + Alcista_p = 45%.
-    Si la distribución es asimétrica, Bajista ≠ Alcista — y eso es información.
+    Suma: 2.5% + Bajista + 50% + Alcista + 2.5% = 100%.
+    Bajista + Alcista = 45% empíricamente distribuido — su diferencia es skewness real
+    (peras con peras, simétrico en los cutoffs).
     """
     if len(returns) < 5:
         return None
@@ -264,7 +262,7 @@ def build_scenarios(
     sorted_r = np.sort(returns)
     n = len(sorted_r)
 
-    # 1. HDI 50% (optimizado)
+    # 1. HDI 50%
     window = int(np.ceil(n * 0.50))
     if window >= n:
         hdi_low, hdi_high = float(sorted_r[0]), float(sorted_r[-1])
@@ -273,15 +271,19 @@ def build_scenarios(
         j = int(np.argmin(widths))
         hdi_low, hdi_high = float(sorted_r[j]), float(sorted_r[j + window])
 
-    # 2. Cutoff Riesgo: peor risk_mass de la cola izquierda
-    risk_idx = max(1, int(np.round(risk_mass * n)))
-    risk_cutoff = float(sorted_r[risk_idx - 1])  # último valor que pertenece a riesgo
+    # 2. Cutoffs colas simétricos
+    tail_idx_left = max(1, int(np.round(tail_mass * n)))
+    risk_cutoff = float(sorted_r[tail_idx_left - 1])
+
+    tail_idx_right = max(1, int(np.round(tail_mass * n)))
+    upside_cutoff = float(sorted_r[-tail_idx_right])
 
     # 3. Particionar
-    risk_returns = returns[returns <= risk_cutoff]
-    bear_returns = returns[(returns > risk_cutoff) & (returns < hdi_low)]
-    exp_returns  = returns[(returns >= hdi_low) & (returns <= hdi_high)]
-    bull_returns = returns[returns > hdi_high]
+    risk_returns    = returns[returns <= risk_cutoff]
+    bear_returns    = returns[(returns > risk_cutoff) & (returns < hdi_low)]
+    exp_returns     = returns[(returns >= hdi_low) & (returns <= hdi_high)]
+    bull_returns    = returns[(returns > hdi_high) & (returns < upside_cutoff)]
+    upside_returns  = returns[returns >= upside_cutoff]
 
     def _sc(name, arr):
         prob = len(arr) / n
@@ -297,10 +299,11 @@ def build_scenarios(
         K=K,
         n_neighbors_with_returns=n,
         raw_returns=returns,
+        risk=_sc("Riesgo (cola izq 2.5%)", risk_returns),
+        bearish=_sc("Bajista", bear_returns),
         expected=_sc("Esperado (HDI 50%)", exp_returns),
         bullish=_sc("Alcista", bull_returns),
-        bearish=_sc("Bajista", bear_returns),
-        risk=_sc("Riesgo (cola izq)", risk_returns),
+        upside=_sc("Sorpresa positiva (cola der 2.5%)", upside_returns),
     )
 
 
