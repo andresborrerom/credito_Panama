@@ -229,11 +229,11 @@ class ScenarioSet:
     horizon_months: int
     K: int
     n_neighbors_with_returns: int
-    raw_returns: np.ndarray  # retornos log de los vecinos en el horizonte
-    expected: Scenario      # 50%
-    bullish: Scenario       # 20%
-    bearish: Scenario       # 20%
-    risk: Scenario          # 10% (colas combinadas)
+    raw_returns: np.ndarray
+    expected: Scenario      # HDI 50% (optimizado)
+    bullish: Scenario       # masa entre HDI high y +∞ (probabilidad empírica)
+    bearish: Scenario       # masa entre risk cutoff y HDI low (probabilidad empírica)
+    risk: Scenario          # peor 5% por defecto (cutoff fijo en cola izquierda)
 
     def all_scenarios(self) -> list[Scenario]:
         return [self.expected, self.bullish, self.bearish, self.risk]
@@ -241,59 +241,66 @@ class ScenarioSet:
 
 def build_scenarios(
     returns: np.ndarray, label: str, horizon_months: int, K: int,
+    risk_mass: float = 0.05,
 ) -> ScenarioSet | None:
-    """Particiona los retornos en 4 escenarios: Esperado(HDI 50%) / Bajista (20%) /
-    Alcista (20%) / Riesgo (10%, cola izq).
+    """Particiona los retornos en 4 escenarios con framework riguroso:
+
+    1. **Esperado (HDI 50%)**: rango más angosto que contiene 50% de la masa.
+       Es lo único optimizado. Tiene libertad completa para sesgarse según
+       la distribución real (no forzado al centro).
+    2. **Riesgo**: cola izquierda con masa fija = risk_mass (default 5%).
+       Cutoff por percentil, no por target de probabilidad.
+    3. **Bajista**: TODO lo que queda entre Riesgo y HDI low. Probabilidad
+       se **calcula empíricamente**, no se impone.
+    4. **Alcista**: TODO lo que queda a la derecha del HDI. Probabilidad
+       empírica.
+
+    Suma: 5% + Bajista_p + 50% + Alcista_p = 100% → Bajista_p + Alcista_p = 45%.
+    Si la distribución es asimétrica, Bajista ≠ Alcista — y eso es información.
     """
     if len(returns) < 5:
         return None
 
-    low_hdi, high_hdi = hdi_interval(returns, mass=0.50)
-    in_hdi = returns[(returns >= low_hdi) & (returns <= high_hdi)]
+    sorted_r = np.sort(returns)
+    n = len(sorted_r)
 
-    # Below y above HDI
-    below = returns[returns < low_hdi]
-    above = returns[returns > high_hdi]
+    # 1. HDI 50% (optimizado)
+    window = int(np.ceil(n * 0.50))
+    if window >= n:
+        hdi_low, hdi_high = float(sorted_r[0]), float(sorted_r[-1])
+    else:
+        widths = sorted_r[window:] - sorted_r[:n - window]
+        j = int(np.argmin(widths))
+        hdi_low, hdi_high = float(sorted_r[j]), float(sorted_r[j + window])
 
-    # Riesgo: peor 10% (cola izquierda). Si below es menos de 10%, completar con peores de above.
-    n_total = len(returns)
-    n_risk = max(1, int(round(0.10 * n_total)))
-    sorted_below = np.sort(below)
-    sorted_above_desc = np.sort(above)[::-1]
+    # 2. Cutoff Riesgo: peor risk_mass de la cola izquierda
+    risk_idx = max(1, int(np.round(risk_mass * n)))
+    risk_cutoff = float(sorted_r[risk_idx - 1])  # último valor que pertenece a riesgo
 
-    # Cola izquierda extrema
-    risk_returns = sorted_below[:min(n_risk, len(sorted_below))]
+    # 3. Particionar
+    risk_returns = returns[returns <= risk_cutoff]
+    bear_returns = returns[(returns > risk_cutoff) & (returns < hdi_low)]
+    exp_returns  = returns[(returns >= hdi_low) & (returns <= hdi_high)]
+    bull_returns = returns[returns > hdi_high]
 
-    # Bajista: el resto de below (después del riesgo) — debería ser ~20%
-    bearish_returns = sorted_below[len(risk_returns):]
-
-    # Alcista: todo above (debería ser ~20%)
-    bullish_returns = above
-
-    def _scenario(name, prob, arr):
+    def _sc(name, arr):
+        prob = len(arr) / n
         if len(arr) == 0:
             return Scenario(name=name, prob=prob, low=float("nan"), high=float("nan"),
                             mean=float("nan"), n_obs=0)
-        return Scenario(name=name, prob=prob, low=float(arr.min()),
-                        high=float(arr.max()), mean=float(arr.mean()),
-                        n_obs=int(len(arr)))
-
-    # Recalcular probabilidades empíricas con los obs reales
-    prob_exp  = len(in_hdi) / n_total
-    prob_bear = len(bearish_returns) / n_total
-    prob_bull = len(bullish_returns) / n_total
-    prob_risk = len(risk_returns) / n_total
+        return Scenario(name=name, prob=prob, low=float(arr.min()), high=float(arr.max()),
+                        mean=float(arr.mean()), n_obs=int(len(arr)))
 
     return ScenarioSet(
         label=label,
         horizon_months=horizon_months,
         K=K,
-        n_neighbors_with_returns=n_total,
+        n_neighbors_with_returns=n,
         raw_returns=returns,
-        expected=_scenario("Esperado", prob_exp, in_hdi),
-        bullish=_scenario("Alcista", prob_bull, bullish_returns),
-        bearish=_scenario("Bajista", prob_bear, bearish_returns),
-        risk=_scenario("Riesgo (cola)", prob_risk, risk_returns),
+        expected=_sc("Esperado (HDI 50%)", exp_returns),
+        bullish=_sc("Alcista", bull_returns),
+        bearish=_sc("Bajista", bear_returns),
+        risk=_sc("Riesgo (cola izq)", risk_returns),
     )
 
 
