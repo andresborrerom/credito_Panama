@@ -1,21 +1,41 @@
 # 01 · Plan y fases del reporte
 
-El reporte mensual cubre **5 fases temáticas** + un **capítulo transversal de spreads
-corporativos**. Desde el primer corte el deck debe esbozar las 5 (aunque sea con 1
-lámina cada una) y profundizar fase por fase en cortes siguientes.
+> **Alcance revisado tras reunión de tesorería corporativa del 2026-06-01.**
+> Ver transcript y notas en `inputs_externos/reunion_alcance_2026-05-29/`.
 
-## Principios de construcción
+## Dos productos integrados (NO un solo reporte)
 
-- **Ventana temporal estándar por corte:** últimos 12 meses corridos + cierre del mes
-  anterior + 31-dic del año anterior. Comparación principal vs **mes anterior** y
-  contexto vs **12M**.
-- **Sin look-ahead:** todo dato presentado en el corte de un mes M debe ser conocible
-  a T+3 del cierre de M. Ver `02_MODELO_DATOS.md` § *Backtesting honesto*.
-- **1 idea = 1 lámina.** Cada lámina lleva: dato, gráfico, mensaje (bullet de 1 línea).
-- **Mensajes clave los escribimos Andrés + Camilo + Claude.** Los analistas no redactan
-  narrativa; solo aportan datos.
+| Producto | Qué entrega | Quién lo usa |
+|---|---|---|
+| **A. Reporte mensual de tasas** | Lectura de mercado + modelo Mercantil + 3-4 escenarios con probabilidad | Comité ejecutivo, JLG, accionistas, planeación financiera |
+| **B. Modelo de retornos esperados de portafolio** | Retorno esperado por asset class para el horizonte (anual o hasta cierre fiscal) + sensibilidad por escenario | Tesorería del grupo, mesa LUZ, gerencia del banco PA |
+
+Antes pensábamos que el deck era el único producto. La reunión aclaró que el
+deck es **el input** al modelo de retornos esperados, que es el producto que
+realmente toma decisiones en la mesa.
+
+## Cobertura geográfica (definitivo tras reunión)
+
+| Geografía | Profundidad | Estado |
+|---|---|---|
+| **USA** | **Fuerte** — modelo predictivo propio, descomposición term premium, escenarios | ✅ implementado |
+| **Panamá** | **Específica** — curva soberana + CDS Panamá + factor independiente de USA | 🟡 falta CDS Panamá + descomposición PCA |
+| **Venezuela** | Parqueada — sin tesorería ni portafolio que justifique todavía | 🟡 estructura, no profundidad |
+| **Europa** | **Fuera** | ❌ explícitamente excluida por Andrés en reunión |
+
+## Principios
+
+- **Informativo, NO recomendación de inversión**. Reiterado dos veces en
+  reunión. Compliance: nada del deck puede leerse como instrucción de mesa.
+- **Distribución de probabilidad, NO un único forecast**. 3-4 escenarios con
+  probabilidad asignada + sensibilidad del portafolio a cada uno.
+- **Modelo detrás + intuición editorial encima**. El número sale del modelo;
+  la calibración fina la firma la mesa.
+- **USA es la columna vertebral**. Panamá es subordinada. Venezuela es contexto.
 
 ---
+
+## Roadmap actualizado por sesión
 
 ## Fase 1 · USA (tasa de referencia mundial)
 
