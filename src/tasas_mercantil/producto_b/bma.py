@@ -176,6 +176,165 @@ def apply_temporal_smoothing(
 
 
 # ============================================================================
+# Iter 2: calibración de α por walk-forward causal
+# ============================================================================
+def _log_scores_up_to(
+    forecasts_per_date: list[dict[str, ModelForecast]],
+    realized: list[float],
+    upto_idx: int,
+    epsilon: float = 0.005,
+) -> dict[str, float]:
+    """Log scores acumulados usando SOLO fechas con idx < upto_idx (no look-ahead).
+
+    Si upto_idx == 0, devuelve dict vacío → caller usa equal.
+    """
+    if upto_idx <= 0:
+        return {}
+    train = forecasts_per_date[:upto_idx]
+    train_real = realized[:upto_idx]
+    log_scores = {m: 0.0 for m in train[0].keys()}
+    counts = {m: 0 for m in log_scores}
+    for fdict, real in zip(train, train_real):
+        for m, f in fdict.items():
+            within = np.mean(np.abs(f.samples - real) < epsilon)
+            ls = np.log(max(within, 1e-6))
+            log_scores[m] += ls
+            counts[m] += 1
+    return {m: log_scores[m] / counts[m] for m in log_scores if counts[m] > 0}
+
+
+def _crps_scores_up_to(
+    forecasts_per_date: list[dict[str, ModelForecast]],
+    realized: list[float],
+    upto_idx: int,
+) -> dict[str, float]:
+    """CRPS histórico por modelo (causal): score = -CRPS (mayor = mejor)."""
+    from .evaluation import crps_sample
+    if upto_idx <= 0:
+        return {}
+    train = forecasts_per_date[:upto_idx]
+    train_real = realized[:upto_idx]
+    crps_acc = {m: 0.0 for m in train[0].keys()}
+    counts = {m: 0 for m in crps_acc}
+    for fdict, real in zip(train, train_real):
+        for m, f in fdict.items():
+            crps_acc[m] += crps_sample(f.samples, real)
+            counts[m] += 1
+    # score = -CRPS_promedio (queremos maximizar score)
+    return {m: -crps_acc[m] / counts[m] for m in crps_acc if counts[m] > 0}
+
+
+def bma_crps_score_weights(crps_scores: dict[str, float],
+                           temperature: float = 50.0) -> dict[str, float]:
+    """Convertir scores a pesos: w_i ∝ exp(score_i · temperature).
+
+    temperature controla la sharpness. Mayor T → pesos más concentrados.
+    Para CRPS típico ~ 0.025, T=50 → diferencias de 5 bps en CRPS dan factor ~e^0.25 ≈ 1.28.
+    """
+    if not crps_scores:
+        return {}
+    max_s = max(crps_scores.values())
+    exps = {m: np.exp((s - max_s) * temperature) for m, s in crps_scores.items()}
+    total = sum(exps.values())
+    return {m: e / total for m, e in exps.items()}
+
+
+def calibrate_alpha_walkforward(
+    forecasts_per_date: list[dict[str, ModelForecast]],
+    realized: list[float],
+    alpha_grid: tuple = (0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0),
+    warmup: int = 6,
+    score_method: str = "crps",
+    temperature: float = 50.0,
+) -> tuple[float, pd.DataFrame]:
+    """Walk-forward causal: para cada t > warmup, score histórico con datos t' < t,
+    se aplica shrinkage(α), mide CRPS de la mezcla en t. Promedia → α*.
+
+    score_method:
+      "crps" — usa -CRPS histórico como score (recomendado).
+      "epsilon" — fracción de samples cerca del realizado (legacy, sensible a horizonte).
+    """
+    from .evaluation import crps_sample
+    model_names = list(forecasts_per_date[0].keys())
+    rows = []
+    for alpha in alpha_grid:
+        crps_list = []
+        for t in range(warmup, len(forecasts_per_date)):
+            if score_method == "crps":
+                scores = _crps_scores_up_to(forecasts_per_date, realized, t)
+                w_data = (bma_crps_score_weights(scores, temperature=temperature)
+                          if scores else {m: 1.0 / len(model_names) for m in model_names})
+            else:
+                ls = _log_scores_up_to(forecasts_per_date, realized, t)
+                w_data = (bma_log_score_weights(ls) if ls
+                          else {m: 1.0 / len(model_names) for m in model_names})
+            w_shrunk = bma_shrinkage(w_data, alpha=alpha)
+            bw = BMAWeights(
+                horizon_months=forecasts_per_date[t][model_names[0]].horizon_months,
+                weights=w_shrunk, iteration=2, method="shrinkage",
+            )
+            ens_samples = combine_forecasts(forecasts_per_date[t], bw)
+            crps_list.append(crps_sample(ens_samples, realized[t]))
+        rows.append({"alpha": alpha, "CRPS_mean": float(np.mean(crps_list)),
+                     "n_test": len(crps_list)})
+    df = pd.DataFrame(rows).sort_values("CRPS_mean").reset_index(drop=True)
+    return float(df.iloc[0]["alpha"]), df
+
+
+# ============================================================================
+# Walk-forward BMA Iter 2 — shrinkage Bayesiano con α óptimo
+# ============================================================================
+def walk_forward_bma_shrinkage(
+    forecasts_per_date: list[dict[str, ModelForecast]],
+    realized: list[float],
+    alpha: float,
+    warmup: int = 6,
+    score_method: str = "crps",
+    temperature: float = 50.0,
+) -> pd.DataFrame:
+    """Walk-forward con shrinkage. Antes de `warmup`: equal weights."""
+    if not forecasts_per_date:
+        return pd.DataFrame()
+    model_names = list(forecasts_per_date[0].keys())
+    h = forecasts_per_date[0][model_names[0]].horizon_months
+    rows = []
+    for t, (fdict, real) in enumerate(zip(forecasts_per_date, realized)):
+        if t < warmup:
+            bw = bma_equal_weights(model_names, h)
+            method = "equal_warmup"
+        else:
+            if score_method == "crps":
+                scores = _crps_scores_up_to(forecasts_per_date, realized, t)
+                w_data = (bma_crps_score_weights(scores, temperature=temperature)
+                          if scores else {m: 1.0 / len(model_names) for m in model_names})
+            else:
+                ls = _log_scores_up_to(forecasts_per_date, realized, t)
+                w_data = (bma_log_score_weights(ls) if ls
+                          else {m: 1.0 / len(model_names) for m in model_names})
+            w_shrunk = bma_shrinkage(w_data, alpha=alpha)
+            bw = BMAWeights(horizon_months=h, weights=w_shrunk,
+                            iteration=2, method=f"shrinkage_a{alpha:.2f}_{score_method}")
+            method = bw.method
+        ens_samples = combine_forecasts(fdict, bw)
+        ens_center = combine_centers(fdict, bw)
+        s = np.sort(ens_samples)
+        n = len(s); window = int(np.ceil(n * 0.50))
+        widths = s[window:] - s[:n - window]
+        j = int(np.argmin(widths))
+        hdi_low, hdi_high = float(s[j]), float(s[j + window])
+        as_of = list(fdict.values())[0].as_of
+        rows.append({
+            "as_of": as_of, "horizon": h, "real": real,
+            "ensemble_center": ens_center,
+            "ensemble_hdi_low": hdi_low, "ensemble_hdi_high": hdi_high,
+            "in_hdi": hdi_low <= real <= hdi_high,
+            "method": method,
+            **{f"w_{m}": bw.weights[m] for m in model_names},
+        })
+    return pd.DataFrame(rows)
+
+
+# ============================================================================
 # Walk-forward BMA — Iter 1 (equal weights)
 # ============================================================================
 def walk_forward_bma_equal(
