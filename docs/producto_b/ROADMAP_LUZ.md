@@ -135,7 +135,20 @@ Registrado para sprints futuros.
 | Demo API Iter 6 | ✅ | `scripts/demo_forecast_api.py` |
 | Experimento curva | ✅ Cerrado (negativo) | `docs/producto_b/EXPERIMENTO_CURVA_TREASURY.md` |
 | Snapshot LUZ 2026-06-09 | ✅ | `ProyectoTasasMercantil/inputs_externos/portafolio_luz/snapshots/2026-06-09/` |
-| Motor M (horizontes + agregador) | ⏳ Pendiente — siguiente paso | — |
-| Output (3) mensaje 1ra diapo | ⏳ Pendiente | — |
-| Output (1) bandas flexibles | ⏳ Pendiente | — |
-| Output (2) histograma | ⏳ Pendiente | — |
+| **M1 — horizonte arbitrario en forecast_api** | ✅ Cerrado | `src/tasas_mercantil/producto_b/forecast_api.py` + `scripts/smoke_m1_horizons.py` |
+| M2 — helpers `horizon_remaining_year` / `horizon_next_12m` | ⏳ Siguiente | — |
+| M3 — replicar Iter 6 a 6 ETFs LUZ | ⏳ | — |
+| M4 — mapeo UST bonds + TBill | ⏳ | — |
+| M5 — agregador portafolio | ⏳ | — |
+| M6 — walk-forward agregado | ⏳ | — |
+| Output (3) mensaje 1ra diapo | ⏳ | — |
+| Output (1) bandas flexibles | ⏳ | — |
+| Output (2) histograma | ⏳ | — |
+
+## Nota M1 (2026-06-09)
+
+Cambios respecto al diseño original:
+- `W_MAX` global → `DEFAULT_W_MAX_6M = 0.10` + `_default_w_max(h) = 0.10·√(h/6)`. Mantiene U comparable entre horizontes.
+- `exclude_window_months` en NN escala a `max(7, h+1)` para protección look-ahead.
+- Walk-forward ahora descarta fechas sin realized completo (afecta solo a horizontes largos cerca del límite de datos). Antes se imputaban como 0, contaminando los pesos BMA.
+- Validación: regresión h=6 bit-perfect contra baseline pre-M1; h=9 y h=12 producen forecasts coherentes (centro y vol monótonos crecientes; AR1 toma la delantera a h=12).

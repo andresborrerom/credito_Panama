@@ -18,8 +18,11 @@ Pipeline:
 
 Uso:
   >>> from tasas_mercantil.producto_b.forecast_api import forecast_lqd
-  >>> result = forecast_lqd(as_of=date(2024,12,31))
+  >>> result = forecast_lqd(as_of=date(2024,12,31))            # 6m default
+  >>> result_12m = forecast_lqd(as_of=date(2024,12,31), h_months=12)
   >>> print(result.comment)
+
+M1 (2026-06): horizonte generalizado a h_months arbitrario. W_MAX escala √h.
 """
 from __future__ import annotations
 from dataclasses import dataclass
@@ -45,17 +48,22 @@ from tasas_mercantil.producto_b.diverse_models import model_ar1
 # Constantes finales del sistema operativo
 # ============================================================================
 ETF_LABEL = "LQD"
-HORIZON_MONTHS = 6
+DEFAULT_H_MONTHS = 6
 WARMUP_MONTHS = 12
 ALPHA = 1.0                  # full data-driven (Iter 2)
 RHO = 0.95                   # temporal smoothing (Iter 3)
-W_MAX = 0.10                 # 10pp = ancho interpretable para LQD 6m
+DEFAULT_W_MAX_6M = 0.10      # ancho aceptable a 6m; escalado √h en otros horizontes
 P_GRID = (0.50, 0.60, 0.70, 0.80, 0.90)
 STRESS_HIGH = 0.80           # cap U≤50
 STRESS_EXTREME = 0.95        # U=0
 STRESS_LOOKBACK = 60         # meses (5 años)
 
 CACHE_DIR = Path("data/external/tasas_mercantil")
+
+
+def _default_w_max(h_months: int) -> float:
+    # bajo random walk Var(R_h) ∝ h ⇒ ancho ~ √h. Mantiene U comparable entre horizontes.
+    return DEFAULT_W_MAX_6M * float(np.sqrt(h_months / 6.0))
 
 
 @dataclass
@@ -94,7 +102,7 @@ def _hdi(samples, mass):
     return float(s[j]), float(s[j + w])
 
 
-def _usability_raw(samples, w_max=W_MAX, p_grid=P_GRID):
+def _usability_raw(samples, w_max=DEFAULT_W_MAX_6M, p_grid=P_GRID):
     best_p, best_lo, best_hi = 0.0, None, None
     for p in sorted(p_grid):
         lo, hi = _hdi(samples, p)
@@ -105,7 +113,7 @@ def _usability_raw(samples, w_max=W_MAX, p_grid=P_GRID):
     return best_p, best_lo, best_hi
 
 
-def _usability_gated(samples, stress, w_max=W_MAX,
+def _usability_gated(samples, stress, w_max=DEFAULT_W_MAX_6M,
                      high=STRESS_HIGH, extreme=STRESS_EXTREME):
     U, lo, hi = _usability_raw(samples, w_max)
     if stress is None: return U, lo, hi, "sin_dato"
@@ -128,28 +136,31 @@ def _percentile_window(series, as_of, lookback=STRESS_LOOKBACK):
 # ============================================================================
 # Modelos individuales del ensemble
 # ============================================================================
-def _model_nn(target, macro_hist, etf_returns, K):
-    nr = find_neighbors(target, macro_hist, K=K, exclude_window_months=7)
+def _model_nn(target, macro_hist, etf_returns, K, h_months, etf_label=ETF_LABEL):
+    # exclude_window_months ≥ h+1 evita que el forward window del vecino
+    # toque el del target (protección look-ahead).
+    nr = find_neighbors(target, macro_hist, K=K,
+                        exclude_window_months=max(7, h_months + 1))
     fwd = compute_forward_returns(nr.neighbors["as_of"].tolist(),
-                                   etf_returns, HORIZON_MONTHS, ETF_LABEL)
+                                   etf_returns, h_months, etf_label)
     if len(fwd) < 3: return None
     return ModelForecast(model_name=f"NN_K{K}", as_of=target.as_of,
-                         horizon_months=HORIZON_MONTHS, samples=fwd,
+                         horizon_months=h_months, samples=fwd,
                          center=float(np.median(fwd)))
 
 
-def _model_naive(as_of, etf_returns):
-    sub = etf_returns[etf_returns["label"] == ETF_LABEL].copy()
+def _model_naive(as_of, etf_returns, h_months, etf_label=ETF_LABEL):
+    sub = etf_returns[etf_returns["label"] == etf_label].copy()
     sub["obs_date"] = pd.to_datetime(sub["obs_date"])
     sub = sub.sort_values("obs_date").set_index("obs_date")
     history = sub[sub.index <= pd.Timestamp(as_of)]["return_log"].dropna()
     if len(history) < 12: return None
     last_year = history.iloc[-12:].values
     rng = np.random.default_rng(int(as_of.toordinal()))
-    sims = np.array([rng.choice(last_year, size=HORIZON_MONTHS, replace=True).sum()
+    sims = np.array([rng.choice(last_year, size=h_months, replace=True).sum()
                      for _ in range(1000)])
     return ModelForecast(model_name="Naive_boot", as_of=as_of,
-                         horizon_months=HORIZON_MONTHS, samples=sims,
+                         horizon_months=h_months, samples=sims,
                          center=float(np.median(sims)))
 
 
@@ -244,59 +255,75 @@ def _walk_forward_weights(forecasts_per_date, realized, target_idx):
 # ============================================================================
 def forecast_lqd(
     as_of: date,
+    h_months: int = DEFAULT_H_MONTHS,
+    w_max: float | None = None,
     history_start: date = date(2020, 1, 31),
     macro_start: date = date(2003, 1, 1),
 ) -> ForecastResult:
-    """Forecast LQD a 6 meses con BMA Iter 6.
+    """Forecast LQD a h_months con BMA Iter 6.
 
     Args:
         as_of: fecha de corte (último día del mes recomendado).
+        h_months: horizonte en meses (default 6, soporta cualquier int ≥ 1).
+        w_max: ancho aceptable para la métrica U. Si None, escala como
+            DEFAULT_W_MAX_6M × √(h/6) — mantiene U comparable entre horizontes.
         history_start: inicio del walk-forward para reproducir pesos.
         macro_start: inicio del macro_history para NN.
 
     Returns:
         ForecastResult con centro, HDI, U gated, comentario, etc.
     """
+    if w_max is None:
+        w_max = _default_w_max(h_months)
+
     store = load_master_store()
     macro_hist = build_macro_history(store, start=macro_start, end=as_of)
     etf_ret = pd.read_parquet(CACHE_DIR / "etfs_producto_b.parquet")
 
     history_dates = pd.date_range(history_start, as_of, freq="ME").date.tolist()
     fps, reals, ds = [], [], []
+    skipped_no_real = 0
     for d in history_dates:
         target = macro_state_at(store, d)
         if target is None: continue
         sub = etf_ret[etf_ret["label"] == ETF_LABEL].copy()
         sub["obs_date"] = pd.to_datetime(sub["obs_date"])
         sub = sub.sort_values("obs_date").set_index("obs_date")
-        cut = pd.Timestamp(d); end = cut + pd.DateOffset(months=HORIZON_MONTHS)
+        cut = pd.Timestamp(d); end = cut + pd.DateOffset(months=h_months)
         window = sub.loc[(sub.index > cut) & (sub.index <= end), "return_log"].dropna()
-        real = float(window.sum()) if len(window) >= HORIZON_MONTHS - 1 else None
+        real = float(window.sum()) if len(window) >= h_months - 1 else None
+
+        # Sin realized completo no podemos scorear: descartar (excepto el target).
+        # Esto evita pesos BMA contaminados por ceros falsos para horizontes largos.
+        if real is None and d != as_of:
+            skipped_no_real += 1
+            continue
+
         models = {
-            "NN_K10":     _model_nn(target, macro_hist, etf_ret, K=10),
-            "NN_K20":     _model_nn(target, macro_hist, etf_ret, K=20),
-            "Naive_boot": _model_naive(d, etf_ret),
-            "AR1":        model_ar1(d, etf_ret, ETF_LABEL, HORIZON_MONTHS, n_sims=1000),
+            "NN_K10":     _model_nn(target, macro_hist, etf_ret, K=10, h_months=h_months),
+            "NN_K20":     _model_nn(target, macro_hist, etf_ret, K=20, h_months=h_months),
+            "Naive_boot": _model_naive(d, etf_ret, h_months),
+            "AR1":        model_ar1(d, etf_ret, ETF_LABEL, h_months, n_sims=1000),
         }
         if any(v is None for v in models.values()): continue
         fps.append(models); ds.append(d)
         reals.append(real if real is not None else 0.0)
 
     if not fps or ds[-1] != as_of:
-        raise ValueError(f"No se pudo construir forecasts hasta {as_of}")
+        raise ValueError(f"No se pudo construir forecasts hasta {as_of} con h={h_months}m")
 
     target_idx = len(ds) - 1
     weights = _walk_forward_weights(fps, reals, target_idx)
-    bw = BMAWeights(horizon_months=HORIZON_MONTHS, weights=weights,
+    bw = BMAWeights(horizon_months=h_months, weights=weights,
                     iteration=3, method="shrinkage+smoothing")
     bma_samples = combine_forecasts(fps[target_idx], bw)
     bma_center = combine_centers(fps[target_idx], bw)
 
     signals = _load_stress_signals()
     stress, components = _compute_stress(as_of, signals)
-    U, lo, hi, regime = _usability_gated(bma_samples, stress)
+    U, lo, hi, regime = _usability_gated(bma_samples, stress, w_max=w_max)
 
-    comment = _build_comment(as_of, bma_center, lo, hi, U, regime, components)
+    comment = _build_comment(as_of, bma_center, lo, hi, U, regime, components, h_months)
     return ForecastResult(
         as_of=as_of, center=bma_center, hdi_lo=lo, hdi_hi=hi,
         U=int(U * 100), regime=regime, stress_components=components,
@@ -304,10 +331,10 @@ def forecast_lqd(
     )
 
 
-def _build_comment(as_of, center, lo, hi, U, regime, comps):
+def _build_comment(as_of, center, lo, hi, U, regime, comps, h_months):
     if U == 0:
         return (
-            f"[{as_of}] LQD 6m: SISTEMA NO USABLE este mes (régimen {regime}, "
+            f"[{as_of}] LQD {h_months}m: SISTEMA NO USABLE este mes (régimen {regime}, "
             f"stress combinado {max(v for v in comps.values() if v is not None):.0%}). "
             f"Centro indicativo {center:+.1%}, pero no se debe emitir intervalo "
             f"de confianza al comité."
@@ -315,7 +342,7 @@ def _build_comment(as_of, center, lo, hi, U, regime, comps):
     high_signals = [k for k, v in comps.items()
                     if v is not None and v >= STRESS_HIGH]
     base = (
-        f"[{as_of}] LQD 6m — Centro {center:+.1%}, "
+        f"[{as_of}] LQD {h_months}m — Centro {center:+.1%}, "
         f"con {int(U*100)}% de confianza estará entre {lo:+.1%} y {hi:+.1%} "
         f"(rango {(hi-lo)*100:.1f}pp)."
     )
