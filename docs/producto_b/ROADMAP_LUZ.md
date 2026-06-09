@@ -152,3 +152,35 @@ Cambios respecto al diseño original:
 - `exclude_window_months` en NN escala a `max(7, h+1)` para protección look-ahead.
 - Walk-forward ahora descarta fechas sin realized completo (afecta solo a horizontes largos cerca del límite de datos). Antes se imputaban como 0, contaminando los pesos BMA.
 - Validación: regresión h=6 bit-perfect contra baseline pre-M1; h=9 y h=12 producen forecasts coherentes (centro y vol monótonos crecientes; AR1 toma la delantera a h=12).
+
+## Nota M1.5 (2026-06-09) — eliminación de umbrales arbitrarios
+
+Crítica del usuario: el `W_MAX = 10pp` era arbitrario; los inputs de las vistas
+deberían salir de algún lugar empírico, no de la cabeza del implementador.
+
+Cambios:
+
+- **Vista A: w_max ya no es `0.10·√(h/6)`** sino el **IQR empírico** (P75−P25)
+  de los retornos rolling h-meses del activo en los últimos 5 años. Sin
+  parámetros. Interpretación: "el modelo informa si su HDI es más angosto que
+  el rango intercuartílico observado del activo".
+- **Vista C nueva — sweet spot endógeno via Kneedle**. Para la nube MC, computa
+  la curva (p, width(p)) y devuelve el "codo": punto de máxima eficiencia
+  confianza-por-pp-de-ancho. No requiere ningún umbral externo.
+- `ForecastResult` extendido con `sigma_h`, `w_max_used`, `sweet_spot` (dict
+  con p, lo, hi, width, curva completa para visualización).
+- El comment de Vista B (fijar confianza) NO se incluye todavía — es una
+  decisión del comité (default propuesto: 80%, lo añadimos cuando consultemos).
+
+Diagnóstico nuevo emergente: con anclaje empírico estricto, **Vista A devuelve
+U=0 cuando el modelo no aporta sobre la dispersión empírica del activo**. Para
+LQD a fines de 2024, eso sucede en h=6 y h=9 (modelo no bate IQR histórico).
+A h=12 sí aporta (HDI 50% modelo 10.0pp < IQR 10.69pp → U=50%). Esto es
+**información valiosa**, no defecto del modelo: el sistema te dice cuándo
+realmente está agregando valor.
+
+Vista C (sweet spot) **siempre** devuelve un punto utilizable — es la vista
+pragmática para el comité. Vista A es el filtro de honestidad estricta.
+
+Validación: smoke pasa, σ_h crece monótono con h, sweet spot ∈ [0.05, 0.95]
+en los 3 horizontes, régimen invariante.

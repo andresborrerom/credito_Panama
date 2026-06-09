@@ -52,31 +52,137 @@ DEFAULT_H_MONTHS = 6
 WARMUP_MONTHS = 12
 ALPHA = 1.0                  # full data-driven (Iter 2)
 RHO = 0.95                   # temporal smoothing (Iter 3)
-DEFAULT_W_MAX_6M = 0.10      # ancho aceptable a 6m; escalado √h en otros horizontes
+DEFAULT_W_MAX_6M = 0.10      # fallback histórico (M1); reemplazado en M1.5 por σ_h
 P_GRID = (0.50, 0.60, 0.70, 0.80, 0.90)
 STRESS_HIGH = 0.80           # cap U≤50
 STRESS_EXTREME = 0.95        # U=0
-STRESS_LOOKBACK = 60         # meses (5 años)
+STRESS_LOOKBACK = 60         # meses (5 años) — también default para σ_h lookback
+# M1.5: w_max anclado al IQR empírico (P75-P25) de retornos h-meses del activo.
+# Sin parámetro arbitrario k. Interpretación: "el modelo informa más que mirar
+# simplemente el rango intercuartílico histórico observado".
 
 CACHE_DIR = Path("data/external/tasas_mercantil")
 
 
 def _default_w_max(h_months: int) -> float:
-    # bajo random walk Var(R_h) ∝ h ⇒ ancho ~ √h. Mantiene U comparable entre horizontes.
+    # Fallback usado solo si no hay datos suficientes para σ_h. En operación
+    # normal, w_max sale de _natural_w_max (Ancla 1: escala del propio activo).
     return DEFAULT_W_MAX_6M * float(np.sqrt(h_months / 6.0))
+
+
+def _rolling_h_returns(etf_returns, label, h_months, as_of,
+                       lookback_years=5):
+    """Retornos rolling h-meses (log), walk-forward causal hasta as_of.
+
+    Devuelve la serie de retornos h-meses históricos observados (solapados).
+    Es la base empírica para anclar σ_h, IQR, y cualquier otra métrica de
+    escala natural del activo.
+    """
+    sub = etf_returns[etf_returns["label"] == label].copy()
+    sub["obs_date"] = pd.to_datetime(sub["obs_date"])
+    sub = sub.sort_values("obs_date").set_index("obs_date")
+    cut = pd.Timestamp(as_of)
+    hist = sub.loc[sub.index <= cut, "return_log"].dropna()
+    if len(hist) < h_months + 12:
+        return None
+    rolling_h = hist.rolling(window=h_months).sum().dropna()
+    window_months = lookback_years * 12
+    if len(rolling_h) > window_months:
+        rolling_h = rolling_h.iloc[-window_months:]
+    if len(rolling_h) < 12:
+        return None
+    return rolling_h
+
+
+def _historical_sigma_h(etf_returns, label, h_months, as_of, lookback_years=5):
+    """σ de retornos h-meses solapados — info para contexto, no para w_max."""
+    rolling_h = _rolling_h_returns(etf_returns, label, h_months, as_of, lookback_years)
+    if rolling_h is None:
+        return None
+    return float(rolling_h.std(ddof=1))
+
+
+def _natural_w_max(etf_returns, label, h_months, as_of, lookback_years=5):
+    """w_max anclado al IQR empírico de retornos h-meses históricos.
+
+    IQR = P75 − P25 de los retornos rolling h-meses en la ventana lookback.
+    Es el "ancho del rango central observado" del activo. Sin parámetros.
+
+    Para distribuciones simétricas unimodales, IQR ≈ HDI 50% empírico — un
+    intervalo del modelo más angosto que el IQR aporta info adicional respecto
+    a mirar simplemente la dispersión histórica.
+
+    Returns:
+        (w_max, sigma_h_for_context). Si no hay datos, fallback √h y NaN.
+    """
+    rolling_h = _rolling_h_returns(etf_returns, label, h_months, as_of, lookback_years)
+    if rolling_h is None:
+        return _default_w_max(h_months), float("nan")
+    q25, q75 = np.quantile(rolling_h.values, [0.25, 0.75])
+    iqr = float(q75 - q25)
+    sigma_h = float(rolling_h.std(ddof=1))
+    return iqr, sigma_h
+
+
+# ---------------------------------------------------------------------------
+# Vista C — sweet spot endógeno via Kneedle sobre curva (p, width)
+# ---------------------------------------------------------------------------
+def _kneedle_convex_increasing(x, y):
+    """Índice del 'codo' de una curva y(x) convexa creciente.
+
+    Codo = punto de máxima distancia perpendicular BAJO la cuerda que une
+    (x[0], y[0]) con (x[-1], y[-1]). En espacio normalizado [0,1]^2, eso es
+    argmax(x_n - y_n).
+    """
+    x = np.asarray(x, dtype=float); y = np.asarray(y, dtype=float)
+    x_n = (x - x[0]) / (x[-1] - x[0] + 1e-12)
+    y_n = (y - y[0]) / (y[-1] - y[0] + 1e-12)
+    return int(np.argmax(x_n - y_n))
+
+
+def usability_sweet_spot(samples, p_grid=None):
+    """Vista C: sweet spot endógeno sin umbrales externos.
+
+    Para la nube `samples`, computa la curva (p, width(p)) para p ∈ p_grid.
+    Devuelve el punto Kneedle: máxima ganancia de confianza por pp de ancho.
+
+    Returns:
+        dict con: p (confianza óptima), lo, hi (HDI a ese p), width, y la
+        curva completa para visualizar.
+    """
+    if p_grid is None:
+        p_grid = np.round(np.arange(0.05, 0.96, 0.05), 2)
+    widths, los, his = [], [], []
+    for p in p_grid:
+        lo, hi = _hdi(samples, float(p))
+        widths.append(hi - lo); los.append(lo); his.append(hi)
+    widths = np.array(widths)
+    idx = _kneedle_convex_increasing(p_grid, widths)
+    return {
+        "p": float(p_grid[idx]),
+        "lo": float(los[idx]),
+        "hi": float(his[idx]),
+        "width": float(widths[idx]),
+        "curve_p": [float(p) for p in p_grid],
+        "curve_widths": widths.tolist(),
+    }
 
 
 @dataclass
 class ForecastResult:
     as_of: date
-    center: float                       # mediana retorno log 6m
-    hdi_lo: float                       # bound bajo HDI U%
-    hdi_hi: float                       # bound alto HDI U%
+    center: float                       # mediana retorno log h-meses
+    hdi_lo: float                       # bound bajo HDI U% (Vista A)
+    hdi_hi: float                       # bound alto HDI U% (Vista A)
     U: int                              # score usabilidad gated, en %
     regime: str                         # normal | stress_alto | stress_extremo
     stress_components: dict             # {move, slope_stress, vel_us2y, breakeven}
     bma_weights: dict                   # pesos finales por modelo
     bma_samples: np.ndarray             # nube completa (1000+ samples)
+    # M1.5 anclajes empíricos (sin umbrales arbitrarios)
+    sigma_h: float                      # σ histórico h-meses del activo (escala natural)
+    w_max_used: float                   # w_max aplicado para Vista A (=k·σ_h por default)
+    sweet_spot: dict                    # Vista C: {p, lo, hi, width, curva (p, widths)}
     comment: str                        # texto interpretable para reporte
 
     def as_dict(self) -> dict:
@@ -85,6 +191,10 @@ class ForecastResult:
             "center": self.center,
             "hdi_lo": self.hdi_lo, "hdi_hi": self.hdi_hi,
             "U": self.U, "regime": self.regime,
+            "sigma_h": self.sigma_h, "w_max_used": self.w_max_used,
+            "sweet_p": self.sweet_spot["p"],
+            "sweet_lo": self.sweet_spot["lo"],
+            "sweet_hi": self.sweet_spot["hi"],
             **{f"stress_{k}": v for k, v in self.stress_components.items()},
             **{f"w_{m}": w for m, w in self.bma_weights.items()},
             "comment": self.comment,
@@ -257,28 +367,39 @@ def forecast_lqd(
     as_of: date,
     h_months: int = DEFAULT_H_MONTHS,
     w_max: float | None = None,
+    sigma_lookback_years: int = 5,
     history_start: date = date(2020, 1, 31),
     macro_start: date = date(2003, 1, 1),
 ) -> ForecastResult:
-    """Forecast LQD a h_months con BMA Iter 6.
+    """Forecast LQD a h_months con BMA Iter 6 (M1.5: anchors empíricos).
 
     Args:
         as_of: fecha de corte (último día del mes recomendado).
         h_months: horizonte en meses (default 6, soporta cualquier int ≥ 1).
-        w_max: ancho aceptable para la métrica U. Si None, escala como
-            DEFAULT_W_MAX_6M × √(h/6) — mantiene U comparable entre horizontes.
-        history_start: inicio del walk-forward para reproducir pesos.
+        w_max: ancho aceptable para Vista A (rango fijo, max confianza).
+            Si None (default), se ancla al IQR empírico de retornos h-meses
+            del activo en los últimos sigma_lookback_years años. Sin
+            parámetros arbitrarios — es el rango intercuartílico observado.
+        sigma_lookback_years: ventana causal para anclar IQR y σ_h.
+        history_start: inicio del walk-forward para reproducir pesos BMA.
         macro_start: inicio del macro_history para NN.
 
     Returns:
-        ForecastResult con centro, HDI, U gated, comentario, etc.
+        ForecastResult con Vista A (HDI U%, anclado al IQR del activo),
+        Vista C (sweet spot endógeno via Kneedle), σ_h del activo para
+        contexto, pesos BMA, régimen de stress, etc.
     """
-    if w_max is None:
-        w_max = _default_w_max(h_months)
-
     store = load_master_store()
     macro_hist = build_macro_history(store, start=macro_start, end=as_of)
     etf_ret = pd.read_parquet(CACHE_DIR / "etfs_producto_b.parquet")
+
+    if w_max is None:
+        w_max, sigma_h = _natural_w_max(etf_ret, ETF_LABEL, h_months, as_of,
+                                         lookback_years=sigma_lookback_years)
+    else:
+        sigma_h_val = _historical_sigma_h(etf_ret, ETF_LABEL, h_months, as_of,
+                                          sigma_lookback_years)
+        sigma_h = sigma_h_val if sigma_h_val is not None else float("nan")
 
     history_dates = pd.date_range(history_start, as_of, freq="ME").date.tolist()
     fps, reals, ds = [], [], []
@@ -323,15 +444,20 @@ def forecast_lqd(
     stress, components = _compute_stress(as_of, signals)
     U, lo, hi, regime = _usability_gated(bma_samples, stress, w_max=w_max)
 
-    comment = _build_comment(as_of, bma_center, lo, hi, U, regime, components, h_months)
+    sweet = usability_sweet_spot(bma_samples)
+
+    comment = _build_comment(as_of, bma_center, lo, hi, U, regime,
+                             components, h_months, sweet)
     return ForecastResult(
         as_of=as_of, center=bma_center, hdi_lo=lo, hdi_hi=hi,
         U=int(U * 100), regime=regime, stress_components=components,
-        bma_weights=weights, bma_samples=bma_samples, comment=comment,
+        bma_weights=weights, bma_samples=bma_samples,
+        sigma_h=sigma_h, w_max_used=w_max, sweet_spot=sweet,
+        comment=comment,
     )
 
 
-def _build_comment(as_of, center, lo, hi, U, regime, comps, h_months):
+def _build_comment(as_of, center, lo, hi, U, regime, comps, h_months, sweet):
     if U == 0:
         return (
             f"[{as_of}] LQD {h_months}m: SISTEMA NO USABLE este mes (régimen {regime}, "
@@ -342,9 +468,12 @@ def _build_comment(as_of, center, lo, hi, U, regime, comps, h_months):
     high_signals = [k for k, v in comps.items()
                     if v is not None and v >= STRESS_HIGH]
     base = (
-        f"[{as_of}] LQD {h_months}m — Centro {center:+.1%}, "
-        f"con {int(U*100)}% de confianza estará entre {lo:+.1%} y {hi:+.1%} "
-        f"(rango {(hi-lo)*100:.1f}pp)."
+        f"[{as_of}] LQD {h_months}m — Centro {center:+.1%}. "
+        f"Vista A (HDI más angosto que IQR histórico del activo): "
+        f"{int(U*100)}% confianza, [{lo:+.1%}, {hi:+.1%}] ({(hi-lo)*100:.1f}pp). "
+        f"Vista C (sweet spot Kneedle endógeno): "
+        f"{int(sweet['p']*100)}% confianza, "
+        f"[{sweet['lo']:+.1%}, {sweet['hi']:+.1%}] ({sweet['width']*100:.1f}pp)."
     )
     if regime != "normal":
         base += f" Régimen: {regime} (señales en alerta: {', '.join(high_signals)})."
