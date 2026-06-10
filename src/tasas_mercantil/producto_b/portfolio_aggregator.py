@@ -95,6 +95,8 @@ class PortfolioForecast:
     coverage_proxy: float               # fracción LUZ via proxy
     coverage_cash: float                # fracción cash
     components: dict                    # {posicion: contribucion_centro_decimal}
+    component_regimes: dict             # {etf_label: regime} para cada ETF usado
+    worst_regime: str                   # peor régimen agregado del portafolio
     comment: str
 
     def as_dict(self) -> dict:
@@ -107,8 +109,12 @@ class PortfolioForecast:
             "coverage_directa": self.coverage_directa,
             "coverage_proxy": self.coverage_proxy,
             "coverage_cash": self.coverage_cash,
+            "worst_regime": self.worst_regime,
             "comment": self.comment,
         }
+
+
+_REGIME_PRIORITY = {"stress_extremo": 3, "stress_alto": 2, "normal": 1, "sin_dato": 0}
 
 
 def _align_samples(samples: np.ndarray, n_target: int = N_MC,
@@ -140,6 +146,7 @@ def forecast_luz_portfolio(as_of: date, h_months: int) -> PortfolioForecast:
     """
     # Cache de forecasts por fuente (evita re-correr el mismo ETF varias veces)
     etf_cache: dict[str, np.ndarray] = {}
+    etf_regimes: dict[str, str] = {}
     bond_cache: dict[int, np.ndarray] = {}
 
     component_samples: dict[str, tuple[float, np.ndarray]] = {}
@@ -150,6 +157,7 @@ def forecast_luz_portfolio(as_of: date, h_months: int) -> PortfolioForecast:
             if pos.source not in etf_cache:
                 r = forecast_etf(pos.source, as_of=as_of, h_months=h_months)
                 etf_cache[pos.source] = _log_to_decimal(r.bma_samples)
+                etf_regimes[pos.source] = r.regime
             s = etf_cache[pos.source]
             cov_directa += pos.weight
         elif pos.strategy == "bond":
@@ -165,6 +173,7 @@ def forecast_luz_portfolio(as_of: date, h_months: int) -> PortfolioForecast:
             if pos.source not in etf_cache:
                 r = forecast_etf(pos.source, as_of=as_of, h_months=h_months)
                 etf_cache[pos.source] = _log_to_decimal(r.bma_samples)
+                etf_regimes[pos.source] = r.regime
             s = etf_cache[pos.source]
             cov_proxy += pos.weight
         elif pos.strategy == "cash":
@@ -173,6 +182,9 @@ def forecast_luz_portfolio(as_of: date, h_months: int) -> PortfolioForecast:
         else:
             raise ValueError(f"Estrategia desconocida: {pos.strategy}")
         component_samples[pos.name] = (pos.weight, _align_samples(s))
+
+    worst_regime = max(etf_regimes.values(), key=lambda r: _REGIME_PRIORITY[r]) \
+        if etf_regimes else "sin_dato"
 
     # Agregación: suma ponderada (correlación implícita)
     portfolio = np.zeros(N_MC)
@@ -183,17 +195,19 @@ def forecast_luz_portfolio(as_of: date, h_months: int) -> PortfolioForecast:
 
     center = float(np.median(portfolio))
     sweet = usability_sweet_spot(portfolio)
+    regime_note = "" if worst_regime == "normal" else f" Régimen agregado: {worst_regime}."
     comment = (
         f"[{as_of}] LUZ {h_months}m — Centro {center:+.2%}. "
         f"Vista C (sweet spot {int(sweet['p']*100)}%): "
         f"[{sweet['lo']:+.2%}, {sweet['hi']:+.2%}] ({sweet['width']*100:.1f}pp). "
         f"Cobertura: {cov_directa*100:.0f}% directo + "
-        f"{cov_proxy*100:.0f}% proxy + {cov_cash*100:.1f}% cash."
+        f"{cov_proxy*100:.0f}% proxy + {cov_cash*100:.1f}% cash.{regime_note}"
     )
     return PortfolioForecast(
         as_of=as_of, h_months=h_months, center=center,
         samples=portfolio, sweet_spot=sweet,
         coverage_directa=cov_directa, coverage_proxy=cov_proxy,
         coverage_cash=cov_cash,
-        components=contribs, comment=comment,
+        components=contribs, component_regimes=etf_regimes,
+        worst_regime=worst_regime, comment=comment,
     )
