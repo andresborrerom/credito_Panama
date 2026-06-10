@@ -63,13 +63,13 @@ def main():
 
     print(f"\n[Vista 6 — VaR 95]")
     v = views["var"]
-    print(f"  95% del tiempo no perdés más de {pct(-v['var'])}")
-    print(f"  (i.e. VaR 95 = {pct(v['var'])})")
+    print(f"  95% del tiempo no perdés más de {abs(v['var'])*100:.2f}%")
+    print(f"  (i.e. retorno P5 = {pct(v['var'])})")
 
     print(f"\n[Vista 7 — CVaR/ES 95]")
     v = views["cvar"]
-    print(f"  Si te toca el peor 5%, perdés en promedio {pct(-v['cvar'])}")
-    print(f"  (i.e. CVaR 95 = {pct(v['cvar'])}, threshold VaR = {pct(v['var'])})")
+    print(f"  Si te toca el peor 5%, perdés en promedio {abs(v['cvar'])*100:.2f}%")
+    print(f"  (i.e. retorno mean(<P5) = {pct(v['cvar'])}, threshold VaR = {pct(v['var'])})")
 
     print(f"\n[Bonus — Cuantiles fijos]")
     q = views["quantiles"]

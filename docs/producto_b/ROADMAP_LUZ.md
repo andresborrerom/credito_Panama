@@ -142,13 +142,10 @@ Registrado para sprints futuros.
 | **M3.2 — sweep 5 ETFs LUZ (ACWI, GHYG, IGOV, BSJQ, TIP)** | ✅ Cerrado | `scripts/ingest_m3_new_etfs.py` + `scripts/smoke_m3_full.py` |
 | **M4 — bonos UST + TBill (3 paths comparados)** | ✅ Cerrado | `src/tasas_mercantil/producto_b/bond_mapping.py` + `scripts/smoke_m4_bonds.py`. C=carry / A=AR1 / B=BMA. **Decisión: usar C para centro + A para banda; B descartado por sesgo.** |
 | **M5 — agregador portafolio LUZ** | ✅ Cerrado | `src/tasas_mercantil/producto_b/portfolio_aggregator.py` + `scripts/smoke_m5_portfolio.py`. 33 posiciones, 100% cubierto (74% directo + 25% proxy + 0.6% cash). Vista C 70% del portafolio acierta 4/4 con realized. |
-| M6 — walk-forward agregado (urgente) | ⏳ Siguiente | — |
-| M4 — mapeo UST bonds + TBill | ⏳ | — |
-| M5 — agregador portafolio | ⏳ | — |
-| M6 — walk-forward agregado | ⏳ | — |
-| Output (3) mensaje 1ra diapo | ⏳ | — |
-| Output (1) bandas flexibles | ⏳ | — |
-| Output (2) histograma | ⏳ | — |
+| **Output (3) — mensaje primera diapo** | ✅ Cerrado | `src/tasas_mercantil/producto_b/executive_summary.py` + `scripts/smoke_output3_executive.py`. 1-2 frases por horizonte con disclaimer automático de régimen. |
+| **Output (1) — 7 vistas de bandas** | ✅ Cerrado | `src/tasas_mercantil/producto_b/views_bandas.py` + `scripts/smoke_output1_views.py`. Vista A (IQR endógeno) / B (HDI fijo 80%) / C (Kneedle) / fan chart 50/80/95 / direccional / VaR 95 / CVaR 95 / cuantiles. |
+| **Output (2) — histograma rico** | ✅ Cerrado | `src/tasas_mercantil/producto_b/histograma_luz.py` + `scripts/smoke_output2_histograma.py`. PNG con KDE + HDIs anidados + mediana + VaR + CVaR + tasa libre + anotaciones direccionales. |
+| M6 — walk-forward agregado | ⏳ Pendiente | hit rate estadísticamente robusto del agregado |
 
 ## Nota M1 (2026-06-09)
 
