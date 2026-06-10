@@ -17,12 +17,15 @@ Pipeline:
        < 0.80 → U raw
 
 Uso:
-  >>> from tasas_mercantil.producto_b.forecast_api import forecast_lqd
-  >>> result = forecast_lqd(as_of=date(2024,12,31))            # 6m default
-  >>> result_12m = forecast_lqd(as_of=date(2024,12,31), h_months=12)
+  >>> from tasas_mercantil.producto_b.forecast_api import forecast_etf
+  >>> result = forecast_etf("LQD", as_of=date(2024,12,31), h_months=6)
+  >>> result_emb = forecast_etf("EMB", as_of=date(2024,12,31), h_months=12)
   >>> print(result.comment)
 
-M1 (2026-06): horizonte generalizado a h_months arbitrario. W_MAX escala √h.
+M1 (2026-06): horizonte generalizado a h_months arbitrario.
+M1.5 (2026-06): w_max anclado al IQR empírico; Vista C (sweet spot Kneedle).
+M3 (2026-06): generalizado a cualquier ETF en cache; forecast_lqd queda
+              como convenience equivalente a forecast_etf("LQD", ...).
 """
 from __future__ import annotations
 from dataclasses import dataclass
@@ -363,7 +366,8 @@ def _walk_forward_weights(forecasts_per_date, realized, target_idx):
 # ============================================================================
 # API pública
 # ============================================================================
-def forecast_lqd(
+def forecast_etf(
+    etf_label: str,
     as_of: date,
     h_months: int = DEFAULT_H_MONTHS,
     w_max: float | None = None,
@@ -371,15 +375,16 @@ def forecast_lqd(
     history_start: date = date(2020, 1, 31),
     macro_start: date = date(2003, 1, 1),
 ) -> ForecastResult:
-    """Forecast LQD a h_months con BMA Iter 6 (M1.5: anchors empíricos).
+    """Forecast cualquier ETF de etfs_producto_b.parquet a h_months con BMA Iter 6.
 
     Args:
+        etf_label: label del ETF en etfs_producto_b.parquet (e.g. "LQD",
+            "EMB", "ACWI", "GHYG"). Debe existir en cache.
         as_of: fecha de corte (último día del mes recomendado).
         h_months: horizonte en meses (default 6, soporta cualquier int ≥ 1).
-        w_max: ancho aceptable para Vista A (rango fijo, max confianza).
-            Si None (default), se ancla al IQR empírico de retornos h-meses
-            del activo en los últimos sigma_lookback_years años. Sin
-            parámetros arbitrarios — es el rango intercuartílico observado.
+        w_max: ancho aceptable para Vista A. Si None, se ancla al IQR
+            empírico de retornos h-meses del activo (últimos
+            sigma_lookback_years años). Sin parámetros arbitrarios.
         sigma_lookback_years: ventana causal para anclar IQR y σ_h.
         history_start: inicio del walk-forward para reproducir pesos BMA.
         macro_start: inicio del macro_history para NN.
@@ -393,11 +398,17 @@ def forecast_lqd(
     macro_hist = build_macro_history(store, start=macro_start, end=as_of)
     etf_ret = pd.read_parquet(CACHE_DIR / "etfs_producto_b.parquet")
 
+    if etf_label not in etf_ret["label"].unique():
+        raise ValueError(
+            f"ETF '{etf_label}' no está en cache. Disponibles: "
+            f"{sorted(etf_ret['label'].unique())}"
+        )
+
     if w_max is None:
-        w_max, sigma_h = _natural_w_max(etf_ret, ETF_LABEL, h_months, as_of,
+        w_max, sigma_h = _natural_w_max(etf_ret, etf_label, h_months, as_of,
                                          lookback_years=sigma_lookback_years)
     else:
-        sigma_h_val = _historical_sigma_h(etf_ret, ETF_LABEL, h_months, as_of,
+        sigma_h_val = _historical_sigma_h(etf_ret, etf_label, h_months, as_of,
                                           sigma_lookback_years)
         sigma_h = sigma_h_val if sigma_h_val is not None else float("nan")
 
@@ -407,7 +418,7 @@ def forecast_lqd(
     for d in history_dates:
         target = macro_state_at(store, d)
         if target is None: continue
-        sub = etf_ret[etf_ret["label"] == ETF_LABEL].copy()
+        sub = etf_ret[etf_ret["label"] == etf_label].copy()
         sub["obs_date"] = pd.to_datetime(sub["obs_date"])
         sub = sub.sort_values("obs_date").set_index("obs_date")
         cut = pd.Timestamp(d); end = cut + pd.DateOffset(months=h_months)
@@ -415,23 +426,27 @@ def forecast_lqd(
         real = float(window.sum()) if len(window) >= h_months - 1 else None
 
         # Sin realized completo no podemos scorear: descartar (excepto el target).
-        # Esto evita pesos BMA contaminados por ceros falsos para horizontes largos.
         if real is None and d != as_of:
             skipped_no_real += 1
             continue
 
         models = {
-            "NN_K10":     _model_nn(target, macro_hist, etf_ret, K=10, h_months=h_months),
-            "NN_K20":     _model_nn(target, macro_hist, etf_ret, K=20, h_months=h_months),
-            "Naive_boot": _model_naive(d, etf_ret, h_months),
-            "AR1":        model_ar1(d, etf_ret, ETF_LABEL, h_months, n_sims=1000),
+            "NN_K10":     _model_nn(target, macro_hist, etf_ret, K=10,
+                                     h_months=h_months, etf_label=etf_label),
+            "NN_K20":     _model_nn(target, macro_hist, etf_ret, K=20,
+                                     h_months=h_months, etf_label=etf_label),
+            "Naive_boot": _model_naive(d, etf_ret, h_months, etf_label=etf_label),
+            "AR1":        model_ar1(d, etf_ret, etf_label, h_months, n_sims=1000),
         }
         if any(v is None for v in models.values()): continue
         fps.append(models); ds.append(d)
         reals.append(real if real is not None else 0.0)
 
     if not fps or ds[-1] != as_of:
-        raise ValueError(f"No se pudo construir forecasts hasta {as_of} con h={h_months}m")
+        raise ValueError(
+            f"No se pudo construir forecasts para {etf_label} hasta {as_of} "
+            f"con h={h_months}m"
+        )
 
     target_idx = len(ds) - 1
     weights = _walk_forward_weights(fps, reals, target_idx)
@@ -447,7 +462,7 @@ def forecast_lqd(
     sweet = usability_sweet_spot(bma_samples)
 
     comment = _build_comment(as_of, bma_center, lo, hi, U, regime,
-                             components, h_months, sweet)
+                             components, h_months, sweet, etf_label)
     return ForecastResult(
         as_of=as_of, center=bma_center, hdi_lo=lo, hdi_hi=hi,
         U=int(U * 100), regime=regime, stress_components=components,
@@ -457,18 +472,25 @@ def forecast_lqd(
     )
 
 
-def _build_comment(as_of, center, lo, hi, U, regime, comps, h_months, sweet):
+def forecast_lqd(as_of: date, **kwargs) -> ForecastResult:
+    """Convenience para LQD (el ETF más usado). Equivalente a forecast_etf("LQD", ...)."""
+    return forecast_etf("LQD", as_of=as_of, **kwargs)
+
+
+def _build_comment(as_of, center, lo, hi, U, regime, comps, h_months, sweet,
+                   etf_label="LQD"):
     if U == 0:
         return (
-            f"[{as_of}] LQD {h_months}m: SISTEMA NO USABLE este mes (régimen {regime}, "
-            f"stress combinado {max(v for v in comps.values() if v is not None):.0%}). "
+            f"[{as_of}] {etf_label} {h_months}m: SISTEMA NO USABLE este mes "
+            f"(régimen {regime}, stress combinado "
+            f"{max(v for v in comps.values() if v is not None):.0%}). "
             f"Centro indicativo {center:+.1%}, pero no se debe emitir intervalo "
             f"de confianza al comité."
         )
     high_signals = [k for k, v in comps.items()
                     if v is not None and v >= STRESS_HIGH]
     base = (
-        f"[{as_of}] LQD {h_months}m — Centro {center:+.1%}. "
+        f"[{as_of}] {etf_label} {h_months}m — Centro {center:+.1%}. "
         f"Vista A (HDI más angosto que IQR histórico del activo): "
         f"{int(U*100)}% confianza, [{lo:+.1%}, {hi:+.1%}] ({(hi-lo)*100:.1f}pp). "
         f"Vista C (sweet spot Kneedle endógeno): "
