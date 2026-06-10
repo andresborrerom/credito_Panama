@@ -127,7 +127,7 @@ ACWI, GHYG ya existentes).
 
 Sweep 5 ETFs × 3 fechas × 2 horizontes = 30 forecasts con groundtruth.
 
-**Hit rate por ETF:**
+**Hit rate por ETF (Vista C):**
 
 | ETF | Vista A | Vista C | Nota |
 |---|---|---|---|
@@ -151,6 +151,52 @@ ACWI). Falta M4 (UST bonds + TBill, +31.7%) para llegar a ~74%.
 **Advertencia operativa documentada:** IGOV es la posición más grande de
 LUZ (9.89%) y la menos confiable del modelo (50% Vista C). El comité
 debe reservar margen extra en IGOV o tratarlo como menos modelable.
+
+### M4 — mapeo de UST bonds directos + TBill (2026-06-10)
+
+Para los 3 UST bonds + TBill (31.7% LUZ) probamos 3 caminos para predecir
+Δyield → retorno bono via fórmula clásica `−D·Δyield + carry`:
+
+- **Path C (baseline naive carry):** asume Δyield = 0. Punto único.
+- **Path A (AR1 sobre Δyield):** modelo paramétrico simple.
+- **Path B (BMA equal-weights de 4 modelos sobre Δyield):** NN_K10, NN_K20,
+  Naive_boot, AR1 mezclados con peso 1/4.
+
+Sweep 4 bonos × 3 fechas × 2 horizontes = 24 forecasts con groundtruth.
+
+**Veredicto:**
+
+| Path | MAE centro | Ancho 80% medio | Hit rate 80% |
+|---|---|---|---|
+| C (carry naive) | **5.53pp** | — | — |
+| A (AR1 Δyield) | **5.41pp** | 14.80pp | **88%** |
+| B (BMA equal-w) | 7.33pp | 18.98pp | 92% |
+
+**Hallazgos:**
+
+1. **A bate a C marginalmente en MAE** (0.12pp). Esencialmente empate —
+   los modelos sobre Δyield NO aportan precisión punto significativa sobre
+   asumir carry puro. Confirma el experimento curva negativo previo.
+2. **B (BMA) es PEOR que A y C en precisión punto** — los modelos NN macro
+   agregan sesgo. Bandas anchas con centro lejano.
+3. **A da banda útil con 88% hit** — mejor compromiso si querés intervalo.
+4. **Bug del TBill confirmado:** mapeo a US3M cuando duration real era 4.4y.
+   Los 2 únicos misses de A vienen de ahí. Marcar para refinamiento futuro
+   (mapeo dinámico de tenor según ttm).
+
+**Implicación para M5 (agregador):**
+
+Para bonos UST + TBill (31.7% LUZ):
+- **Centro:** usar carry puro (C). Honesto, sin pretender precisión que no
+  tenemos.
+- **Banda:** usar AR1 (A) para incertidumbre razonable.
+- **NO usar BMA** para bonos directos — agrega ruido sin precisión.
+
+Para ETFs (~42% LUZ): usar `forecast_etf` con Vista A/C como en M3.
+
+**Mensaje al comité (bonos directos):** "Para los bonos UST + TBill, el
+modelo no aporta sobre asumir carry puro como predicción punto. Lo
+honesto es reportar `carry ± banda AR1` y dejar al comité interpretar."
 
 ### Validación walk-forward (sweep 2021-2024)
 
