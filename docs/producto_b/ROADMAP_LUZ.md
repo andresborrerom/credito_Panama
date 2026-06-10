@@ -136,8 +136,9 @@ Registrado para sprints futuros.
 | Experimento curva | ✅ Cerrado (negativo) | `docs/producto_b/EXPERIMENTO_CURVA_TREASURY.md` |
 | Snapshot LUZ 2026-06-09 | ✅ | `ProyectoTasasMercantil/inputs_externos/portafolio_luz/snapshots/2026-06-09/` |
 | **M1 — horizonte arbitrario en forecast_api** | ✅ Cerrado | `src/tasas_mercantil/producto_b/forecast_api.py` + `scripts/smoke_m1_horizons.py` |
-| M2 — helpers `horizon_remaining_year` / `horizon_next_12m` | ⏳ Siguiente | — |
-| M3 — replicar Iter 6 a 6 ETFs LUZ | ⏳ | — |
+| **M1.5 — anclajes empíricos (IQR + Kneedle)** | ✅ Cerrado | `forecast_api.py` (Vista A=IQR, Vista C=Kneedle) |
+| **M2 — helpers de horizonte** | ✅ Cerrado | `src/tasas_mercantil/producto_b/horizons.py` + `scripts/smoke_m2_horizons.py` |
+| M3 — replicar Iter 6 a 6 ETFs LUZ | ⏳ Siguiente | — |
 | M4 — mapeo UST bonds + TBill | ⏳ | — |
 | M5 — agregador portafolio | ⏳ | — |
 | M6 — walk-forward agregado | ⏳ | — |
