@@ -138,7 +138,9 @@ Registrado para sprints futuros.
 | **M1 — horizonte arbitrario en forecast_api** | ✅ Cerrado | `src/tasas_mercantil/producto_b/forecast_api.py` + `scripts/smoke_m1_horizons.py` |
 | **M1.5 — anclajes empíricos (IQR + Kneedle)** | ✅ Cerrado | `forecast_api.py` (Vista A=IQR, Vista C=Kneedle) |
 | **M2 — helpers de horizonte** | ✅ Cerrado | `src/tasas_mercantil/producto_b/horizons.py` + `scripts/smoke_m2_horizons.py` |
-| M3 — replicar Iter 6 a 6 ETFs LUZ | ⏳ Siguiente | — |
+| **M3.1 — POC EMB (motor reusable)** | ✅ Cerrado | `forecast_etf(etf_label, ...)` + `scripts/smoke_m3_poc_emb.py` |
+| **M3.2 — sweep 5 ETFs LUZ (ACWI, GHYG, IGOV, BSJQ, TIP)** | ✅ Cerrado | `scripts/ingest_m3_new_etfs.py` + `scripts/smoke_m3_full.py` |
+| M4 — mapeo UST bonds + TBill | ⏳ Siguiente | — |
 | M4 — mapeo UST bonds + TBill | ⏳ | — |
 | M5 — agregador portafolio | ⏳ | — |
 | M6 — walk-forward agregado | ⏳ | — |

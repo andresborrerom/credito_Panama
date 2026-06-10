@@ -100,6 +100,58 @@ salir empíricamente. Cambios:
 - Diagnóstico emergente: Vista A devuelve U=0 cuando el modelo no aporta
   sobre la dispersión empírica del activo. Eso es información valiosa.
 
+### M2 — helpers de horizonte (2026-06-10)
+
+Módulo `horizons.py` con la definición canónica de los dos horizontes del
+comité: `horizon_remaining_year(as_of)` (variable: jun=6, mar=9, dic=0) y
+`horizon_next_12m()` (= 12). Convenience `forecast_lqd_both_horizons(as_of)`
+corre el motor en los dos horizontes simultáneamente, skipea
+"resto_del_anio" si as_of es diciembre.
+
+### M3.1 — POC EMB: generalizar a cualquier ETF (2026-06-10)
+
+Refactor `forecast_lqd` → `forecast_etf(etf_label, ...)` con `forecast_lqd`
+como wrapper trivial de back-compat. Validación de ETF en cache.
+
+Smoke EMB en 3 fechas × 2 horizontes: **Vista C 6/6 = 100%, Vista A 4/4 =
+100% (cuando emite)**. EMB se comporta MEJOR que LQD: σ_h propia, IQR
+propio. En `stress_alto`, Vista A SÍ emite para EMB (HDI 50% < IQR del
+activo) mientras que en LQD se capa frecuentemente.
+
+Validación: la arquitectura NO está overfitted a LQD.
+
+### M3.2 — replicar a 5 ETFs LUZ restantes (2026-06-10)
+
+Ingest IGOV, BSJQ, TIP desde EODHD. Cache total: 10 ETFs (incluyendo
+ACWI, GHYG ya existentes).
+
+Sweep 5 ETFs × 3 fechas × 2 horizontes = 30 forecasts con groundtruth.
+
+**Hit rate por ETF:**
+
+| ETF | Vista A | Vista C | Nota |
+|---|---|---|---|
+| BSJQ | 4/4 = 100% | 6/6 = 100% | 🌟 short HY = más predecible |
+| ACWI | 3/4 = 75% | 6/6 = 100% | sweet spot ancho captura vol |
+| GHYG | 4/4 = 100% | 4/6 = 67% | A perfecta, C falla en extremo |
+| TIP | 3/4 = 75% | 4/6 = 67% | intermedio |
+| **IGOV** | **1/3 = 33%** | **3/6 = 50%** | ⚠ más complicado (FX + multi-país) |
+
+**Hit rate por régimen (agregado 30 forecasts):**
+
+| Régimen | Vista A | Vista C |
+|---|---|---|
+| normal | 9/10 = 90% | 9/10 = 90% |
+| stress_alto | 6/9 = 67% | 8/10 = 80% |
+| stress_extremo | 0 emisiones (gate) | 6/10 = 60% |
+
+**Cobertura LUZ alcanzada:** 42.58% (LQD + EMB + IGOV + GHYG + BSJQ + TIP +
+ACWI). Falta M4 (UST bonds + TBill, +31.7%) para llegar a ~74%.
+
+**Advertencia operativa documentada:** IGOV es la posición más grande de
+LUZ (9.89%) y la menos confiable del modelo (50% Vista C). El comité
+debe reservar margen extra en IGOV o tratarlo como menos modelable.
+
 ### Validación walk-forward (sweep 2021-2024)
 
 Corrida sobre 9 fechas representativas × 2 horizontes (= 18 forecasts) con
@@ -175,23 +227,25 @@ cierra (U=0), Vista C es la fuente de la referencia operativa.
 
 **NO es un on/off switch.** Es un **derrating de confianza empírica**.
 
-**Hit rate observado de Vista C por régimen** (sweep walk-forward 2021-2024):
+**Hit rate observado de Vista C por régimen** (sweep walk-forward, agregado
+todos los ETFs corridos hasta M3.2 — 48 corridas):
 
 | Régimen | Corridas | Hits Vista C | Hit rate |
 |---|---|---|---|
-| `normal` | 2 | 2 | **100%** |
-| `stress_extremo` | 11 | 8 | **73%** |
-| `stress_alto` | 4 | 2 | **50%** |
+| `normal` | 12 | 11 | **92%** |
+| `stress_extremo` | 21 | 14 | **67%** |
+| `stress_alto` | 13 | 10 | **77%** |
 
-**Lectura:** Vista C en stress_alto es esencialmente coin-flip. En extremo,
-todavía útil (1 de cada 4 falla). En normal, alta confiabilidad.
+**Lectura:** en `normal`, Vista C es muy confiable. En stress, sigue siendo
+útil pero degradada — el comité debe reservar margen extra.
 
-**Hit rate observado de Vista A** (cuando emite):
+**Hit rate observado de Vista A** (cuando emite, agregado todos los ETFs):
 
 | Régimen | Emisiones | Hits Vista A | Hit rate |
 |---|---|---|---|
-| `normal` | 2 | 2 | **100%** |
-| `stress_alto` | 2 | 0 | **0%** (n=2 muy chico) |
+| `normal` | 11 | 11 | **100%** |
+| `stress_alto` | 11 | 6 | **55%** |
+| `stress_extremo` | 0 (gate cierra) | — | n/a |
 
 **Cómo usar:** publicar TODAS las vistas, anotar el régimen como **etiqueta
 de confianza empírica**, dejar al comité interpretar. **NO descartar
@@ -320,9 +374,10 @@ Ver `ROADMAP_LUZ.md` para detalle. Resumen ordenado:
 |---|---|---|
 | M1 — horizonte arbitrario | ✅ | Una sola API para 6m / 12m / cualquiera |
 | M1.5 — eliminar umbrales arbitrarios | ✅ | IQR + sweet spot Kneedle |
-| **M2 — helpers de horizonte** | ⏳ **siguiente** | `resto_del_año(as_of)` y `próximos_12m()` |
-| M3 — replicar a 6 ETFs LUZ | ⏳ | Cobertura LUZ de 9.5% → ~60% |
-| M4 — mapeo UST bonds + TBill | ⏳ | Cobertura LUZ → ~90% |
+| M2 — helpers de horizonte | ✅ | `resto_del_año(as_of)` y `próximos_12m()` |
+| M3.1 — POC EMB (generalizar ETF) | ✅ | Motor reusable validado |
+| M3.2 — replicar a 5 ETFs LUZ restantes | ✅ | Cobertura LUZ 9.48% → 42.58% |
+| **M4 — mapeo UST bonds + TBill** | ⏳ **siguiente** | Cobertura LUZ → ~74% |
 | M5 — agregador portafolio | ⏳ | Forecast LUZ completo |
 | M6 — walk-forward agregado (urgente post-M5) | ⏳ | Hit rates estadísticamente robustos por régimen |
 
