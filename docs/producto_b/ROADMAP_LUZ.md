@@ -141,7 +141,8 @@ Registrado para sprints futuros.
 | **M3.1 — POC EMB (motor reusable)** | ✅ Cerrado | `forecast_etf(etf_label, ...)` + `scripts/smoke_m3_poc_emb.py` |
 | **M3.2 — sweep 5 ETFs LUZ (ACWI, GHYG, IGOV, BSJQ, TIP)** | ✅ Cerrado | `scripts/ingest_m3_new_etfs.py` + `scripts/smoke_m3_full.py` |
 | **M4 — bonos UST + TBill (3 paths comparados)** | ✅ Cerrado | `src/tasas_mercantil/producto_b/bond_mapping.py` + `scripts/smoke_m4_bonds.py`. C=carry / A=AR1 / B=BMA. **Decisión: usar C para centro + A para banda; B descartado por sesgo.** |
-| M5 — agregador portafolio | ⏳ Siguiente | — |
+| **M5 — agregador portafolio LUZ** | ✅ Cerrado | `src/tasas_mercantil/producto_b/portfolio_aggregator.py` + `scripts/smoke_m5_portfolio.py`. 33 posiciones, 100% cubierto (74% directo + 25% proxy + 0.6% cash). Vista C 70% del portafolio acierta 4/4 con realized. |
+| M6 — walk-forward agregado (urgente) | ⏳ Siguiente | — |
 | M4 — mapeo UST bonds + TBill | ⏳ | — |
 | M5 — agregador portafolio | ⏳ | — |
 | M6 — walk-forward agregado | ⏳ | — |

@@ -198,6 +198,47 @@ Para ETFs (~42% LUZ): usar `forecast_etf` con Vista A/C como en M3.
 modelo no aporta sobre asumir carry puro como predicción punto. Lo
 honesto es reportar `carry ± banda AR1` y dejar al comité interpretar."
 
+### M5 — agregador portafolio LUZ (2026-06-10)
+
+Módulo `portfolio_aggregator.py` con mapeo completo de 33 posiciones LUZ:
+- 7 ETFs directos (M3) — 42.6% LUZ
+- 4 bonos UST + TBill via path A AR1 (M4) — 31.7% LUZ
+- 21 proxies asset-class (sector ETFs, S&P 500, FTSE, Intl 1-3y) — 25.1%
+- Cash + MM (retorno 0) — 0.6%
+- **Total: 99.96% ≈ 100%** (weights validados)
+
+**Agregación:**
+- Para cada posición: obtener samples MC del componente.
+- ETFs: convertir log returns → decimal antes de sumar.
+- Suma ponderada con correlación implícita (samples independientes — sub-
+  estima varianza real; M6 puede refinar con matriz de correlación).
+
+**Smoke sweep LUZ × 2 fechas × 2 horizontes:**
+
+| as_of | h | Centro | Sweet 70% | HDI 80% | Realized | Hit C | Hit 80 |
+|---|---|---|---|---|---|---|---|
+| 2023-12-31 | 6m | +2.66% | [−1.1, +7.2]% | [−2.1, +8.4]% | −0.14% | ✓ | ✓ |
+| 2023-12-31 | 12m | +4.36% | [−0.8, +8.6]% | [−1.8, +10.5]% | +2.38% | ✓ | ✓ |
+| 2024-06-30 | 6m | +2.83% | [−2.0, +6.2]% | [−3.2, +7.0]% | +3.24% | ✓ | ✓ |
+| 2024-06-30 | 12m | +4.39% | [+0.6, +9.3]% | [−0.8, +10.7]% | +9.10% | ✓ | ✓ |
+
+**4/4 hits en ambas vistas.** Las bandas contienen al realized en todos
+los escenarios. Centros estables (+2.6% a +4.4%) — coherentes con carry
+medio del portafolio + drift positivo.
+
+**Top contribuciones al centro (LUZ 12m al 2024-06-30):**
+GHYG +0.68pp / BSJQ +0.47pp / UST Nov-35 +0.38pp / S&P 500 +0.37pp /
+UST Feb-36 +0.34pp. Los 5 mayores suman 2.24pp del +4.39% total.
+
+**Limitaciones documentadas:**
+1. Correlación implícita ≡ independencia → sub-estima varianza real.
+2. Proxies asset-class (25%) usan el ETF más cercano sin ajuste.
+3. Sin Vista A formal del portafolio (necesitaría IQR de portfolio
+   sintético histórico — pendiente).
+4. Walk-forward solo 2 fechas (sample size chico para hit rate robusto).
+5. Cada portfolio call tarda ~15-20 min — caching agresivo dentro del
+   call ayuda, pero sweep grande es costoso.
+
 ### Validación walk-forward (sweep 2021-2024)
 
 Corrida sobre 9 fechas representativas × 2 horizontes (= 18 forecasts) con
