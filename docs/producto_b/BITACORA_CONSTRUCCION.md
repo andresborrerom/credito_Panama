@@ -239,6 +239,56 @@ UST Feb-36 +0.34pp. Los 5 mayores suman 2.24pp del +4.39% total.
 5. Cada portfolio call tarda ~15-20 min — caching agresivo dentro del
    call ayuda, pero sweep grande es costoso.
 
+### M6 — walk-forward formal del agregado LUZ (2026-06-11)
+
+10 corridas trimestrales cubriendo los 3 regímenes operativos, persistidas
+en `data/external/tasas_mercantil/m6_walk_forward_luz.parquet`. Vista A se
+ancla al IQR endógeno del portafolio (P25-P75 de los samples agregados).
+
+**Hit rate global (n=10):**
+
+| Vista | Hit rate | Notas |
+|---|---|---|
+| Vista B (HDI 80% fijo) | **9/10 = 90%** | la más confiable operativamente |
+| Vista C (sweet spot Kneedle) | 7/10 = 70% | balance precisión/cobertura |
+| Vista A (IQR portafolio) | 5/10 = 50% | la más estricta |
+
+**Hit rate por régimen:**
+
+| Régimen | n | Vista A | Vista B | Vista C |
+|---|---|---|---|---|
+| normal | 4 | 50% | **100%** | 75% |
+| stress_alto | 2 | 50% | **100%** | 100% |
+| stress_extremo | 4 | 50% | 75% | 50% |
+
+**MAE del centro vs realized:** 3.46pp.
+
+**Hallazgos:**
+
+1. **Vista B es la métrica recomendada para uso operativo del comité.** 90%
+   hit rate global, 100% en normal y stress_alto. Es la que entra en la
+   primera diapositiva como "intervalo de referencia".
+2. **Vista C sigue siendo útil** para "sweet spot del modelo" (sin parámetros
+   externos), pero su intervalo más angosto sacrifica hit rate.
+3. **Vista A es la más conservadora** — 50% global y por régimen. Cuando emite
+   con U=50% u 60%, es porque el modelo realmente bate al IQR del portafolio
+   sintético histórico. Operativamente sirve como filtro de honestidad.
+4. **Centro tiene MAE 3.46pp** — razonable para LUZ (carry ~3-5%, vol esperada
+   más alta). En régimen normal el MAE baja a ~1pp; en extremo sube a ~5pp.
+
+**Cambio en mensaje al comité respecto a versión M5:**
+- Antes: "Vista C (sweet spot) acierta 4/4". Ahora: "Vista B 9/10, Vista C 7/10".
+- La diapositiva debe destacar Vista B como banda primaria. Vista C como
+  diagnóstico endógeno secundario.
+
+**Reglas operativas finales para el comité:**
+
+| Régimen | Acción recomendada |
+|---|---|
+| `normal` | Usar centro + Vista B (HDI 80%) como banda. Decisiones operativas habilitadas. |
+| `stress_alto` | Vista B sigue 100% — usar como referencia. Reservar margen extra. |
+| `stress_extremo` | Vista B baja a 75% — útil pero derateada. El régimen es la alarma primaria; centro no debería guiar decisiones de duración. |
+
 ### Validación walk-forward (sweep 2021-2024)
 
 Corrida sobre 9 fechas representativas × 2 horizontes (= 18 forecasts) con

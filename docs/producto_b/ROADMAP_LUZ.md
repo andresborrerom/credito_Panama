@@ -145,7 +145,7 @@ Registrado para sprints futuros.
 | **Output (3) — mensaje primera diapo** | ✅ Cerrado | `src/tasas_mercantil/producto_b/executive_summary.py` + `scripts/smoke_output3_executive.py`. 1-2 frases por horizonte con disclaimer automático de régimen. |
 | **Output (1) — 7 vistas de bandas** | ✅ Cerrado | `src/tasas_mercantil/producto_b/views_bandas.py` + `scripts/smoke_output1_views.py`. Vista A (IQR endógeno) / B (HDI fijo 80%) / C (Kneedle) / fan chart 50/80/95 / direccional / VaR 95 / CVaR 95 / cuantiles. |
 | **Output (2) — histograma rico** | ✅ Cerrado | `src/tasas_mercantil/producto_b/histograma_luz.py` + `scripts/smoke_output2_histograma.py`. PNG con KDE + HDIs anidados + mediana + VaR + CVaR + tasa libre + anotaciones direccionales. |
-| M6 — walk-forward agregado | ⏳ Pendiente | hit rate estadísticamente robusto del agregado |
+| **M6 — walk-forward agregado** | ✅ Cerrado | `scripts/m6_walk_forward.py` + parquet. 10 corridas, Vista B 9/10 = 90% global, Vista C 7/10 = 70%, MAE centro 3.46pp. **Vista B recomendada como banda primaria al comité.** |
 
 ## Nota M1 (2026-06-09)
 
