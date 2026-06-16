@@ -155,7 +155,7 @@ Dos cosas bloquean cierre 100% de los 3 sprints, las dos en la misma plantilla:
    - +1  CPAN CDS USD SR 5Y — L_PA_2
    = **45 instrumentos nuevos**; plantilla pasa de v0.2 (76) a v0.3 (~121).
 
-2. **Dataset interno Panamá con rating** (decisión 4). Dimensión faltante en L_PA_1: hoy es sector × plazo; queremos rating × sector × plazo. Fuentes a evaluar: Fitch Centroamérica, Equilibrium, PCR, planilla del analista. Se ingresa una vez y se refresca trimestral.
+2. ~~**Dataset interno Panamá con rating** (decisión 4).~~ ✅ **RESUELTO el 2026-06-16**: el estudio de tasas Panamá del mismo repo (`docs/_data/instruments_con_rating.csv.gz` + `trades_con_rating.csv.gz`) ya tiene la dimensión rating cruzada. Lógica de tiers en `src/analytics/ratings.py`. L_PA_1 se enriqueció con 3 heatmaps: rating × plazo, sector × plazo, **spread observado** de trades reales por rating × plazo. Los 5 tiers (T1=AAA → T5=BB/NR) cotizan en spreads bien diferenciados: T1 cerca de 0 bps vs UST, T2 ~60-170, T3 ~120-430, T4/T5 ~150-330. Limpieza: winsorización spreads a [−100, 2000] bps para excluir trades anómalos. **Reemplazable** por dump Bloomberg/Equilibrium oficial cuando esté disponible — la lógica de proxy V0 lo permite directamente.
 
 Mejoras menores deferidas hasta validar valor:
 - NY Fed Primary Dealer Survey (PDF parser semestral) — L_USA_2 traza
