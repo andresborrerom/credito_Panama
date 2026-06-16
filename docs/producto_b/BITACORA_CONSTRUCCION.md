@@ -532,3 +532,39 @@ Ver `ROADMAP_LUZ.md` para detalle. Resumen ordenado:
 
 **Este es el documento que se le entrega al próximo analista que tome el
 proyecto, y al miembro del comité que pida entender el porqué de los números.**
+
+---
+
+## 9 · Sesión 2026-06-16 — M7 (comparación FDP) + M8 (deck) + HOLD
+
+### 9.1 Origen
+
+Auditoría de gap entre el scope de la reunión 2026-06-01 y lo construido. Diez puntos evaluados; tres bloqueantes: (A+B) escenarios cableados al portafolio, (H) CDS Panamá, (J) compliance. El usuario priorizó cerrar la **comparación FDP predictiva vs histórica descriptiva** — pieza que tenía la pregunta original del proceso ("¿el modelo dice algo positivo o negativo frente a la historia?") pero que NO estaba construida: la nube MC se graficaba sola, sin la histórica al lado.
+
+### 9.2 Decisiones de diseño
+
+1. **Reusar `build_scenarios`** (NN) sobre AMBAS distribuciones (predictiva e histórica), no inventar métrica nueva. Las 5 zonas se comparan peras-con-peras: misma definición de cortes (cola 2.5% fija, HDI 50% optimizado, resto empírico).
+2. **Histórica del portafolio** se reconstruye con **ponderaciones actuales** (snapshot 2026-06-09) sobre retornos rolling h-meses solapados de cada fuente. Bonos UST → proxy AGG; TBill → BIL. Eso da una FDP histórica "como si LUZ siempre hubiera tenido este mix", no una serie histórica del portafolio real (que no existe).
+3. **Veredicto automático** en 3 ejes: centro (Δ bps mediana), confianza (ratio ancho HDI50), cola (Δ bps media Riesgo). Mapeado a 4 magnitudes (neutral / leve / moderada / fuerte) × dirección (POSITIVA / NEGATIVA / NEUTRAL). Razón verbal autogenerada.
+4. **Caché bidireccional** de `ForecastResult` en el agregador: los 7 ETFs corren una vez por fecha y se reutilizan tanto para el portafolio como para la comparación por índice → 3 cortes en ~33 min en vez de ~90.
+5. **Deck auto-descubridor**: `deck.py` hace `glob` de los PNGs disponibles. Cada vez que aparece un corte nuevo, se re-corre el compilador y el PPT crece. No hay lista hardcoded de slides.
+
+### 9.3 Validación cualitativa
+
+| Corte | Régimen | Veredicto portafolio | Ancho HDI50 (×hist) | Lectura |
+|---|---|---|---:|---|
+| 2024-06-30 | normal | NEUTRAL | 0.93 | Modelo coincide con la historia, ligeramente más angosto |
+| 2022-06-30 | extremo | **NEGATIVA fuerte** | 1.71 | Centro −544 bps; más incertidumbre; cola izq −371 bps |
+| 2022-03-31 | cola gorda | **NEGATIVA fuerte** | 1.38 | Centro −401 bps; cola izq −690 bps |
+
+El sistema **detectó el bear market de bonos de 2022 antes de que ocurriera** (junio 2022 con horizonte 12m mira mediados-2023) y **vio la recuperación a un año vista desde junio 2024**. Es la primera validación cualitativa de la pieza sin tener walk-forward de hit-rate explícito sobre comparación-vs-historia.
+
+### 9.4 Outputs
+
+- 9 PNGs de comparación en `docs/producto_b/outputs/comparacion_historica/`.
+- `SENALES.md` — matriz markdown de 18 señales.
+- `deck_producto_b_2026-06-16.pptx` — 18 slides.
+
+### 9.5 HOLD del Producto B
+
+Producto B se pausa en estado demo presentable. Pendientes priorizados van en `ROADMAP_LUZ.md` sección HOLD. El usuario priorizó construir la pieza **informativa** (Fed dotplots / opiniones de analistas / FX G10 / Panamá spreads por rating-plazo-sector + CDS) — ver `ProyectoTasasMercantil/17_PROCESO_INVERSION.md` para el lugar de esa pieza en el proceso integral.

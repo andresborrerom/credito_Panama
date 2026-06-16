@@ -146,6 +146,23 @@ Registrado para sprints futuros.
 | **Output (1) — 7 vistas de bandas** | ✅ Cerrado | `src/tasas_mercantil/producto_b/views_bandas.py` + `scripts/smoke_output1_views.py`. Vista A (IQR endógeno) / B (HDI fijo 80%) / C (Kneedle) / fan chart 50/80/95 / direccional / VaR 95 / CVaR 95 / cuantiles. |
 | **Output (2) — histograma rico** | ✅ Cerrado | `src/tasas_mercantil/producto_b/histograma_luz.py` + `scripts/smoke_output2_histograma.py`. PNG con KDE + HDIs anidados + mediana + VaR + CVaR + tasa libre + anotaciones direccionales. |
 | **M6 — walk-forward agregado** | ✅ Cerrado | `scripts/m6_walk_forward.py` + parquet. 10 corridas, Vista B 9/10 = 90% global, Vista C 7/10 = 70%, MAE centro 3.46pp. **Vista B recomendada como banda primaria al comité.** |
+| **M7 — Comparación FDP predictiva vs histórica (5 zonas peras-con-peras)** | ✅ Cerrado | `src/tasas_mercantil/producto_b/comparacion_historica.py` + `scripts/gen_comparacion_historica.py`. Aplica `build_scenarios` sobre la nube MC del modelo Y sobre los retornos h-meses históricos del activo (portafolio reconstruido con ponderaciones actuales; bonos UST → AGG, TBill → BIL). Emite veredicto automático (POSITIVA/NEGATIVA/NEUTRAL × leve/moderada/fuerte) sobre 3 ejes: centro vs historia, ancho HDI50 (confianza), masa en cola izquierda. 3 cortes generados (2024-06-30 normal, 2022-06-30 extremo, 2022-03-31 cola gorda) × portafolio + 5 índices = 18 señales. Outputs en `docs/producto_b/outputs/comparacion_historica/` + `SENALES.md`. **Validación cualitativa**: el modelo señaló el bear market de 2022 (NEGATIVA fuerte, distribución más ancha y desplazada a la izquierda) y la recuperación de 2024 (POSITIVA mayoritaria con distribuciones más angostas). |
+| **M8 — Deck Producto B** | ✅ Cerrado | `src/tasas_mercantil/producto_b/deck.py`. PPT 16:9 auto-descubridor (re-generable cada vez que aparecen outputs nuevos). 18 slides: portada · metodología · sección FDP predictiva · 4 histogramas · sección modelo vs historia portafolio · 3 cortes de portafolio · sección por índice · 5 índices · tabla nativa de la matriz de señales · compliance. Disclaimer "Documento informativo. No constituye recomendación de inversión." en cada slide narrativa y en los PNG de comparación. |
+| **M9 — Reuso del caché de forecasts en el agregador** | ✅ Cerrado | `portfolio_aggregator.forecast_luz_portfolio` ahora acepta `etf_forecast_cache: dict | None`. Los 5 índices principales salen GRATIS de la misma corrida del portafolio (un único `forecast_etf` por label) → 3 cortes completos en ~33 min en vez de ~90 min. |
+
+## HOLD — pendientes priorizados (no se desarrollan ahora)
+
+Al cierre **2026-06-16** el Producto B llegó al estado **demo presentable** con la pieza M7-M8. El usuario decidió pausar el Producto B y construir la pieza **informativa** (`13_GLOBALES_Y_OTROS_PAISES.md` extendida) antes de seguir con la lista de abajo.
+
+Cuando se retome, este es el orden propuesto (de la auditoría de gap del 2026-06-16):
+
+| Pieza | Por qué | Estimación |
+|---|---|---|
+| **Cablear escenarios al output ejecutivo** (`predict_portfolio_scenarios` → `executive_summary`) | La maquinaria de los 5 escenarios existe pero el output ejecutivo todavía da centro + banda en vez de la tabla escenario × asset-class pedida por Camilo. | 1 sesión |
+| **CDS Panamá + descomposición de correlación con USA** | Pieza nueva pedida en reunión 2026-06-01. Cero código hoy. | 1 sesión |
+| **Factor de oferta UST / term premium** | Hueco detectado el 2026-06-16: el modelo no incorpora subastas / QRA / déficit fiscal. Gancho ya planeado en `implied_path.py` v0.2.0. | 1-2 sesiones |
+| **Caso Banesco — perpetuo 7% USD 60MM** | Estudio de oportunidad de fondeo proactivo (no inversión). | 1 sesión notebook |
+| **Snapshot LUZ recurrente + walk-forward con escenarios** | Backfill 2026-05-31 y mecanismo de re-ingest mensual del snapshot. | 1 sesión |
 
 ## Nota M1 (2026-06-09)
 
