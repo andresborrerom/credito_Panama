@@ -135,3 +135,7 @@ Compliance: disclaimer "Documento informativo con fines analíticos. No constitu
 ## 11 · Bitácora
 
 - **2026-06-16**: creación. Arquitectura aprobada. Sprint 1 USA arranca.
+- **2026-06-16 (Sprint 1.1)**: L_USA_3 cerrada. `curvas_usa.py` con 4 paneles (UST nominal / TIPS / breakeven / forwards SOFR 1Q-20Q). Bootstrap interno desde SR3 strip + swap OIS. Smoke 2026-05-30 OK.
+- **2026-06-16 (Sprint 1.2)**: L_USA_1 cerrada. `fed_dotplot.py` con fetcher HTTP del HTML SEP de la Fed (cache local `data/external/informativa/sep/`), parser de la tabla summary + tabla de dots, dot plot reconstruido con jitter por participante + central tendency band + mediana actual + mediana anterior con flecha de revisión + implied path SR3 superpuesto. Tabla con gap Fed-vs-mercado. SEP usado: 2026-03-18. Frontera honesta: cubre years current+2+longer run, no 5y.
+- **2026-06-16 (Sprint 1.3)**: L_USA_2 cerrada. `path_fed.py` con Mercantil v0.3.0 agregado (Pieza A 55% + Pieza B 45%) en 5 horizontes (1m/3m/6m/12m/24m). Sentiment TLT como termómetro lateral (no traza forecasting). Trazas para NY Fed PD Survey, ECFC BBG y LLM semántico dejadas como placeholders en la leyenda (aparecerán cuando los respectivos ingest estén listos). Footer con skill +18% (1m) → +46% (12m) bootstrap-validado.
+- **Estado Sprint 1**: 3/3 slides reales con datos auto-fetcheados o ya cacheados. Deck `deck_informativa_usa_<as_of>.pptx` re-generable sin clicks. Siguiente: Sprint 2 (FX G10) — pendiente plantilla BBG v0.3 con forwards FX.
