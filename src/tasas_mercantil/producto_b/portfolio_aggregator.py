@@ -133,7 +133,10 @@ def _log_to_decimal(log_samples: np.ndarray) -> np.ndarray:
     return np.exp(log_samples) - 1.0
 
 
-def forecast_luz_portfolio(as_of: date, h_months: int) -> PortfolioForecast:
+def forecast_luz_portfolio(
+    as_of: date, h_months: int,
+    etf_forecast_cache: dict | None = None,
+) -> PortfolioForecast:
     """Forecast del portafolio LUZ completo agregando 32 posiciones.
 
     Estrategia por posición:
@@ -143,22 +146,37 @@ def forecast_luz_portfolio(as_of: date, h_months: int) -> PortfolioForecast:
       - cash:      ceros
 
     Agrega via suma ponderada de samples (correlación implícita).
+
+    Args:
+        etf_forecast_cache: dict opcional {label: ForecastResult}. Si se pasa,
+            se reutilizan los forecasts ya computados (evita re-correr cada ETF,
+            ~92s c/u) y se rellena con los que falten. El llamador recupera por
+            esta vía los ForecastResult por índice — usado por la comparación
+            histórica para obtener índices y portafolio en una sola corrida.
     """
-    # Cache de forecasts por fuente (evita re-correr el mismo ETF varias veces)
+    fc_cache: dict = etf_forecast_cache if etf_forecast_cache is not None else {}
+    # Cache de samples decimales derivados (evita re-convertir)
     etf_cache: dict[str, np.ndarray] = {}
     etf_regimes: dict[str, str] = {}
     bond_cache: dict[int, np.ndarray] = {}
+
+    def _etf_samples(label: str) -> np.ndarray:
+        """Samples decimales del ETF, reusando fc_cache de ForecastResult."""
+        if label not in etf_cache:
+            r = fc_cache.get(label)
+            if r is None:
+                r = forecast_etf(label, as_of=as_of, h_months=h_months)
+                fc_cache[label] = r
+            etf_cache[label] = _log_to_decimal(r.bma_samples)
+            etf_regimes[label] = r.regime
+        return etf_cache[label]
 
     component_samples: dict[str, tuple[float, np.ndarray]] = {}
     cov_directa = cov_proxy = cov_cash = 0.0
 
     for pos in LUZ_HOLDINGS:
         if pos.strategy == "etf":
-            if pos.source not in etf_cache:
-                r = forecast_etf(pos.source, as_of=as_of, h_months=h_months)
-                etf_cache[pos.source] = _log_to_decimal(r.bma_samples)
-                etf_regimes[pos.source] = r.regime
-            s = etf_cache[pos.source]
+            s = _etf_samples(pos.source)
             cov_directa += pos.weight
         elif pos.strategy == "bond":
             bidx = int(pos.source)
@@ -170,11 +188,7 @@ def forecast_luz_portfolio(as_of: date, h_months: int) -> PortfolioForecast:
             s = bond_cache[bidx]
             cov_directa += pos.weight
         elif pos.strategy == "proxy_etf":
-            if pos.source not in etf_cache:
-                r = forecast_etf(pos.source, as_of=as_of, h_months=h_months)
-                etf_cache[pos.source] = _log_to_decimal(r.bma_samples)
-                etf_regimes[pos.source] = r.regime
-            s = etf_cache[pos.source]
+            s = _etf_samples(pos.source)
             cov_proxy += pos.weight
         elif pos.strategy == "cash":
             s = np.zeros(N_MC)
