@@ -3,10 +3,10 @@
 Patrón auto-descubridor: si una slide no tiene su PNG generado, se omite y
 queda registrado en el resumen. Mismo estilo que Producto B.
 
-Sprint 1 — bloque USA (3 slides):
-  L_USA_1 — Dot plot SEP + evolución
-  L_USA_2 — Path Fed Funds multi-fuente
-  L_USA_3 — Estructura temporal (UST nominal/TIPS/breakeven/forwards 5y)
+Sprints:
+  Sprint 1 USA (3 slides): dot plot SEP · path multi-fuente · estructura temporal
+  Sprint 2 FX  (2 slides): G10 spots+evolución · forwards 5y (pendiente BBG v0.3)
+  Sprint 3 PA  (2 slides): corp sector × plazo · soberano + CDS (pendiente BBG v0.3)
 
 Uso:
     PYTHONPATH=src python -m tasas_mercantil.informativa.deck <as_of>
@@ -32,11 +32,27 @@ GREY = RGBColor(0x66, 0x66, 0x66)
 DISCLAIMER = ("Documento informativo con fines analíticos. No constituye "
               "recomendación de inversión.")
 
-# (slug, título, descripción)
-USA_SLIDES = [
-    ("L_USA_1_dotplot",      "Dot plot Fed — proyecciones SEP", "Sprint 1.2"),
-    ("L_USA_2_path_fed",     "Fed Funds: mercado · analistas · sentiment", "Sprint 1.3"),
-    ("L_USA_3_curvas_usa",   "Estructura temporal de tasas USA",           "Sprint 1.1 ✓"),
+# Estructura del deck: lista de (section_header, [(slug, title, status)])
+SECTIONS = [
+    ("Bloque USA",
+     "L_USA_1 dot plot SEP · L_USA_2 path multi-fuente · L_USA_3 estructura temporal",
+     [
+        ("L_USA_1_dotplot",    "Dot plot Fed — proyecciones SEP",           "Sprint 1.2 ✓"),
+        ("L_USA_2_path_fed",   "Fed Funds: mercado · analistas · sentiment", "Sprint 1.3 ✓"),
+        ("L_USA_3_curvas_usa", "Estructura temporal de tasas USA",          "Sprint 1.1 ✓"),
+     ]),
+    ("Bloque FX G10",
+     "L_FX_1 spots y evolución · L_FX_2 forwards 5y (BBG v0.3)",
+     [
+        ("L_FX_1_g10",         "FX G10 + DXY: spots y evolución",            "Sprint 2.1 ✓"),
+        ("L_FX_2_forwards",    "Forwards FX trimestrales 5y",                "Sprint 2.2 · pendiente plantilla BBG v0.3"),
+     ]),
+    ("Bloque Panamá",
+     "L_PA_1 corp sector × plazo · L_PA_2 soberano + CDS (BBG v0.3)",
+     [
+        ("L_PA_1_corp_sector_plazo", "Panamá corp · sector × plazo",         "Sprint 3.1 ✓"),
+        ("L_PA_2_soberano_cds",      "Panamá soberano · spread + EMBI + CDS", "Sprint 3.2 · pendiente plantilla BBG v0.3"),
+     ]),
 ]
 
 
@@ -71,15 +87,15 @@ def _text(slide, left, top, w, h, text, size, color, bold=False,
 def _cover(prs, as_of):
     s = _blank(prs)
     _bg(s, BLUE)
-    _text(s, 0.8, 2.3, SLIDE_W_IN - 1.6, 1.3,
-          "Pieza informativa — Tasas USA", 42, WHITE, bold=True)
-    _text(s, 0.8, 3.4, SLIDE_W_IN - 1.6, 0.9,
-          "Estructura temporal · proyecciones Fed · expectativas",
-          24, WHITE)
-    _text(s, 0.8, 4.4, SLIDE_W_IN - 1.6, 0.7,
+    _text(s, 0.8, 2.0, SLIDE_W_IN - 1.6, 1.3,
+          "Pieza informativa — Tasas, FX, Panamá", 38, WHITE, bold=True)
+    _text(s, 0.8, 3.1, SLIDE_W_IN - 1.6, 0.9,
+          "Estructura temporal · proyecciones Fed · expectativas · FX G10 "
+          "· crédito Panamá", 21, WHITE)
+    _text(s, 0.8, 4.2, SLIDE_W_IN - 1.6, 0.7,
           f"Corte de análisis · {as_of.isoformat()}", 20, LIGHT)
-    _text(s, 0.8, 6.5, SLIDE_W_IN - 1.6, 0.5,
-          "Datos: Bloomberg · FRED · EODHD · Fed (SEP) · NY Fed (PD Survey)",
+    _text(s, 0.8, 6.4, SLIDE_W_IN - 1.6, 0.6,
+          "Datos: Bloomberg · FRED · EODHD · Fed (SEP) · Latinex",
           12, LIGHT, italic=True)
 
 
@@ -118,7 +134,7 @@ def compile_informativa(as_of: date, output_path: Path | str | None = None
                         ) -> tuple[Path, list[str], list[str]]:
     if output_path is None:
         output_path = (Path(f"docs/informativa/outputs/{as_of.isoformat()}"
-                            f"/deck_informativa_usa_{as_of.isoformat()}.pptx"))
+                            f"/deck_informativa_{as_of.isoformat()}.pptx"))
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -127,21 +143,20 @@ def compile_informativa(as_of: date, output_path: Path | str | None = None
     prs.slide_height = Inches(SLIDE_H_IN)
 
     _cover(prs, as_of)
-    _section(prs, "Bloque USA — Sprint 1",
-             "L_USA_1 dot plot · L_USA_2 path multi-fuente · "
-             "L_USA_3 estructura temporal")
 
     base = Path(f"docs/informativa/outputs/{as_of.isoformat()}")
     included, pending = [], []
-    for slug, title, status in USA_SLIDES:
-        png = base / f"{slug}.png"
-        header = f"{title}  ·  corte {as_of}"
-        if png.exists():
-            _image(prs, png, header)
-            included.append(slug)
-        else:
-            _placeholder(prs, header, status)
-            pending.append(slug)
+    for section_title, section_subtitle, slides in SECTIONS:
+        _section(prs, section_title, section_subtitle)
+        for slug, title, status in slides:
+            png = base / f"{slug}.png"
+            header = f"{title}  ·  corte {as_of}"
+            if png.exists():
+                _image(prs, png, header)
+                included.append(slug)
+            else:
+                _placeholder(prs, header, status)
+                pending.append(slug)
 
     _section(prs, "Compliance", DISCLAIMER)
     prs.save(str(output_path))

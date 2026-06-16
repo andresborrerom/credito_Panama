@@ -138,4 +138,27 @@ Compliance: disclaimer "Documento informativo con fines analíticos. No constitu
 - **2026-06-16 (Sprint 1.1)**: L_USA_3 cerrada. `curvas_usa.py` con 4 paneles (UST nominal / TIPS / breakeven / forwards SOFR 1Q-20Q). Bootstrap interno desde SR3 strip + swap OIS. Smoke 2026-05-30 OK.
 - **2026-06-16 (Sprint 1.2)**: L_USA_1 cerrada. `fed_dotplot.py` con fetcher HTTP del HTML SEP de la Fed (cache local `data/external/informativa/sep/`), parser de la tabla summary + tabla de dots, dot plot reconstruido con jitter por participante + central tendency band + mediana actual + mediana anterior con flecha de revisión + implied path SR3 superpuesto. Tabla con gap Fed-vs-mercado. SEP usado: 2026-03-18. Frontera honesta: cubre years current+2+longer run, no 5y.
 - **2026-06-16 (Sprint 1.3)**: L_USA_2 cerrada. `path_fed.py` con Mercantil v0.3.0 agregado (Pieza A 55% + Pieza B 45%) en 5 horizontes (1m/3m/6m/12m/24m). Sentiment TLT como termómetro lateral (no traza forecasting). Trazas para NY Fed PD Survey, ECFC BBG y LLM semántico dejadas como placeholders en la leyenda (aparecerán cuando los respectivos ingest estén listos). Footer con skill +18% (1m) → +46% (12m) bootstrap-validado.
-- **Estado Sprint 1**: 3/3 slides reales con datos auto-fetcheados o ya cacheados. Deck `deck_informativa_usa_<as_of>.pptx` re-generable sin clicks. Siguiente: Sprint 2 (FX G10) — pendiente plantilla BBG v0.3 con forwards FX.
+- **Estado Sprint 1**: 3/3 slides reales con datos auto-fetcheados o ya cacheados. Deck `deck_informativa_usa_<as_of>.pptx` re-generable sin clicks.
+- **2026-06-16 (Sprint 2.1)**: L_FX_1 cerrada. `fx_g10.py` con 5 paneles (EUR/USD, GBP/USD, USD/JPY, USD/CHF, DXY) — serie diaria 5 años, IQR + mediana histórica, percentil 5y del valor hoy, Δ 1m/3m/12m, síntesis cualitativa lateral. Ingest EODHD: `scripts/ingest_a2_eodhd_fx.py` (10,744 filas desde 2019). **L_FX_2 (forwards FX trimestrales 5y) queda como placeholder** — EODHD no publica forwards FX; bloqueado por plantilla BBG v0.3 (40 instrumentos a pedir a Antulio).
+- **2026-06-16 (Sprint 3.1)**: L_PA_1 cerrada. `panama_corp.py` con heatmap **sector × plazo** (tasa promedio ponderada por monto) + bar chart de spread agregado vs UST por bucket plazo + top 10 emisiones por monto. Filtra 2,573 emisiones activas Latinex → ~1,470 con tasa fija válida tras limpieza. **L_PA_2 (soberano + EMBI + CDS) queda como placeholder** — necesita plantilla BBG v0.3 (PANAMA Govt + CPAN CDS USD SR 5Y) o ingest específico desde fuente alternativa.
+- **2026-06-16 — Deck consolidado**: `deck_informativa_<as_of>.pptx` ahora unifica USA + FX + PA en un solo entregable auto-descubridor. **5 slides reales + 2 placeholders** al cierre del 2026-06-16.
+
+## 12 · Pendientes priorizados para próxima sesión
+
+Dos cosas bloquean cierre 100% de los 3 sprints, las dos en la misma plantilla:
+
+1. **Plantilla BBG v0.3 → Antulio**. Lista consolidada de instrumentos nuevos a agregar:
+   - +1  ECFC (Fed funds próximas reuniones, encuesta economistas) — L_USA_2
+   - +2  Swap OIS 1Y, 3Y — L_USA_3 (mejora bootstrap forwards)
+   - +40 Forwards FX G10: EUR/GBP/JPY/CHF/AUD × {1Q,2Q,3Q,1Y,2Y,3Y,4Y,5Y} — L_FX_2
+   - +1  PANAMA 30Y soberano — L_PA_2
+   - +1  CPAN CDS USD SR 5Y — L_PA_2
+   = **45 instrumentos nuevos**; plantilla pasa de v0.2 (76) a v0.3 (~121).
+
+2. **Dataset interno Panamá con rating** (decisión 4). Dimensión faltante en L_PA_1: hoy es sector × plazo; queremos rating × sector × plazo. Fuentes a evaluar: Fitch Centroamérica, Equilibrium, PCR, planilla del analista. Se ingresa una vez y se refresca trimestral.
+
+Mejoras menores deferidas hasta validar valor:
+- NY Fed Primary Dealer Survey (PDF parser semestral) — L_USA_2 traza
+- LLM semántico sobre top headlines EODHD — L_USA_2 caja
+- Cambio 12m del heatmap Panamá corp (requiere snapshot histórico de emisiones activas)
+- Sentiment de pares FX en L_FX_1
