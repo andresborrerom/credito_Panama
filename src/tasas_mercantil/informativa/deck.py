@@ -35,8 +35,9 @@ DISCLAIMER = ("Documento informativo con fines analíticos. No constituye "
 # Estructura del deck: lista de (section_header, [(slug, title, status)])
 SECTIONS = [
     ("Bloque USA",
-     "L_USA_1 dot plot SEP · L_USA_2 path multi-fuente · L_USA_3 estructura temporal",
+     "Modelo combinado WIRP+Taylor · dot plot SEP · path multi-fuente · estructura temporal",
      [
+        ("L_USA_0_modelo_combinado", "Por qué combinamos: WIRP + Taylor (backtest 2010-2024)", "Sprint 1.0 ✓"),
         ("L_USA_1_dotplot",    "Dot plot Fed — proyecciones SEP",           "Sprint 1.2 ✓"),
         ("L_USA_2_path_fed",   "Fed Funds: mercado · analistas · sentiment", "Sprint 1.3 ✓"),
         ("L_USA_3_curvas_usa", "Estructura temporal de tasas USA",          "Sprint 1.1 ✓"),
