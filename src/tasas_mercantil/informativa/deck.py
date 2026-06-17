@@ -1,0 +1,213 @@
+"""Compilador del deck de la pieza informativa.
+
+Patrón auto-descubridor: si una slide no tiene su PNG generado, se omite y
+queda registrado en el resumen. Mismo estilo que Producto B.
+
+Sprints:
+  Sprint 1 USA (3 slides): dot plot SEP · path multi-fuente · estructura temporal
+  Sprint 2 FX  (2 slides): G10 spots+evolución · forwards 5y (pendiente BBG v0.3)
+  Sprint 3 PA  (2 slides): corp sector × plazo · soberano + CDS (pendiente BBG v0.3)
+
+Uso:
+    PYTHONPATH=src python -m tasas_mercantil.informativa.deck <as_of>
+"""
+from __future__ import annotations
+from datetime import date
+from pathlib import Path
+import sys
+
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
+
+SLIDE_W_IN = 13.33
+SLIDE_H_IN = 7.50
+BLUE = RGBColor(0x2A, 0x6F, 0xB3)
+DARKBLUE = RGBColor(0x1A, 0x3A, 0x5C)
+WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+LIGHT = RGBColor(0xE8, 0xEF, 0xF7)
+GREY = RGBColor(0x66, 0x66, 0x66)
+
+DISCLAIMER = ("Documento informativo con fines analíticos. No constituye "
+              "recomendación de inversión.")
+
+# Estructura del deck: lista de (section_header, [(slug, title, status)])
+SECTIONS = [
+    ("Bloque USA",
+     "Modelo combinado WIRP+Taylor · dot plot SEP · path multi-fuente · estructura temporal",
+     [
+        ("L_USA_0_modelo_combinado", "Por qué combinamos: WIRP + Taylor (backtest 2010-2024)", "Sprint 1.0 ✓"),
+        ("L_USA_1_dotplot",    "Dot plot Fed — proyecciones SEP",           "Sprint 1.2 ✓"),
+        ("L_USA_2_path_fed",   "Fed Funds: mercado · analistas · sentiment", "Sprint 1.3 ✓"),
+        ("L_USA_3_curvas_usa", "Estructura temporal de tasas USA",          "Sprint 1.1 ✓"),
+     ]),
+    ("Bloque FX G10",
+     "L_FX_1 spots y evolución · L_FX_2 forwards 5y (BBG v0.3)",
+     [
+        ("L_FX_1_g10",         "FX G10 + DXY: spots y evolución",            "Sprint 2.1 ✓"),
+        ("L_FX_2_forwards",    "Forwards FX trimestrales 5y",                "Sprint 2.2 · pendiente plantilla BBG v0.3"),
+     ]),
+    ("Bloque Panamá",
+     "Bonos corporativos · soberano + forwards implícitos",
+     [
+        ("L_PA_1_corp_sector_plazo", "Panamá corp · sector × plazo",         "Sprint 3.1 ✓"),
+        ("L_PA_2_soberano",          "Panamá soberano + forwards implícitos","Sprint 3.2 ✓"),
+     ]),
+]
+
+
+def _blank(prs):
+    return prs.slides.add_slide(prs.slide_layouts[6])
+
+
+def _bg(slide, color):
+    bg = slide.shapes.add_shape(1, Inches(0), Inches(0),
+                                Inches(SLIDE_W_IN), Inches(SLIDE_H_IN))
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = color
+    bg.line.fill.background()
+
+
+def _text(slide, left, top, w, h, text, size, color, bold=False,
+          italic=False, align=PP_ALIGN.LEFT):
+    box = slide.shapes.add_textbox(Inches(left), Inches(top),
+                                   Inches(w), Inches(h))
+    tf = box.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.alignment = align
+    p.text = text
+    r = p.runs[0]
+    r.font.size = Pt(size)
+    r.font.bold = bold
+    r.font.italic = italic
+    r.font.color.rgb = color
+
+
+def _cover(prs, as_of):
+    s = _blank(prs)
+    _bg(s, BLUE)
+    _text(s, 0.8, 2.0, SLIDE_W_IN - 1.6, 1.3,
+          "Pieza informativa — Tasas, FX, Panamá", 38, WHITE, bold=True)
+    _text(s, 0.8, 3.1, SLIDE_W_IN - 1.6, 0.9,
+          "Estructura temporal · proyecciones Fed · expectativas · FX G10 "
+          "· crédito Panamá", 21, WHITE)
+    _text(s, 0.8, 4.2, SLIDE_W_IN - 1.6, 0.7,
+          f"Corte de análisis · {as_of.isoformat()}", 20, LIGHT)
+    _text(s, 0.8, 6.4, SLIDE_W_IN - 1.6, 0.6,
+          "Datos: Bloomberg · FRED · EODHD · Fed (SEP) · Latinex",
+          12, LIGHT, italic=True)
+
+
+def _section(prs, title, subtitle=""):
+    s = _blank(prs)
+    _bg(s, DARKBLUE)
+    _text(s, 0.8, 2.9, SLIDE_W_IN - 1.6, 1.1, title, 32, WHITE, bold=True)
+    if subtitle:
+        _text(s, 0.8, 4.0, SLIDE_W_IN - 1.6, 1.2, subtitle, 17, LIGHT)
+
+
+def _image(prs, png, header, message: str | None = None):
+    s = _blank(prs)
+    _text(s, 0.4, 0.10, SLIDE_W_IN - 0.8, 0.36, header, 13, DARKBLUE, bold=True)
+    # Si hay mensaje, reservar espacio arriba para textbox editable
+    if message:
+        msg_top = 0.50
+        msg_h = 1.10
+        img_top = msg_top + msg_h + 0.10
+        img_h = SLIDE_H_IN - img_top - 0.45
+        # Textbox del mensaje (EDITABLE en PowerPoint)
+        from pptx.util import Emu
+        box = s.shapes.add_textbox(
+            Inches(0.4), Inches(msg_top),
+            Inches(SLIDE_W_IN - 0.8), Inches(msg_h))
+        tf = box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.text = message
+        r = p.runs[0]
+        r.font.size = Pt(11)
+        r.font.color.rgb = DARKBLUE
+        # Fondo crema editable
+        from pptx.dml.color import RGBColor as _RGB
+        box.fill.solid()
+        box.fill.fore_color.rgb = _RGB(0xFF, 0xF5, 0xE6)
+        box.line.color.rgb = _RGB(0xB3, 0x2A, 0x2A)
+        box.line.width = Pt(1.2)
+        s.shapes.add_picture(str(png), Inches(0.4), Inches(img_top),
+                             width=Inches(SLIDE_W_IN - 0.8),
+                             height=Inches(img_h))
+    else:
+        s.shapes.add_picture(str(png), Inches(0.4), Inches(0.55),
+                             width=Inches(SLIDE_W_IN - 0.8))
+    _text(s, 0.4, 7.18, SLIDE_W_IN - 0.8, 0.28, DISCLAIMER, 8, GREY, italic=True)
+
+
+def _placeholder(prs, header, subtitle):
+    s = _blank(prs)
+    _text(s, 0.4, 0.12, SLIDE_W_IN - 0.8, 0.4, header, 14, DARKBLUE, bold=True)
+    box = s.shapes.add_textbox(Inches(2), Inches(2.8),
+                               Inches(SLIDE_W_IN - 4), Inches(2))
+    tf = box.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    p.text = f"En construcción · {subtitle}"
+    p.runs[0].font.size = Pt(22)
+    p.runs[0].font.color.rgb = GREY
+    p.runs[0].font.italic = True
+
+
+def compile_informativa(as_of: date, output_path: Path | str | None = None,
+                        messages: dict[str, str] | None = None
+                        ) -> tuple[Path, list[str], list[str]]:
+    """Compila el deck. Si `messages` (slug → texto editado) viene, esos
+    textos van como textbox EDITABLE en cada slide del PPT. Si no, intenta
+    leerlos de messages.json del corte (load_messages_json)."""
+    if output_path is None:
+        output_path = (Path(f"docs/informativa/outputs/{as_of.isoformat()}"
+                            f"/deck_informativa_{as_of.isoformat()}.pptx"))
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if messages is None:
+        try:
+            from .messages import load_messages_json
+            messages = load_messages_json(as_of)
+        except Exception:
+            messages = {}
+
+    prs = Presentation()
+    prs.slide_width = Inches(SLIDE_W_IN)
+    prs.slide_height = Inches(SLIDE_H_IN)
+
+    _cover(prs, as_of)
+
+    base = Path(f"docs/informativa/outputs/{as_of.isoformat()}")
+    included, pending = [], []
+    for section_title, section_subtitle, slides in SECTIONS:
+        _section(prs, section_title, section_subtitle)
+        for slug, title, status in slides:
+            png = base / f"{slug}.png"
+            header = f"{title}  ·  corte {as_of}"
+            if png.exists():
+                msg = (messages or {}).get(slug)
+                _image(prs, png, header, message=msg)
+                included.append(slug)
+            else:
+                _placeholder(prs, header, status)
+                pending.append(slug)
+
+    _section(prs, "Compliance", DISCLAIMER)
+    prs.save(str(output_path))
+    return output_path, included, pending
+
+
+if __name__ == "__main__":
+    arg = sys.argv[1] if len(sys.argv) > 1 else "2026-05-30"
+    as_of = date.fromisoformat(arg)
+    out, inc, pend = compile_informativa(as_of)
+    print(f"Deck: {out}")
+    print(f"Slides con PNG ({len(inc)}): {inc}")
+    print(f"Slides pendientes ({len(pend)}): {pend}")

@@ -1,0 +1,118 @@
+# Narrativa editorial del corte mayo 2026.
+#
+# Este archivo es la fuente unica de verdad para los componentes editoriales del deck:
+# - TL;DR (3 mensajes principales)
+# - Tactical Views (vistas tacticas con los 4 Ws)
+# - Calendario del proximo mes (eventos con importancia)
+# - Snapshot Venezuela (BCV + FX + bonos en default)
+#
+# Para un corte nuevo: copia este archivo a cortes/YYYY-MM/narrativa.yaml,
+# actualiza los campos, y corre render_deck_v10. Sin tocar Python.
+
+corte: "2026-05"
+as_of: "2026-05-29"
+autor_principal: "Camilo Forero + Andrés Borrero"
+
+# ---------------------------------------------------------------------------
+# TL;DR — los 3 mensajes principales del mes.
+# Cada uno empieza con "Creemos que..." o equivalente (voz primera persona).
+# conviction: Alta | Media | Baja
+# ---------------------------------------------------------------------------
+tldr_messages:
+  - headline: >-
+      Modelo y mercado en consenso: Fed Funds estables, +20 bps en 24 meses.
+      Sin tesis contraria este mes.
+    conviction: "Media"
+    relevant_unit: "Tesorería + Banco Panamá"
+    trigger: >-
+      CPI core junio. Si vuelve a > 0.3% m/m, modelo se inclina más hawkish
+      que el mercado. Próximo dot plot SEP también re-ancla expectativas.
+
+  - headline: >-
+      UST 10Y a 4.45% con curva positivamente inclinada (2s10s +43 bps) ofrece
+      carry atractivo vs cash 3.66%. Sweet spot para libros HTM en 5-10Y.
+    conviction: "Alta"
+    relevant_unit: "Aseguradora + Wealth Management"
+    trigger: "Cierre UST 10Y > 4.70% obligaría revisar duración objetivo."
+
+  - headline: >-
+      Breakevens 10Y 2.41% y 5Y 2.56% señalan mercado cómodo con inflación cerca
+      del target Fed. Preferimos UST nominales sobre TIPS en horizonte 12M.
+    conviction: "Media"
+    relevant_unit: "Wealth Management"
+    trigger: "Tres CPI core consecutivos > 0.4% m/m descartaría la vista."
+
+
+# ---------------------------------------------------------------------------
+# Tactical Views — el corazón accionable del deck.
+# Cada vista lleva los 4 Ws: what / if_right / if_wrong / trigger.
+# direccion: Overweight | Underweight | Long | Short | Neutral
+# horizonte: 3M | 6M | 12M
+# ---------------------------------------------------------------------------
+tactical_views:
+  - activo: "UST 5-10Y"
+    direccion: "Overweight"
+    horizonte: "6M"
+    conviction: "Alta"
+    what: "Target yield 4.20-4.50% en UST 10Y. Sweet spot risk-reward."
+    if_right: "Lock-in carry + duration upside si Fed retoma cortes."
+    if_wrong: "Pérdida de MTM acotada (~5% si UST 10Y sube 100 bps). Carry 4.4% mitiga."
+    trigger: "UST 10Y > 4.70% o dot plot junio significativamente más hawkish."
+
+  - activo: "TIPS 10Y"
+    direccion: "Neutral"
+    horizonte: "6M"
+    conviction: "Media"
+    what: "Real yield 2.03% atractivo histórico, pero BE 10Y de 2.41% se ve barato."
+    if_right: "Captura yield real positivo + protección inflación cola."
+    if_wrong: "Si inflación realizada cae a 2%, TIPS underperformeará vs nominales."
+    trigger: "Breakeven 10Y > 2.70% inclinaría hacia overweight TIPS."
+
+  - activo: "SOFR forwards corto (0-12M)"
+    direccion: "Short vs mercado"
+    horizonte: "6M"
+    conviction: "Baja"
+    what: "Mercado descuenta path estable; vemos asimetría hacia hike si CPI sorprende."
+    if_right: "Ganancia en posiciones short futures SOFR / OIS."
+    if_wrong: "Si Fed efectivamente queda en pausa, costo de carry ~10-15 bps."
+    trigger: "Dot plot junio si median 2026 sube ≥25 bps confirmaría la vista."
+
+  - activo: "Spread Panamá soberano vs UST"
+    direccion: "Pendiente análisis Panamá (lámina 6)"
+    horizonte: "3M"
+    conviction: "Media"
+    what: "Spread Panamá 10Y vs UST cotiza ~130 bps; mediana 5Y 240 bps."
+    if_right: "Si retorna a media, ganancia ~110 bps en bonos PAN largos."
+    if_wrong: "Spread puede mantenerse comprimido si calidad crediticia mejora."
+    trigger: "Próxima revisión Moody's/S&P de Panamá soberano."
+
+
+# ---------------------------------------------------------------------------
+# Calendario — eventos del próximo mes que pueden cambiar el reporte.
+# importancia: Alta | Media | Baja
+# ---------------------------------------------------------------------------
+calendar:
+  - fecha: "2026-06-11"
+    evento: "FOMC + SEP/dot plot"
+    relevante_para: "Lámina 1 mensaje 1 + Lámina 3 + Tactical View 3"
+    importancia: "Alta"
+
+  - fecha: "2026-06-12"
+    evento: "CPI Mayo 2026"
+    relevante_para: "Lámina 1 mensaje 3 + Tactical View 2 (TIPS)"
+    importancia: "Alta"
+
+  - fecha: "2026-06-05"
+    evento: "Nonfarm Payrolls Mayo"
+    relevante_para: "Reaction function modelo Pieza B (M-2)"
+    importancia: "Media"
+
+  - fecha: "2026-06-04"
+    evento: "Decisión BCE"
+    relevante_para: "Lámina 5 — Global"
+    importancia: "Media"
+
+  - fecha: "2026-06-26"
+    evento: "PCE Core Mayo"
+    relevante_para: "Tactical View 2 (TIPS)"
+    importancia: "Media"
