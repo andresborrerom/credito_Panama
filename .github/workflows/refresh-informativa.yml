@@ -1,0 +1,68 @@
+name: Refresh informativa
+
+on:
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: "Fecha de corte (YYYY-MM-DD). Por defecto: hoy"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/tasas-mercantil-report-Q8sFt
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          pip install pandas numpy matplotlib scipy requests \
+                      python-pptx pyarrow
+
+      - name: Compute as_of
+        id: corte
+        run: |
+          if [ -z "${{ inputs.as_of }}" ]; then
+            echo "as_of=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          else
+            echo "as_of=${{ inputs.as_of }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Refresh data + regenerate slides + site + deck
+        env:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+        run: |
+          PYTHONPATH=src python scripts/refresh_informativa.py \
+            ${{ steps.corte.outputs.as_of }}
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/informativa/ data/external/tasas_mercantil/fred_curvas_usa.parquet \
+                  data/external/tasas_mercantil/fx_g10.parquet \
+                  data/external/informativa/ || true
+          if git diff --staged --quiet; then
+            echo "Sin cambios para commitear."
+          else
+            git commit -m "Informativa: refresh automático corte ${{ steps.corte.outputs.as_of }}"
+            git push origin claude/tasas-mercantil-report-Q8sFt
+          fi
+
+      - name: Upload PPT as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deck-informativa-${{ steps.corte.outputs.as_of }}
+          path: docs/informativa/outputs/${{ steps.corte.outputs.as_of }}/deck_informativa_${{ steps.corte.outputs.as_of }}.pptx
+          if-no-files-found: warn
