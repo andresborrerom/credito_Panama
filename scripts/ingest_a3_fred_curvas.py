@@ -85,6 +85,11 @@ def main() -> None:
     out["obs_date"] = pd.to_datetime(out["obs_date"])
     out["value"] = pd.to_numeric(out["value"], errors="coerce")
     out = out.dropna(subset=["value"])
+    # Schema canónico compatible con bloomberg_historico.parquet y MasterStore
+    out["vintage_date"] = out["obs_date"]
+    out["sheet"] = "fred_curvas_usa"
+    out = out[["feature_name", "ticker", "obs_date", "value",
+               "vintage_date", "source", "sheet"]]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     out.to_parquet(OUT, index=False)
     print(f"\nGuardado {len(out):,} filas → {OUT}")

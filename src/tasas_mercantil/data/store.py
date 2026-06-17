@@ -21,6 +21,17 @@ import pandas as pd
 
 DEFAULT_STORE_DIR = Path("data/external/tasas_mercantil")
 
+# Solo estos parquets son fuentes canónicas del MasterStore (formato long
+# con feature_name + vintage_date). El resto del directorio son outputs
+# de procesos (BMA, ETF returns, news sentiment, FX, etc.) que viven al
+# lado pero no son features de mercado consultadas por el modelo.
+CANONICAL_PARQUETS = [
+    "bloomberg_historico.parquet",
+    "fred_curvas_usa.parquet",
+    "fred_non_vintage.parquet",
+    "fred_vintage_macro.parquet",
+]
+
 
 @dataclass
 class MasterStore:
@@ -123,10 +134,19 @@ def load_master_store(
     store_dir: Path = DEFAULT_STORE_DIR,
     presentation_window_days: int = 3,
 ) -> MasterStore:
-    """Carga y junta todos los parquets del directorio en un MasterStore."""
-    parquets = sorted(store_dir.glob("*.parquet"))
+    """Carga y junta los parquets CANÓNICOS del directorio en un MasterStore.
+
+    Solo concatena los parquets listados en CANONICAL_PARQUETS (formato
+    long con feature_name + vintage_date). Los demás parquets del
+    directorio son outputs de procesos auxiliares y se ignoran.
+    """
+    parquets = [store_dir / name for name in CANONICAL_PARQUETS
+                if (store_dir / name).exists()]
     if not parquets:
-        raise FileNotFoundError(f"No hay parquets en {store_dir}")
+        raise FileNotFoundError(
+            f"No hay parquets canónicos en {store_dir}. "
+            f"Esperaba alguno de: {CANONICAL_PARQUETS}"
+        )
     frames = [pd.read_parquet(p) for p in parquets]
     df = pd.concat(frames, ignore_index=True)
 
