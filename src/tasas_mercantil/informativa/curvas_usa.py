@@ -55,10 +55,9 @@ DISCLAIMER = ("Documento informativo con fines analíticos. No constituye "
 # Loaders
 # ---------------------------------------------------------------------------
 def _load_master(parquet_path: Path | None = None) -> pd.DataFrame:
-    p = Path(parquet_path) if parquet_path else CACHE
-    df = pd.read_parquet(p)
-    df["obs_date"] = pd.to_datetime(df["obs_date"])
-    return df
+    """Loader unificado BBG + FRED. parquet_path se ignora (compatibilidad)."""
+    from .data_loader import load_master
+    return load_master()
 
 
 def _last_on_or_before(df: pd.DataFrame, feature: str,

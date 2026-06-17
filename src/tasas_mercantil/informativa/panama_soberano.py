@@ -45,7 +45,8 @@ DISCLAIMER = ("Documento informativo con fines analíticos. No constituye "
 
 
 def _ust_curve(as_of: date) -> dict[float, float]:
-    df = pd.read_parquet(BLOOMBERG_PARQUET)
+    from .data_loader import load_master
+    df = load_master()
     df["obs_date"] = pd.to_datetime(df["obs_date"])
     cut = pd.Timestamp(as_of)
     out = {}
