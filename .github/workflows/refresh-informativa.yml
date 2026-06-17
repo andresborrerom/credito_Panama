@@ -7,6 +7,11 @@ on:
         description: "Fecha de corte (YYYY-MM-DD). Por defecto: hoy"
         required: false
         default: ""
+  # Schedule mensual: día 1 de cada mes a las 12:00 UTC (07:00 Colombia/Panamá).
+  # Refresca con datos del mes anterior cerrado. El usuario puede igual disparar
+  # manual cuando hay un evento intermedio (SEP nuevo, FOMC, etc).
+  schedule:
+    - cron: "0 12 1 * *"
 
 permissions:
   contents: write
