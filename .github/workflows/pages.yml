@@ -2,7 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [main, claude/pensive-carson-shPap]
+    branches: [main, claude/pensive-carson-shPap, claude/tasas-mercantil-report-Q8sFt]
     paths:
       - 'docs/**'
       - '.github/workflows/pages.yml'
