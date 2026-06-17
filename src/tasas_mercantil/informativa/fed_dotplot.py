@@ -39,7 +39,7 @@ URL_TPL = "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl{ymd}.htm"
 SEP_DATES: list[date] = [
     date(2024, 3, 20),  date(2024, 6, 12),  date(2024, 9, 18), date(2024, 12, 18),
     date(2025, 3, 19),  date(2025, 6, 18),  date(2025, 9, 17), date(2025, 12, 10),
-    date(2026, 3, 18),
+    date(2026, 3, 18),  date(2026, 6, 17),
 ]
 
 DISCLAIMER = ("Documento informativo con fines analíticos. No constituye "
