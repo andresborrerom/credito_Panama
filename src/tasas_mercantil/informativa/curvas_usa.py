@@ -205,13 +205,13 @@ def _plot_curve(ax, df, tenors, as_of, title, ylabel, ymin=None, ymax=None):
 
     if x12:
         ax.plot(x12, y12, color="#aaaaaa", lw=1.6,
-                marker="o", ms=4, label=f"Hace 12m ({d12})")
+                marker="o", ms=4, label=f"Hace 12 meses")
     if x1:
         ax.plot(x1, y1, color="#7aa9d2", lw=1.8,
-                marker="o", ms=4, label=f"Hace 1m ({d1})")
+                marker="o", ms=4, label=f"Hace 1 mes")
     if x0:
         ax.plot(x0, y0, color="#1a3a5c", lw=2.4,
-                marker="o", ms=5, label=f"Hoy ({d0})")
+                marker="o", ms=5, label=f"Hoy")
 
     ax.set_title(title, fontsize=11, weight="bold")
     ax.set_xlabel("Tenor (años)", fontsize=9)
@@ -231,7 +231,8 @@ def _plot_curve(ax, df, tenors, as_of, title, ylabel, ymin=None, ymax=None):
         delta_1m = [(c_now[t] - c_1m[t]) * 100 for t in common]
         max_d, min_d = max(delta_1m), min(delta_1m)
         ax.text(0.02, 0.02,
-                f"Δ vs 1m: max {max_d:+.0f}bps · min {min_d:+.0f}bps",
+                f"Cambio vs hace 1 mes: máx {max_d:+.0f} · "
+                f"mín {min_d:+.0f} centésimas",
                 transform=ax.transAxes, fontsize=7.5, style="italic",
                 bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
                           edgecolor="#bbb", alpha=0.85))
@@ -246,23 +247,23 @@ def _plot_forwards(ax, df, as_of):
     direct = valid & (qs <= 8)
     boot = valid & (qs > 8)
     ax.bar(qs[direct], fwd[direct], width=0.8,
-           color="#1a3a5c", label="SR3 directo (1Q-8Q)")
+           color="#1a3a5c", label="Próximos 2 años (de futuros directos)")
     ax.bar(qs[boot], fwd[boot], width=0.8,
-           color="#7aa9d2", label="Bootstrap OIS (9Q-20Q)")
+           color="#7aa9d2", label="Años 3 a 5 (de swaps)")
 
-    # Línea SOFR ON spot como referencia
     cut = pd.Timestamp(as_of)
     sofr_on = _last_on_or_before(df, "SOFR_ON", cut)
     if sofr_on is not None:
         ax.axhline(sofr_on, color="#b32a2a", ls="--", lw=1.4,
-                   label=f"SOFR ON hoy {sofr_on:.2f}%")
+                   label=f"Tasa overnight hoy: {sofr_on:.2f}%")
 
-    ax.set_title("Forwards SOFR trimestrales (5 años)",
-                 fontsize=11, weight="bold")
+    ax.set_title("Tasa de corto plazo que el mercado anticipa\n"
+                 "para cada trimestre de los próximos 5 años",
+                 fontsize=10.5, weight="bold")
     ax.set_xlabel("Trimestre adelante", fontsize=9)
-    ax.set_ylabel("Tasa anual (%)", fontsize=9)
+    ax.set_ylabel("Tasa anual esperada (%)", fontsize=9)
     ax.set_xticks(np.arange(1, n_q + 1, 2))
-    ax.set_xticklabels([f"{(q+1)/4:.1f}y" if q % 4 == 3 else f"{q+1}Q"
+    ax.set_xticklabels([f"{(q+1)/4:.1f} años" if q % 4 == 3 else f"T{q+1}"
                         for q in range(0, n_q, 2)], fontsize=7.5)
     ax.grid(True, alpha=0.3, axis="y")
     ax.set_axisbelow(True)
@@ -275,7 +276,10 @@ def _plot_forwards(ax, df, as_of):
         cross = np.where(valid & (fwd < sofr_on - cut_threshold / 100))[0]
         if len(cross) > 0:
             first_q = cross[0] + 1
-            ax.annotate(f"Primer trimestre con\nforward <SOFR-25bps:\nQ{first_q}",
+            yrs = (first_q + 1) / 4.0
+            ax.annotate(f"El mercado espera que la Fed\n"
+                        f"baje tasas a partir de\n"
+                        f"unos {yrs:.1f} años desde hoy",
                         xy=(first_q, fwd[first_q - 1]),
                         xytext=(first_q + 2, sofr_on + 0.3),
                         fontsize=7.5,
@@ -287,23 +291,26 @@ def _plot_forwards(ax, df, as_of):
 
 
 def _build_curvas_message(df: pd.DataFrame, as_of: date) -> str:
-    """Mensaje principal de L_USA_3 basado en el corte."""
+    """Mensaje principal en castellano descriptivo."""
     cut = pd.Timestamp(as_of)
     ust_now = load_curve(df, UST_TENORS, as_of)
-    ust_1m = load_curve(df, UST_TENORS, (cut - pd.offsets.MonthEnd(1)).date())
     parts = []
     if ust_now and 2.0 in ust_now and 10.0 in ust_now:
-        s2s10 = (ust_now[10.0] - ust_now[2.0]) * 100
-        slope = "empinada" if s2s10 > 50 else "plana" if abs(s2s10) < 50 else "invertida"
-        parts.append(f"Curva UST {slope} (2s10s {s2s10:+.0f} bps)")
-    if ust_now and ust_1m:
-        common = set(ust_now) & set(ust_1m)
-        if common:
-            deltas = [(ust_now[t] - ust_1m[t]) * 100 for t in common]
-            avg_d = np.mean(deltas)
-            direction = "subió" if avg_d > 5 else "bajó" if avg_d < -5 else "estable"
-            parts.append(f"vs 1m: curva {direction} {avg_d:+.0f} bps promedio")
-    # Forwards: primer Q donde cae >25bps vs SOFR ON
+        y2 = ust_now[2.0]; y10 = ust_now[10.0]
+        s = y10 - y2
+        if s > 0.5:
+            shape = (f"está empinada: el bono a 10 años paga {s:.2f} puntos "
+                     f"más que el de 2 años ({y10:.2f}% vs {y2:.2f}%)")
+        elif s < -0.1:
+            shape = (f"está invertida: el bono a 2 años paga más que el de "
+                     f"10 años ({y2:.2f}% vs {y10:.2f}%)")
+        else:
+            shape = (f"está casi plana: el bono a 10 años paga apenas "
+                     f"{s:.2f} puntos más que el de 2 años "
+                     f"({y10:.2f}% vs {y2:.2f}%)")
+        parts.append(f"La curva de tasas del Tesoro USA {shape}")
+
+    # Forwards
     sofr_on = _last_on_or_before(df, "SOFR_ON", cut)
     fwd = forwards_quarterly(df, as_of, 20)
     if sofr_on and np.isfinite(sofr_on):
@@ -311,17 +318,33 @@ def _build_curvas_message(df: pd.DataFrame, as_of: date) -> str:
         if len(cross_idx) > 0:
             q = cross_idx[0] + 1
             yrs = (q + 1) / 4.0
-            parts.append(f"forwards descuentan primer cut significativo en Q{q} (~{yrs:.1f}y)")
+            parts.append(
+                f"el mercado descuenta que la Fed bajará tasas en cerca de "
+                f"{yrs:.1f} años desde hoy"
+            )
         else:
-            parts.append(f"forwards no descuentan cuts significativos en próximos 5y (mercado ve Fed on-hold)")
-    # Breakeven slope
+            parts.append(
+                "el mercado no anticipa bajadas importantes de tasas en "
+                "los próximos 5 años (espera que la Fed mantenga el nivel actual)"
+            )
+
+    # Breakeven
     be_now = load_curve(df, BE_TENORS, as_of)
     if be_now and 2.0 in be_now and 30.0 in be_now:
-        be_slope = (be_now[30.0] - be_now[2.0]) * 100
-        if abs(be_slope) > 10:
-            shape = "invertida" if be_slope < 0 else "creciente"
-            parts.append(f"breakeven {shape} 2y→30y ({be_slope:+.0f} bps)")
-    return " · ".join(parts) if parts else "Estructura temporal USA al corte"
+        be2 = be_now[2.0]; be30 = be_now[30.0]
+        if be30 < be2 - 0.1:
+            parts.append(
+                f"la inflación esperada baja con el plazo: para los próximos "
+                f"2 años el mercado descuenta {be2:.2f}% anual, pero para los "
+                f"próximos 30 años descuenta {be30:.2f}% (la Fed lograría su meta)"
+            )
+        elif be30 > be2 + 0.1:
+            parts.append(
+                f"la inflación esperada sube con el plazo: {be2:.2f}% a 2 años "
+                f"vs {be30:.2f}% a 30 años (el mercado anticipa que la Fed "
+                f"no controlará la inflación a largo plazo)"
+            )
+    return ". ".join(parts) + "." if parts else "Estado de la curva de tasas USA."
 
 
 def plot_curvas_usa(as_of: date, output_path: Path | str,
@@ -338,24 +361,26 @@ def plot_curvas_usa(as_of: date, output_path: Path | str,
     gs = fig.add_gridspec(3, 2, height_ratios=[0.18, 1.0, 1.0],
                           hspace=0.42, wspace=0.20)
     ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
-    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
-                ha="center", va="center", fontsize=11.5, weight="bold",
+    ax_msg.text(0.5, 0.5, msg,
+                ha="center", va="center", fontsize=11.0,
                 color="#0d1b2a", wrap=True,
                 bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
                           edgecolor="#b32a2a", linewidth=1.6))
     axes = np.array([[fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])],
                      [fig.add_subplot(gs[2, 0]), fig.add_subplot(gs[2, 1])]])
     _plot_curve(axes[0, 0], df, UST_TENORS, as_of,
-                "Curva UST nominal", "Yield (%)")
+                "Tasas del Tesoro USA por plazo",
+                "Tasa (%)")
     _plot_curve(axes[0, 1], df, TIPS_TENORS, as_of,
-                "Curva TIPS real", "Yield real (%)")
+                "Tasas REALES del Tesoro (descontando inflación)",
+                "Tasa real (%)")
     _plot_curve(axes[1, 0], df, BE_TENORS, as_of,
-                "Breakeven inflation (nominal − real)",
-                "Inflación implícita (%)")
+                "Inflación esperada por el mercado, por plazo",
+                "Inflación anual (%)")
     _plot_forwards(axes[1, 1], df, as_of)
 
     fig.suptitle(
-        f"Estructura temporal de tasas USA — corte {as_of}",
+        f"Cómo está la curva de tasas USA · cierre del {as_of}",
         fontsize=14, weight="bold", y=0.995)
     fig.text(0.5, 0.005, DISCLAIMER, ha="center", fontsize=7.5,
              style="italic", color="#666")

@@ -241,34 +241,47 @@ def _dots_for_year(dots: pd.DataFrame, year_col: str) -> list[float]:
 
 
 def _build_dotplot_message(sep: SEPParsed, implied: dict | None) -> str:
-    """Mensaje principal: gap Fed-mercado + revisión vs SEP previo."""
+    """Mensaje principal en castellano descriptivo."""
     parts = []
-    # Gap mediano Fed-mercado (años con ambos)
     if implied:
         gaps = []
         for y in sep.year_labels:
             m = sep.median.get(y, float("nan"))
             im = implied.get(y, float("nan"))
             if np.isfinite(m) and np.isfinite(im):
-                gaps.append(((m - im) * 100, y))
+                gaps.append((m - im, y, m, im))
         if gaps:
-            max_gap = max(gaps, key=lambda x: abs(x[0]))
-            direction = "más DOVISH" if max_gap[0] > 0 else "más HAWKISH"
-            parts.append(f"Mercado descuenta Fed {direction} que el dot plot · "
-                         f"gap máx {max_gap[1]}: {max_gap[0]:+.0f} bps "
-                         f"(mediana {sep.median[max_gap[1]]:.2f}% vs mkt {implied[max_gap[1]]:.2f}%)")
-    # Revisión vs SEP previo
+            biggest = max(gaps, key=lambda x: abs(x[0]))
+            dgap, y, m, im = biggest
+            if dgap > 0:
+                parts.append(
+                    f"El mercado espera que la Fed baje tasas más rápido "
+                    f"de lo que la propia Fed anuncia. Para {y}, los miembros "
+                    f"de la Fed proyectan en promedio {m:.2f}%, pero el "
+                    f"mercado de futuros descuenta {im:.2f}% (una diferencia "
+                    f"de {abs(dgap)*100:.0f} centésimas de punto)"
+                )
+            else:
+                parts.append(
+                    f"El mercado espera que la Fed mantenga tasas más altas "
+                    f"de lo que ella misma proyecta. Para {y}, los miembros "
+                    f"de la Fed proyectan en promedio {m:.2f}%, pero el "
+                    f"mercado descuenta {im:.2f}%"
+                )
+
+    # Revisiones vs SEP previo
     revisions = []
     for y in sep.year_labels:
         m = sep.median.get(y, float("nan"))
         pm = sep.prev_median.get(y, float("nan"))
         if np.isfinite(m) and np.isfinite(pm) and abs(m - pm) > 0.05:
-            revisions.append(f"{y} {(m-pm)*100:+.0f} bps")
+            d = (m - pm) * 100
+            verb = "subió" if d > 0 else "bajó"
+            revisions.append(f"para {y} {verb} {abs(d):.0f} centésimas")
     if revisions:
-        parts.append("revisión vs SEP previo: " + ", ".join(revisions))
-    else:
-        parts.append("sin revisiones materiales vs SEP previo")
-    return " · ".join(parts)
+        parts.append("Cambios vs proyección anterior de la Fed: " +
+                     ", ".join(revisions))
+    return ". ".join(parts) + "." if parts else "Proyecciones de la Fed."
 
 
 def plot_dotplot(sep: SEPParsed, output_path: Path | str,
@@ -279,10 +292,10 @@ def plot_dotplot(sep: SEPParsed, output_path: Path | str,
 
     msg = _build_dotplot_message(sep, implied)
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(2, 1, height_ratios=[0.13, 1.0], hspace=0.02)
+    gs = fig.add_gridspec(2, 1, height_ratios=[0.20, 1.0], hspace=0.18)
     ax_msg = fig.add_subplot(gs[0, 0]); ax_msg.axis("off")
-    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
-                ha="center", va="center", fontsize=11.5, weight="bold",
+    ax_msg.text(0.5, 0.5, msg,
+                ha="center", va="center", fontsize=11.0,
                 color="#0d1b2a", wrap=True,
                 bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
                           edgecolor="#b32a2a", linewidth=1.6))
@@ -347,9 +360,14 @@ def plot_dotplot(sep: SEPParsed, output_path: Path | str,
     ax.set_xlim(-0.55, len(years) - 0.45)
     ax.set_ylabel("Fed Funds Rate (%)", fontsize=10)
 
-    # Tabla resumen al pie
-    summary_rows = [["Año", "Mediana", "SEP prev", "Δ (bps)",
-                     "Central Tendency", "Implied path", "Gap Fed-Mkt (bps)"]]
+    # Tabla resumen al pie en castellano descriptivo
+    summary_rows = [["Año",
+                     "Proyección\nFed (mediana)",
+                     "Proyección\nFed anterior",
+                     "Cambio\n(centésimas)",
+                     "Rango donde se\nconcentra la Fed",
+                     "Lo que descuenta\nel mercado",
+                     "Diferencia\nFed vs mercado\n(centésimas)"]]
     for y in years:
         m = sep.median.get(y, np.nan)
         pm = sep.prev_median.get(y, np.nan)
@@ -359,12 +377,12 @@ def plot_dotplot(sep: SEPParsed, output_path: Path | str,
         gap_mkt = (m - im) * 100 if np.isfinite(m) and np.isfinite(im) else np.nan
         summary_rows.append([
             y,
-            f"{m:.2f}" if np.isfinite(m) else "—",
-            f"{pm:.2f}" if np.isfinite(pm) else "—",
+            f"{m:.2f}%" if np.isfinite(m) else "—",
+            f"{pm:.2f}%" if np.isfinite(pm) else "—",
             f"{delta_prev:+.0f}" if np.isfinite(delta_prev) else "—",
-            f"{lo:.2f}–{hi:.2f}" if np.isfinite(lo) else "—",
-            f"{im:.2f}" if np.isfinite(im) else "n/a",
-            f"{gap_mkt:+.0f}" if np.isfinite(gap_mkt) else "n/a",
+            f"{lo:.2f}%–{hi:.2f}%" if np.isfinite(lo) else "—",
+            f"{im:.2f}%" if np.isfinite(im) else "n/d",
+            f"{gap_mkt:+.0f}" if np.isfinite(gap_mkt) else "n/d",
         ])
     # tabla via ax secundario abajo
     box = ax.table(cellText=summary_rows[1:], colLabels=summary_rows[0],
@@ -378,26 +396,30 @@ def plot_dotplot(sep: SEPParsed, output_path: Path | str,
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
     handles = [
-        Line2D([], [], color="#b32a2a", lw=2.3, label=f"Mediana SEP {sep.sep_date}"),
-        Patch(facecolor="#7aa9d2", alpha=0.4, label="Central tendency"),
+        Line2D([], [], color="#b32a2a", lw=2.3,
+               label=f"Mediana de las proyecciones (al {sep.sep_date})"),
+        Patch(facecolor="#7aa9d2", alpha=0.4,
+              label="Rango donde se concentra la mayoría de la Fed"),
         Line2D([], [], color="#2a6fb3", marker="o", lw=0, ms=7,
-               markeredgecolor="#1a3a5c", label="Proyecciones por participante (dots)"),
-        Line2D([], [], color="#888888", lw=1.6, ls=(0,(4,2)), label=prev_label),
+               markeredgecolor="#1a3a5c",
+               label="Cada punto = un miembro de la Fed (FOMC)"),
+        Line2D([], [], color="#888888", lw=1.6, ls=(0,(4,2)),
+               label="Mediana de la proyección anterior de la Fed"),
         Line2D([], [], color="#1a7a1a", lw=1.8, ls="--",
-               label=f"Implied path SR3 ({as_of})"),
+               label=f"Lo que el mercado de futuros descuenta hoy"),
     ]
     ax.legend(handles=handles, loc="upper right", fontsize=8.5, framealpha=0.95)
 
     ax.set_title(
-        f"Dot plot Fed — SEP {sep.sep_date} · proyecciones Fed Funds + "
-        f"mercado al cierre {as_of}",
-        fontsize=12, weight="bold")
+        f"Dónde proyecta la Fed sus tasas a futuro y qué descuenta "
+        f"el mercado sobre ellas (proyección de la Fed del {sep.sep_date})",
+        fontsize=11.5, weight="bold")
     ax.grid(True, axis="y", alpha=0.3)
     ax.set_axisbelow(True)
 
     fig.text(0.5, 0.005,
-             "SEP cubre años current + 2 + longer run (≈3 años, no 5y). "
-             + DISCLAIMER,
+             "Las proyecciones de la Fed cubren el año en curso, los 2 siguientes "
+             "y un \"largo plazo\" (no llegan a 5 años). " + DISCLAIMER,
              ha="center", fontsize=7.5, style="italic", color="#666")
     fig.tight_layout(rect=(0, 0.02, 1, 1))
     fig.subplots_adjust(bottom=0.35)

@@ -77,18 +77,22 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
     df = _load_backtest()
     r = _rank_summary(df)
 
-    # Mensaje principal autogenerado
-    mae_a = df["abs_err_A_bps"].median()
-    mae_b = df["abs_err_B_bps"].median()
+    # Mensaje principal en castellano descriptivo
     mae_m = df["abs_err_M_bps"].median()
-    msg = (f"Mercantil v0.3.0 (55% WIRP + 45% Taylor) es el peor en SOLO "
-           f"{r['M_worst_pct']:.0f}% de los cortes vs {r['A_worst_pct']:.0f}% A "
-           f"sola y {r['B_worst_pct']:.0f}% B sola · "
-           f"mejor que el peor de A,B en {r['M_better_than_worst']:.0f}% de los "
-           f"cortes · MAE mediana 6m: {mae_m:.0f} bps")
+    msg = (
+        f"Por qué usamos un modelo combinado en vez de elegir una sola fuente: "
+        f"al juntar lo que dice el mercado de futuros con la regla de la tasa "
+        f"de equilibrio (Taylor), el modelo combinado acierta más. En los "
+        f"últimos 15 años solo {r['M_worst_pct']:.0f} de cada 100 meses fue "
+        f"la peor predicción, mientras que el mercado solo lo fue "
+        f"{r['A_worst_pct']:.0f} veces y la regla de Taylor sola "
+        f"{r['B_worst_pct']:.0f}. En la mayoría de los meses "
+        f"({r['M_better_than_worst']:.0f}%) el modelo combinado fue mejor que "
+        f"la peor de las dos fuentes por separado."
+    )
 
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(3, 3, height_ratios=[0.20, 1.10, 1.00],
+    gs = fig.add_gridspec(3, 3, height_ratios=[0.28, 1.10, 1.00],
                           width_ratios=[1.6, 1.1, 1.1],
                           hspace=0.45, wspace=0.32)
     ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
@@ -98,25 +102,26 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
     ax_tbl = fig.add_subplot(gs[2, 2])
     ax_tbl.axis("off")
 
-    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
-                ha="center", va="center", fontsize=11.5, weight="bold",
+    ax_msg.text(0.5, 0.5, msg,
+                ha="center", va="center", fontsize=11.0,
                 color="#0d1b2a", wrap=True,
                 bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
                           edgecolor="#b32a2a", linewidth=1.6))
 
     # (1) Serie temporal: predict A, B, M vs realized
     ax_ts.plot(df["as_of"], df["realized_pct"] * 100,
-               color="black", lw=2.0, label="Realized Fed Funds (6m fwd)",
+               color="black", lw=2.0,
+               label="Tasa Fed que efectivamente ocurrió",
                zorder=4)
     ax_ts.plot(df["as_of"], df["predict_A_pct"] * 100,
                color="#2a6fb3", lw=1.0, ls=(0, (5, 2)), alpha=0.75,
-               label=f"Pieza A · WIRP/Mercado (peso {W_A:.0%})")
+               label=f"Lo que decía el mercado de futuros (peso {W_A:.0%})")
     ax_ts.plot(df["as_of"], df["predict_B_pct"] * 100,
                color="#b32a2a", lw=1.0, ls=(0, (5, 2)), alpha=0.75,
-               label=f"Pieza B · Taylor (peso {W_B:.0%})")
+               label=f"Lo que decía la regla de Taylor (peso {W_B:.0%})")
     ax_ts.plot(df["as_of"], df["predict_M_pct"] * 100,
                color="#0d1b2a", lw=2.0,
-               label="Mercantil v0.3.0 (55% A + 45% B)")
+               label="Modelo combinado (mercado + Taylor)")
 
     # Sombrear MOVIMIENTO en gris claro
     mov = df[df["regimen"] == "MOVIMIENTO"]
@@ -129,24 +134,25 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
                 ax_ts.axvspan(g.min(), g.max(), color="#fff5e6", alpha=0.55,
                               zorder=0)
 
-    ax_ts.set_title("Backtest 2010–2024 · 180 cortes mensuales · "
-                    "horizonte 6 meses",
-                    fontsize=12, weight="bold")
-    ax_ts.set_ylabel("Fed Funds (%)", fontsize=9.5)
+    ax_ts.set_title("Comparación de las tres predicciones contra lo que pasó "
+                    "(180 meses entre 2010 y 2024)",
+                    fontsize=11, weight="bold")
+    ax_ts.set_ylabel("Tasa Fed (%)", fontsize=9.5)
     ax_ts.grid(True, alpha=0.3); ax_ts.set_axisbelow(True)
     ax_ts.legend(loc="upper left", fontsize=8.5, framealpha=0.95,
                  ncol=2)
     ax_ts.xaxis.set_major_locator(mdates.YearLocator(2))
     ax_ts.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax_ts.tick_params(axis="x", labelsize=9)
-    ax_ts.text(0.99, 0.04, "Sombreado: régimen MOVIMIENTO (hike/cut)",
+    ax_ts.text(0.99, 0.04, "Zona sombreada: meses con subidas o bajadas de tasa",
                transform=ax_ts.transAxes, ha="right", fontsize=7.5,
                style="italic", color="#888")
 
-    # (2) MAE por régimen
-    regs = ["CALMA", "MOVIMIENTO"]
+    # (2) Error promedio por régimen
+    regs = ["Tasa estable", "Tasa cambiando"]
+    raw_regs = ["CALMA", "MOVIMIENTO"]
     mae_by = []
-    for reg in regs:
+    for reg in raw_regs:
         sub = df[df["regimen"] == reg]
         mae_by.append([sub["abs_err_A_bps"].median(),
                        sub["abs_err_B_bps"].median(),
@@ -156,7 +162,8 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
     x = np.arange(len(regs))
     w = 0.20
     colors = ["#2a6fb3", "#b32a2a", "#0d1b2a", "#888"]
-    labels = ["A (mercado)", "B (Taylor)", "Mercantil", "Naive (spot)"]
+    labels = ["Mercado de futuros", "Regla de Taylor",
+              "Modelo combinado", "Suponer sin cambios"]
     for i, (col, lab) in enumerate(zip(colors, labels)):
         bars = ax_reg.bar(x + (i - 1.5) * w, mae_arr[:, i], w,
                           color=col, label=lab)
@@ -164,62 +171,70 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
             ax_reg.text(b.get_x() + b.get_width() / 2, v + 0.5,
                         f"{v:.0f}", ha="center", fontsize=7.5)
     ax_reg.set_xticks(x); ax_reg.set_xticklabels(regs)
-    ax_reg.set_ylabel("MAE mediano (bps)", fontsize=9)
-    ax_reg.set_title("Error mediano por régimen",
-                     fontsize=11, weight="bold")
-    ax_reg.legend(loc="upper left", fontsize=7.5, framealpha=0.95)
+    ax_reg.set_ylabel("Error típico (centésimas de %)", fontsize=9)
+    ax_reg.set_title("Qué tan grande es el error típico\n"
+                     "según el momento del ciclo",
+                     fontsize=10.5, weight="bold")
+    ax_reg.legend(loc="upper left", fontsize=7.0, framealpha=0.95)
     ax_reg.grid(True, axis="y", alpha=0.3); ax_reg.set_axisbelow(True)
 
-    # (3) Histograma de errores absolutos (cola derecha = errores grandes)
+    # (3) Distribución de tamaño de errores
     for col, lab, color in [
-        ("abs_err_A_bps", "A · WIRP",     "#2a6fb3"),
-        ("abs_err_B_bps", "B · Taylor",   "#b32a2a"),
-        ("abs_err_M_bps", "Mercantil",    "#0d1b2a"),
+        ("abs_err_A_bps", "Mercado de futuros", "#2a6fb3"),
+        ("abs_err_B_bps", "Regla de Taylor",   "#b32a2a"),
+        ("abs_err_M_bps", "Modelo combinado",  "#0d1b2a"),
     ]:
         ax_hist.hist(df[col].clip(upper=100), bins=20,
                      alpha=0.45, color=color, label=lab, edgecolor="white")
-    ax_hist.set_title("Distribución de errores absolutos",
-                      fontsize=11, weight="bold")
-    ax_hist.set_xlabel("|error| (bps, cap 100)", fontsize=9)
-    ax_hist.set_ylabel("frecuencia", fontsize=9)
+    ax_hist.set_title("Cuántas veces los errores fueron\n"
+                      "chicos o grandes (en 180 meses)",
+                      fontsize=10.5, weight="bold")
+    ax_hist.set_xlabel("Tamaño del error (centésimas de %)", fontsize=9)
+    ax_hist.set_ylabel("Cantidad de meses", fontsize=9)
     ax_hist.legend(loc="upper right", fontsize=8, framealpha=0.95)
     ax_hist.grid(True, axis="y", alpha=0.3); ax_hist.set_axisbelow(True)
 
-    # (4) Tabla ranking
+    # (4) Tabla ranking en castellano
     rows = [
-        ["Modelo",      "% mejor", "% peor", "MAE mediana (bps)"],
-        ["A · WIRP",    f"{r['A_best_pct']:.0f}%", f"{r['A_worst_pct']:.0f}%",
-                        f"{df['abs_err_A_bps'].median():.1f}"],
-        ["B · Taylor",  f"{r['B_best_pct']:.0f}%", f"{r['B_worst_pct']:.0f}%",
-                        f"{df['abs_err_B_bps'].median():.1f}"],
-        ["Mercantil",   f"{r['M_best_pct']:.0f}%", f"{r['M_worst_pct']:.0f}%",
-                        f"{df['abs_err_M_bps'].median():.1f}"],
+        ["Fuente", "Veces que fue\nla más certera",
+         "Veces que fue\nla más errada", "Error típico"],
+        ["Mercado de futuros",
+         f"{r['A_best_pct']:.0f} de cada 100",
+         f"{r['A_worst_pct']:.0f} de cada 100",
+         f"{df['abs_err_A_bps'].median():.0f} centésimas"],
+        ["Regla de Taylor",
+         f"{r['B_best_pct']:.0f} de cada 100",
+         f"{r['B_worst_pct']:.0f} de cada 100",
+         f"{df['abs_err_B_bps'].median():.0f} centésimas"],
+        ["Modelo combinado",
+         f"{r['M_best_pct']:.0f} de cada 100",
+         f"{r['M_worst_pct']:.0f} de cada 100",
+         f"{df['abs_err_M_bps'].median():.0f} centésimas"],
     ]
     tbl = ax_tbl.table(cellText=rows[1:], colLabels=rows[0],
                        loc="upper center", cellLoc="center",
-                       bbox=[0.0, 0.40, 1.0, 0.55])
-    tbl.auto_set_font_size(False); tbl.set_fontsize(9.0)
+                       bbox=[0.0, 0.42, 1.0, 0.55])
+    tbl.auto_set_font_size(False); tbl.set_fontsize(8.0)
     for j in range(len(rows[0])):
         tbl[0, j].set_facecolor("#2a6fb3")
         tbl[0, j].set_text_props(color="white", weight="bold")
-    # Highlight Mercantil row
     for j in range(len(rows[0])):
         tbl[3, j].set_facecolor("#e8eff7")
         tbl[3, j].set_text_props(weight="bold")
 
     ax_tbl.text(0.5, 0.30,
-                f"Mercantil es mejor que el PEOR de A,B en\n"
-                f"el {r['M_better_than_worst']:.0f}% de los cortes",
-                ha="center", va="center", fontsize=10, weight="bold",
+                f"El modelo combinado fue mejor que la peor\n"
+                f"de las dos fuentes en {r['M_better_than_worst']:.0f} de cada 100 meses",
+                ha="center", va="center", fontsize=9, weight="bold",
                 bbox=dict(boxstyle="round,pad=0.5", facecolor="#fff5e6",
                           edgecolor="#b32a2a", linewidth=1.4),
                 transform=ax_tbl.transAxes)
-    ax_tbl.set_title("Ranking de modelos (n=180)", fontsize=11, weight="bold")
+    ax_tbl.set_title("Resumen de aciertos y errores", fontsize=10.5, weight="bold")
 
-    # Mensaje central
+    # Título principal en castellano descriptivo
     fig.suptitle(
-        "El modelo Mercantil combina mercado (WIRP) + regla (Taylor): "
-        "no siempre es el mejor, pero casi nunca es el peor",
+        "Por qué el modelo combina dos fuentes: no siempre es la mejor "
+        "predicción, pero casi nunca es la peor",
         fontsize=13.5, weight="bold", y=0.995)
     fig.text(0.5, 0.005, DISCLAIMER, ha="center", fontsize=7.5,
              style="italic", color="#666")

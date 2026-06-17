@@ -26,13 +26,13 @@ import matplotlib.dates as mdates
 
 FX_PARQUET = Path("data/external/tasas_mercantil/fx_g10.parquet")
 
-# (feature, label panel, cómo leer la dirección)
+# (feature, label panel, hint)
 PAIRS = [
-    ("fx_eurusd", "EUR/USD",  "EUR fuerte ↑"),
-    ("fx_gbpusd", "GBP/USD",  "GBP fuerte ↑"),
-    ("fx_usdjpy", "USD/JPY",  "USD fuerte ↑"),
-    ("fx_usdchf", "USD/CHF",  "USD fuerte ↑"),
-    ("fx_dxy",    "DXY",      "USD fuerte ↑"),
+    ("fx_eurusd", "Euro · dólares por euro",       "sube si el euro se fortalece"),
+    ("fx_gbpusd", "Libra · dólares por libra",      "sube si la libra se fortalece"),
+    ("fx_usdjpy", "Yen · yenes por dólar",          "sube si el dólar se fortalece"),
+    ("fx_usdchf", "Franco · francos por dólar",     "sube si el dólar se fortalece"),
+    ("fx_dxy",    "Índice del dólar (DXY)",          "sube si el dólar se fortalece"),
 ]
 
 DISCLAIMER = ("Documento informativo con fines analíticos. No constituye "
@@ -115,16 +115,18 @@ def _plot_panel(ax, df, feature, label, hint, as_of):
     # Banda intercuartil
     p25, p75 = np.percentile(s.values, [25, 75])
     ax.axhspan(p25, p75, color="#7aa9d2", alpha=0.12,
-               label=f"IQR 5y [{p25:.2f}, {p75:.2f}]")
+               label=f"Rango medio últimos 5 años")
     ax.axhline(snap["median_5y"], color="#1a3a5c", ls="--", lw=1.0,
-               alpha=0.7, label=f"Mediana {snap['median_5y']:.2f}")
+               alpha=0.7, label=f"Promedio 5 años: {snap['median_5y']:.2f}")
     # Punto actual
     last_d = s.index[-1]
     ax.scatter([last_d], [snap["value"]], color="#b32a2a", s=55, zorder=5,
                edgecolor="white", linewidth=1.2,
-               label=f"Hoy {snap['value']:.2f} (p{snap['percentile_5y']:.0f})")
+               label=f"Hoy: {snap['value']:.2f}")
 
-    ax.set_title(f"{label} · {hint}", fontsize=11, weight="bold")
+    ax.set_title(f"{label}", fontsize=10.5, weight="bold")
+    ax.text(0.5, 1.02, hint, transform=ax.transAxes, ha="center",
+            fontsize=7.5, style="italic", color="#666")
     ax.grid(True, alpha=0.3); ax.set_axisbelow(True)
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
@@ -133,9 +135,9 @@ def _plot_panel(ax, df, feature, label, hint, as_of):
     ax.legend(loc="best", fontsize=7.0, framealpha=0.9)
 
     # caja con cambios
-    txt = (f"Δ1m {snap['d1m_pct']:+.1f}%\n"
-           f"Δ3m {snap['d3m_pct']:+.1f}%\n"
-           f"Δ12m {snap['d12m_pct']:+.1f}%")
+    txt = (f"Hace 1 mes:  {snap['d1m_pct']:+.1f}%\n"
+           f"Hace 3 meses: {snap['d3m_pct']:+.1f}%\n"
+           f"Hace 12 meses: {snap['d12m_pct']:+.1f}%")
     color = ("#1a7a1a" if snap["d12m_pct"] > 0 else "#b32a2a"
              if snap["d12m_pct"] < 0 else "#666")
     ax.text(0.02, 0.97, txt, transform=ax.transAxes,
@@ -145,21 +147,37 @@ def _plot_panel(ax, df, feature, label, hint, as_of):
 
 
 def _build_fx_message(df: pd.DataFrame, as_of: date) -> str:
-    """Mensaje principal: pares en zona extrema (p<10 o p>90)."""
+    """Mensaje principal en castellano descriptivo."""
+    NAMES = {
+        "fx_eurusd": "el euro vs dólar",
+        "fx_gbpusd": "la libra vs dólar",
+        "fx_usdjpy": "el dólar vs yen",
+        "fx_usdchf": "el dólar vs franco suizo",
+        "fx_dxy":    "el índice del dólar",
+    }
     extremes = []
-    for feat, lab, _ in PAIRS:
+    for feat, _, _ in PAIRS:
         s = fx_snapshot(df, feat, as_of)
         if not np.isfinite(s["percentile_5y"]):
             continue
         p = s["percentile_5y"]
+        name = NAMES.get(feat, feat)
         if p > 90:
-            extremes.append(f"{lab} en p{p:.0f}/5y ({s['value']:.3f}, {s['d12m_pct']:+.1f}% 12m)")
+            extremes.append(
+                f"{name} está en niveles muy altos vs los últimos 5 años "
+                f"(más alto que el {p:.0f}% de las observaciones recientes)"
+            )
         elif p < 10:
-            extremes.append(f"{lab} en p{p:.0f}/5y ({s['value']:.3f}, {s['d12m_pct']:+.1f}% 12m)")
+            extremes.append(
+                f"{name} está en niveles muy bajos vs los últimos 5 años "
+                f"(más bajo que el {100-p:.0f}% de las observaciones recientes)"
+            )
     if not extremes:
         snap_dxy = fx_snapshot(df, "fx_dxy", as_of)
-        return f"FX G10 sin extremos vs 5 años · DXY {snap_dxy['value']:.1f} (p{snap_dxy['percentile_5y']:.0f})"
-    return "Zonas extremas vs 5 años: " + " · ".join(extremes)
+        return (f"Los principales tipos de cambio están en niveles normales "
+                f"vs los últimos 5 años. El índice del dólar está en "
+                f"{snap_dxy['value']:.1f}.")
+    return "Niveles extremos vs los últimos 5 años: " + ". ".join(extremes) + "."
 
 
 def plot_l_fx_1(as_of: date, output_path: Path | str,
@@ -173,8 +191,8 @@ def plot_l_fx_1(as_of: date, output_path: Path | str,
     gs = fig.add_gridspec(3, 3, height_ratios=[0.18, 1.0, 1.0],
                           hspace=0.42, wspace=0.30)
     ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
-    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
-                ha="center", va="center", fontsize=11.5, weight="bold",
+    ax_msg.text(0.5, 0.5, msg,
+                ha="center", va="center", fontsize=11.0,
                 color="#0d1b2a", wrap=True,
                 bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
                           edgecolor="#b32a2a", linewidth=1.6))
@@ -184,41 +202,50 @@ def plot_l_fx_1(as_of: date, output_path: Path | str,
         _plot_panel(ax, df, feat, lab, hint, as_of)
     axes.flat[5].axis("off")
 
-    # Síntesis cualitativa en el panel libre
+    # Síntesis cualitativa en el panel libre, en castellano
+    NAMES_SHORT = {
+        "fx_eurusd": "Euro",
+        "fx_gbpusd": "Libra",
+        "fx_usdjpy": "Yen",
+        "fx_usdchf": "Franco",
+        "fx_dxy":    "DXY (índice del dólar)",
+    }
     df_local = df
-    summary_lines = ["Síntesis hoy vs últimos 5 años:"]
+    summary_lines = ["Cómo están hoy vs los últimos 5 años:"]
     for feat, lab, _ in PAIRS:
         snap = fx_snapshot(df_local, feat, as_of)
         if not np.isfinite(snap["percentile_5y"]):
             continue
         p = snap["percentile_5y"]
+        short = NAMES_SHORT.get(feat, lab)
         if p > 80:
-            tag = "alto vs hist (p" + f"{p:.0f}" + ")"
+            tag = "MUY alto vs los últimos 5 años"
         elif p > 60:
-            tag = "arriba mediana (p" + f"{p:.0f}" + ")"
+            tag = "arriba del promedio"
         elif p < 20:
-            tag = "bajo vs hist (p" + f"{p:.0f}" + ")"
+            tag = "MUY bajo vs los últimos 5 años"
         elif p < 40:
-            tag = "abajo mediana (p" + f"{p:.0f}" + ")"
+            tag = "abajo del promedio"
         else:
-            tag = "neutral (p" + f"{p:.0f}" + ")"
-        summary_lines.append(f"  • {lab:8s} {snap['value']:>8.3f}  {tag}")
+            tag = "en niveles normales"
+        summary_lines.append(f"  • {short:<22s} {snap['value']:>8.3f}  →  {tag}")
     axes.flat[5].text(0.02, 0.95, "\n".join(summary_lines),
-                      ha="left", va="top", fontsize=10, family="monospace",
+                      ha="left", va="top", fontsize=9.5, family="monospace",
                       transform=axes.flat[5].transAxes,
                       bbox=dict(boxstyle="round,pad=0.5",
                                 facecolor="#f5f8fb", edgecolor="#aaa"))
-    axes.flat[5].text(0.02, 0.18,
-                      "Convención EODHD:\n"
-                      "  EUR/USD, GBP/USD → USD por unidad foránea\n"
-                      "  USD/JPY, USD/CHF → unidad foránea por USD\n"
-                      "  DXY = índice ponderado dólar (ICE)",
+    axes.flat[5].text(0.02, 0.20,
+                      "Cómo leer:\n"
+                      "  • Euro y Libra: cuántos dólares cuesta una unidad\n"
+                      "  • Yen y Franco: cuántas unidades cuesta un dólar\n"
+                      "  • DXY: índice ponderado del dólar vs principales monedas",
                       ha="left", va="top", fontsize=8,
                       style="italic", color="#666",
                       transform=axes.flat[5].transAxes)
 
-    fig.suptitle(f"FX G10 — spots, evolución y posición vs 5 años "
-                 f"· corte {as_of}", fontsize=13, weight="bold", y=0.995)
+    fig.suptitle(f"Principales tipos de cambio: dónde están hoy "
+                 f"vs los últimos 5 años · cierre del {as_of}",
+                 fontsize=12.5, weight="bold", y=0.995)
     fig.text(0.5, 0.005, DISCLAIMER, ha="center", fontsize=7.5,
              style="italic", color="#666")
     fig.tight_layout(rect=(0, 0.015, 1, 0.97))

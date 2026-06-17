@@ -50,9 +50,15 @@ UST_PILLARS = [("UST_1Y", 1.0), ("UST_2Y", 2.0), ("UST_3Y", 3.0),
                ("UST_5Y", 5.0), ("UST_7Y", 7.0), ("UST_10Y", 10.0),
                ("UST_20Y", 20.0), ("UST_30Y", 30.0)]
 RATING_ORDER = ["T1", "T2", "T3", "T4", "T5"]
-RATING_LABELS = {"T1": "T1·AAA", "T2": "T2·AA",
-                 "T3": "T3·A",   "T4": "T4·BBB",
-                 "T5": "T5·BB/NR"}
+RATING_LABELS = {"T1": "AAA Panamá", "T2": "AA Panamá",
+                 "T3": "A Panamá",   "T4": "BBB Panamá",
+                 "T5": "BB / sin calif."}
+
+# Etiquetas legibles de plazo
+PLAZO_LABELS = {"<1y": "Menos de 1 año", "1-3y": "1 a 3 años",
+                "3-5y": "3 a 5 años", "5-7y": "5 a 7 años",
+                "7-10y": "7 a 10 años", ">10y": "Más de 10 años",
+                "0-1y": "Menos de 1 año", "10y+": "Más de 10 años"}
 BUCKET_MIDS = {"<1y": 0.5, "1-3y": 2.0, "3-5y": 4.0,
                "5-7y": 6.0, "7-10y": 8.5, ">10y": 15.0,
                "0-1y": 0.5, "10y+": 15.0}
@@ -186,29 +192,39 @@ def aggregate(as_of: date) -> dict:
 
 
 def _build_message(pivot_rt, pivot_sr, ust, as_of) -> str:
-    """Genera el mensaje principal de la slide a partir del corte."""
+    """Mensaje principal en castellano descriptivo."""
     parts = []
     t1 = pivot_rt.loc["T1"].dropna() if "T1" in pivot_rt.index else pd.Series()
     t2 = pivot_rt.loc["T2"].dropna() if "T2" in pivot_rt.index else pd.Series()
     t3 = pivot_rt.loc["T3"].dropna() if "T3" in pivot_rt.index else pd.Series()
     if not t1.empty and not t3.empty:
-        parts.append(f"Diferencial T3·A − T1·AAA: ~{(t3.median()-t1.median()):.0f} bps")
-    if not t2.empty:
-        parts.append(f"T2·AA paga {t2.min():.0f}–{t2.max():.0f} bps según plazo")
-    # Peak plazo en T3
+        diff_pp = (t3.median() - t1.median()) / 100
+        parts.append(
+            f"Un emisor calificado A en Panamá paga aproximadamente "
+            f"{diff_pp:.2f} puntos porcentuales más que uno calificado AAA, "
+            f"sobre el bono del Tesoro USA del mismo plazo"
+        )
     if not t3.empty:
         peak_bucket = t3.idxmax()
-        parts.append(f"peak plazo en T3·A es {peak_bucket} ({t3.max():.0f} bps)")
-    # Sector más caro vs financiero T3
+        plazo_es = PLAZO_LABELS.get(peak_bucket, peak_bucket)
+        parts.append(
+            f"el plazo más caro para emisores A es '{plazo_es.lower()}', "
+            f"donde pagan {(t3.max()/100):.2f} puntos sobre el Tesoro USA"
+        )
     if "T3" in pivot_sr.columns:
         col = pivot_sr["T3"].dropna()
         if "Financiero" in col.index and len(col) > 1:
             others = col.drop("Financiero")
             if not others.empty:
                 worst_sec = others.idxmax()
-                parts.append(f"{worst_sec} T3 paga ~{(others.max()-col['Financiero']):.0f} bps "
-                             f"más que Financiero al mismo rating")
-    return " · ".join(parts) if parts else f"Universo Panamá-corp activo al {as_of}"
+                diff = (others.max() - col['Financiero']) / 100
+                if diff > 0.5:
+                    parts.append(
+                        f"el sector {worst_sec} paga {diff:.2f} puntos "
+                        f"porcentuales más que Financiero al mismo nivel "
+                        f"de calificación"
+                    )
+    return ". ".join(parts) + "." if parts else f"Mercado corporativo de Panamá al {as_of}."
 
 
 # ---------------------------------------------------------------------------
@@ -289,30 +305,35 @@ def plot_l_pa_1(as_of: date, output_path: Path | str,
     ax_top = fig.add_subplot(gs[2, :]); ax_top.axis("off")
 
     # Mensaje principal autogenerado
-    ax_msg.text(0.5, 0.5,
-                "MENSAJE PRINCIPAL · " + a["message"],
-                ha="center", va="center", fontsize=11.5, weight="bold",
+    ax_msg.text(0.5, 0.5, a["message"],
+                ha="center", va="center", fontsize=11.0,
                 color="#0d1b2a", wrap=True,
                 bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
                           edgecolor="#b32a2a", linewidth=1.6))
 
-    # Tabla 1: SPREAD por RATING × PLAZO (trades últimos 6m)
+    # Tabla 1: SPREAD por RATING × PLAZO en castellano
     _draw_pivot_table(
         ax_t1, a["pivot_rt"], a["cnt_rt"],
-        f"Spread mediano (bps) · RATING × PLAZO · {a['n_trades']:,} trades últimos 6m",
-        fmt="{:.0f}", idx_labels=RATING_LABELS)
+        f"Cuánto paga un bono panameño SOBRE el Tesoro USA del mismo plazo,\n"
+        f"según calificación y plazo (en centésimas de punto · "
+        f"{a['n_trades']:,} operaciones de los últimos 6 meses)",
+        fmt="{:.0f}", idx_labels=RATING_LABELS,
+        col_labels=PLAZO_LABELS)
 
-    # Tabla 2: SPREAD por SECTOR × RATING (emisiones activas)
+    # Tabla 2: SPREAD por SECTOR × RATING
     _draw_pivot_table(
         ax_t2, a["pivot_sr"], a["cnt_sr"],
-        "Spread promedio (bps) · SECTOR × RATING · emisiones activas",
+        "Cuánto paga sobre el Tesoro USA, según SECTOR y calificación\n"
+        "(promedio de emisiones activas en centésimas de punto)",
         fmt="{:.0f}", col_labels=RATING_LABELS)
 
     # Top emisiones
-    ax_top.set_title("Top 10 emisiones activas por monto",
+    ax_top.set_title("Las 10 emisiones panameñas más grandes activas hoy "
+                     "(tasa fija)",
                      fontsize=10.5, weight="bold", loc="left")
-    cols = ["ISIN", "Emisor", "Sector", "Rating", "Plazo (y)",
-            "Tasa %", "Spread bp", "USD MM", "Vencimiento"]
+    cols = ["ISIN", "Emisor", "Sector", "Calificación", "Plazo (años)",
+            "Tasa %", "Sobre Tesoro\n(centésimas)",
+            "Monto\n(USD millones)", "Vencimiento"]
     if not a["top"].empty:
         cell = a["top"][["isin", "emisor", "Sector", "Rating", "Plazo (y)",
                          "Tasa %", "Spread bp", "USD MM",
@@ -325,12 +346,14 @@ def plot_l_pa_1(as_of: date, output_path: Path | str,
             tbl[0, j].set_facecolor("#2a6fb3")
             tbl[0, j].set_text_props(color="white", weight="bold")
 
-    fig.suptitle(f"Panamá corporate — spread por crédito · sector · plazo "
-                 f"· corte {as_of}", fontsize=13, weight="bold", y=0.995)
+    fig.suptitle(f"Bonos corporativos de Panamá: cuánto se paga por cada "
+                 f"calificación, sector y plazo · cierre del {as_of}",
+                 fontsize=12.5, weight="bold", y=0.995)
     fig.text(0.5, 0.005,
-             "Spreads en bps vs UST del plazo correspondiente. "
-             "Rating: proxy V0 (escala Panamá local; reemplazable por dump "
-             "oficial). Soberano + CDS pendientes plantilla BBG v0.3. "
+             "100 centésimas = 1 punto porcentual. Calificación: estimación "
+             "interna (escala local de Panamá); se actualizará cuando "
+             "lleguen las calificaciones oficiales. Bono soberano de Panamá "
+             "y CDS pendientes (requieren ampliar la plantilla Bloomberg). "
              + DISCLAIMER,
              ha="center", fontsize=7.0, style="italic", color="#666")
     fig.tight_layout(rect=(0, 0.015, 1, 0.97))
