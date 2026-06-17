@@ -93,8 +93,8 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
 
     fig = plt.figure(figsize=figsize, dpi=dpi)
     gs = fig.add_gridspec(3, 3, height_ratios=[0.28, 1.10, 1.00],
-                          width_ratios=[1.6, 1.1, 1.1],
-                          hspace=0.45, wspace=0.32)
+                          width_ratios=[1.0, 1.0, 1.7],
+                          hspace=0.45, wspace=0.35)
     ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
     ax_ts = fig.add_subplot(gs[1, :])
     ax_reg = fig.add_subplot(gs[2, 0])
@@ -194,27 +194,28 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
     ax_hist.legend(loc="upper right", fontsize=8, framealpha=0.95)
     ax_hist.grid(True, axis="y", alpha=0.3); ax_hist.set_axisbelow(True)
 
-    # (4) Tabla ranking en castellano
+    # (4) Tabla ranking en castellano (compacta, sin sobreposición)
     rows = [
-        ["Fuente", "Veces que fue\nla más certera",
-         "Veces que fue\nla más errada", "Error típico"],
+        ["Fuente", "Veces más\ncertera",
+         "Veces más\nerrada", "Error típico\n(centésimas)"],
         ["Mercado de futuros",
-         f"{r['A_best_pct']:.0f} de cada 100",
-         f"{r['A_worst_pct']:.0f} de cada 100",
-         f"{df['abs_err_A_bps'].median():.0f} centésimas"],
+         f"{r['A_best_pct']:.0f} de 100",
+         f"{r['A_worst_pct']:.0f} de 100",
+         f"{df['abs_err_A_bps'].median():.0f}"],
         ["Regla de Taylor",
-         f"{r['B_best_pct']:.0f} de cada 100",
-         f"{r['B_worst_pct']:.0f} de cada 100",
-         f"{df['abs_err_B_bps'].median():.0f} centésimas"],
+         f"{r['B_best_pct']:.0f} de 100",
+         f"{r['B_worst_pct']:.0f} de 100",
+         f"{df['abs_err_B_bps'].median():.0f}"],
         ["Modelo combinado",
-         f"{r['M_best_pct']:.0f} de cada 100",
-         f"{r['M_worst_pct']:.0f} de cada 100",
-         f"{df['abs_err_M_bps'].median():.0f} centésimas"],
+         f"{r['M_best_pct']:.0f} de 100",
+         f"{r['M_worst_pct']:.0f} de 100",
+         f"{df['abs_err_M_bps'].median():.0f}"],
     ]
     tbl = ax_tbl.table(cellText=rows[1:], colLabels=rows[0],
                        loc="upper center", cellLoc="center",
+                       colWidths=[0.40, 0.20, 0.20, 0.20],
                        bbox=[0.0, 0.42, 1.0, 0.55])
-    tbl.auto_set_font_size(False); tbl.set_fontsize(8.0)
+    tbl.auto_set_font_size(False); tbl.set_fontsize(8.5)
     for j in range(len(rows[0])):
         tbl[0, j].set_facecolor("#2a6fb3")
         tbl[0, j].set_text_props(color="white", weight="bold")

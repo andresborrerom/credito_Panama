@@ -49,10 +49,10 @@ SECTIONS = [
         ("L_FX_2_forwards",    "Forwards FX trimestrales 5y",                "Sprint 2.2 · pendiente plantilla BBG v0.3"),
      ]),
     ("Bloque Panamá",
-     "L_PA_1 corp sector × plazo · L_PA_2 soberano + CDS (BBG v0.3)",
+     "Bonos corporativos · soberano + forwards implícitos",
      [
         ("L_PA_1_corp_sector_plazo", "Panamá corp · sector × plazo",         "Sprint 3.1 ✓"),
-        ("L_PA_2_soberano_cds",      "Panamá soberano · spread + EMBI + CDS", "Sprint 3.2 · pendiente plantilla BBG v0.3"),
+        ("L_PA_2_soberano",          "Panamá soberano + forwards implícitos","Sprint 3.2 ✓"),
      ]),
 ]
 
