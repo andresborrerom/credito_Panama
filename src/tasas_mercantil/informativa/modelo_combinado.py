@@ -70,16 +70,10 @@ def _rank_summary(df: pd.DataFrame) -> dict:
 
 
 # ---------------------------------------------------------------------------
-def plot_l_usa_0(as_of: date, output_path: Path | str,
-                 figsize=(15, 9), dpi=130) -> Path:
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+def build_msg_l_usa_0(as_of: date | None = None) -> str:
     df = _load_backtest()
     r = _rank_summary(df)
-
-    # Mensaje principal en castellano descriptivo
-    mae_m = df["abs_err_M_bps"].median()
-    msg = (
+    return (
         f"Por qué usamos un modelo combinado en vez de elegir una sola fuente: "
         f"al juntar lo que dice el mercado de futuros con la regla de la tasa "
         f"de equilibrio (Taylor), el modelo combinado acierta más. En los "
@@ -91,22 +85,40 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
         f"la peor de las dos fuentes por separado."
     )
 
-    fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(3, 3, height_ratios=[0.28, 1.10, 1.00],
-                          width_ratios=[1.0, 1.0, 1.7],
-                          hspace=0.45, wspace=0.35)
-    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
-    ax_ts = fig.add_subplot(gs[1, :])
-    ax_reg = fig.add_subplot(gs[2, 0])
-    ax_hist = fig.add_subplot(gs[2, 1])
-    ax_tbl = fig.add_subplot(gs[2, 2])
-    ax_tbl.axis("off")
 
-    ax_msg.text(0.5, 0.5, msg,
-                ha="center", va="center", fontsize=11.0,
-                color="#0d1b2a", wrap=True,
-                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
-                          edgecolor="#b32a2a", linewidth=1.6))
+def plot_l_usa_0(as_of: date, output_path: Path | str,
+                 figsize=(15, 9), dpi=130,
+                 show_message_banner: bool = True) -> Path:
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df = _load_backtest()
+    r = _rank_summary(df)
+    msg = build_msg_l_usa_0() if show_message_banner else None
+
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    if show_message_banner:
+        gs = fig.add_gridspec(3, 3, height_ratios=[0.28, 1.10, 1.00],
+                              width_ratios=[1.0, 1.0, 1.7],
+                              hspace=0.45, wspace=0.35)
+        ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+        ax_ts = fig.add_subplot(gs[1, :])
+        ax_reg = fig.add_subplot(gs[2, 0])
+        ax_hist = fig.add_subplot(gs[2, 1])
+        ax_tbl = fig.add_subplot(gs[2, 2])
+        ax_msg.text(0.5, 0.5, msg,
+                    ha="center", va="center", fontsize=11.0,
+                    color="#0d1b2a", wrap=True,
+                    bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                              edgecolor="#b32a2a", linewidth=1.6))
+    else:
+        gs = fig.add_gridspec(2, 3, height_ratios=[1.10, 1.00],
+                              width_ratios=[1.0, 1.0, 1.7],
+                              hspace=0.45, wspace=0.35)
+        ax_ts = fig.add_subplot(gs[0, :])
+        ax_reg = fig.add_subplot(gs[1, 0])
+        ax_hist = fig.add_subplot(gs[1, 1])
+        ax_tbl = fig.add_subplot(gs[1, 2])
+    ax_tbl.axis("off")
 
     # (1) Serie temporal: predict A, B, M vs realized
     ax_ts.plot(df["as_of"], df["realized_pct"] * 100,

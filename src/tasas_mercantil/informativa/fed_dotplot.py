@@ -286,20 +286,24 @@ def _build_dotplot_message(sep: SEPParsed, implied: dict | None) -> str:
 
 def plot_dotplot(sep: SEPParsed, output_path: Path | str,
                  as_of: date, implied: dict[str, float] | None = None,
-                 figsize=(14, 9.2), dpi=130) -> Path:
+                 figsize=(14, 8), dpi=130,
+                 show_message_banner: bool = False) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    msg = _build_dotplot_message(sep, implied)
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(2, 1, height_ratios=[0.20, 1.0], hspace=0.18)
-    ax_msg = fig.add_subplot(gs[0, 0]); ax_msg.axis("off")
-    ax_msg.text(0.5, 0.5, msg,
-                ha="center", va="center", fontsize=11.0,
-                color="#0d1b2a", wrap=True,
-                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
-                          edgecolor="#b32a2a", linewidth=1.6))
-    ax = fig.add_subplot(gs[1, 0])
+    if show_message_banner:
+        msg = _build_dotplot_message(sep, implied)
+        gs = fig.add_gridspec(2, 1, height_ratios=[0.20, 1.0], hspace=0.18)
+        ax_msg = fig.add_subplot(gs[0, 0]); ax_msg.axis("off")
+        ax_msg.text(0.5, 0.5, msg,
+                    ha="center", va="center", fontsize=11.0,
+                    color="#0d1b2a", wrap=True,
+                    bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                              edgecolor="#b32a2a", linewidth=1.6))
+        ax = fig.add_subplot(gs[1, 0])
+    else:
+        ax = fig.add_subplot(1, 1, 1)
 
     years = sep.year_labels
     x_pos = np.arange(len(years))
@@ -438,7 +442,8 @@ def _format_prev_label(sep: SEPParsed) -> str:
 # ---------------------------------------------------------------------------
 # Entry point para el deck
 # ---------------------------------------------------------------------------
-def plot_l_usa_1(as_of: date, output_path: Path | str) -> Path | None:
+def plot_l_usa_1(as_of: date, output_path: Path | str,
+                 show_message_banner: bool = False) -> Path | None:
     """Wrapper de un solo paso: fetch + parse + implied path + PNG."""
     sep_d = latest_sep_date(as_of)
     if sep_d is None:
@@ -446,4 +451,15 @@ def plot_l_usa_1(as_of: date, output_path: Path | str) -> Path | None:
     html = fetch_sep_html(sep_d)
     sep = parse_sep_html(html, sep_d)
     impl = implied_path_by_year(as_of, sep.year_labels)
-    return plot_dotplot(sep, output_path, as_of=as_of, implied=impl)
+    return plot_dotplot(sep, output_path, as_of=as_of, implied=impl,
+                        show_message_banner=show_message_banner)
+
+
+def build_msg_l_usa_1(as_of: date) -> str:
+    sep_d = latest_sep_date(as_of)
+    if sep_d is None:
+        return "Sin SEP disponible para el corte."
+    html = fetch_sep_html(sep_d)
+    sep = parse_sep_html(html, sep_d)
+    impl = implied_path_by_year(as_of, sep.year_labels)
+    return _build_dotplot_message(sep, impl)

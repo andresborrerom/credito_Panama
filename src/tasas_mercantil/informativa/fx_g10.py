@@ -180,24 +180,35 @@ def _build_fx_message(df: pd.DataFrame, as_of: date) -> str:
     return "Niveles extremos vs los últimos 5 años: " + ". ".join(extremes) + "."
 
 
+def build_msg_l_fx_1(as_of: date) -> str:
+    return _build_fx_message(_load(), as_of)
+
+
 def plot_l_fx_1(as_of: date, output_path: Path | str,
-                figsize=(14, 9.5), dpi=130) -> Path:
+                figsize=(14, 8.5), dpi=130,
+                show_message_banner: bool = False) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df = _load()
 
-    msg = _build_fx_message(df, as_of)
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(3, 3, height_ratios=[0.18, 1.0, 1.0],
-                          hspace=0.42, wspace=0.30)
-    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
-    ax_msg.text(0.5, 0.5, msg,
-                ha="center", va="center", fontsize=11.0,
-                color="#0d1b2a", wrap=True,
-                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
-                          edgecolor="#b32a2a", linewidth=1.6))
-    axes = np.array([[fig.add_subplot(gs[1, j]) for j in range(3)],
-                     [fig.add_subplot(gs[2, j]) for j in range(3)]])
+    if show_message_banner:
+        msg = _build_fx_message(df, as_of)
+        gs = fig.add_gridspec(3, 3, height_ratios=[0.18, 1.0, 1.0],
+                              hspace=0.42, wspace=0.30)
+        ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+        ax_msg.text(0.5, 0.5, msg,
+                    ha="center", va="center", fontsize=11.0,
+                    color="#0d1b2a", wrap=True,
+                    bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                              edgecolor="#b32a2a", linewidth=1.6))
+        axes = np.array([[fig.add_subplot(gs[1, j]) for j in range(3)],
+                         [fig.add_subplot(gs[2, j]) for j in range(3)]])
+    else:
+        axes = np.empty((2, 3), dtype=object)
+        for i in range(2):
+            for j in range(3):
+                axes[i, j] = fig.add_subplot(2, 3, i * 3 + j + 1)
     for ax, (feat, lab, hint) in zip(axes.flat[:5], PAIRS):
         _plot_panel(ax, df, feat, lab, hint, as_of)
     axes.flat[5].axis("off")

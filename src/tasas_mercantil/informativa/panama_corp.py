@@ -291,26 +291,37 @@ def _draw_pivot_table(ax, pivot: pd.DataFrame, cnt: pd.DataFrame | None,
                     tbl[i + 1, j + 1].set_facecolor(rgba)
 
 
+def build_msg_l_pa_1(as_of: date) -> str:
+    return aggregate(as_of)["message"]
+
+
 def plot_l_pa_1(as_of: date, output_path: Path | str,
-                figsize=(15, 10), dpi=130) -> Path:
+                figsize=(15, 9), dpi=130,
+                show_message_banner: bool = False) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     a = aggregate(as_of)
 
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(3, 2, height_ratios=[0.32, 1.15, 1.15],
-                          hspace=0.40, wspace=0.10)
-    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
-    ax_t1 = fig.add_subplot(gs[1, 0])
-    ax_t2 = fig.add_subplot(gs[1, 1])
-    ax_top = fig.add_subplot(gs[2, :]); ax_top.axis("off")
-
-    # Mensaje principal autogenerado
-    ax_msg.text(0.5, 0.5, a["message"],
-                ha="center", va="center", fontsize=11.0,
-                color="#0d1b2a", wrap=True,
-                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
-                          edgecolor="#b32a2a", linewidth=1.6))
+    if show_message_banner:
+        gs = fig.add_gridspec(3, 2, height_ratios=[0.32, 1.15, 1.15],
+                              hspace=0.40, wspace=0.10)
+        ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+        ax_t1 = fig.add_subplot(gs[1, 0])
+        ax_t2 = fig.add_subplot(gs[1, 1])
+        ax_top = fig.add_subplot(gs[2, :])
+        ax_msg.text(0.5, 0.5, a["message"],
+                    ha="center", va="center", fontsize=11.0,
+                    color="#0d1b2a", wrap=True,
+                    bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                              edgecolor="#b32a2a", linewidth=1.6))
+    else:
+        gs = fig.add_gridspec(2, 2, height_ratios=[1.15, 1.15],
+                              hspace=0.40, wspace=0.10)
+        ax_t1 = fig.add_subplot(gs[0, 0])
+        ax_t2 = fig.add_subplot(gs[0, 1])
+        ax_top = fig.add_subplot(gs[1, :])
+    ax_top.axis("off")
 
     # Tabla 1: SPREAD por RATING × PLAZO en castellano
     _draw_pivot_table(

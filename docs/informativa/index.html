@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pieza informativa</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0; padding: 0; background: #f5f8fb; color: #0d1b2a;
+}
+header.topbar {
+  background: #2a6fb3; color: white; padding: 18px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+header.topbar h1 { margin: 0; font-size: 22px; font-weight: 600; }
+header.topbar .meta { font-size: 13px; opacity: 0.85; }
+.container { max-width: 1180px; margin: 24px auto; padding: 0 24px; }
+.card {
+  background: white; border-radius: 8px; padding: 22px;
+  margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.card h2 { margin: 0 0 6px 0; font-size: 18px; color: #1a3a5c; }
+.card .subtitle { color: #777; font-size: 13px; margin-bottom: 14px; }
+.card img {
+  width: 100%; height: auto; border: 1px solid #e0e6ec;
+  border-radius: 4px; margin: 12px 0;
+}
+.msg-block { margin-top: 14px; }
+.msg-block label {
+  display: block; font-weight: 600; font-size: 13px;
+  color: #1a3a5c; margin-bottom: 6px;
+}
+.msg-proposed {
+  background: #f5f5f5; border-left: 3px solid #888; padding: 10px 14px;
+  font-size: 13px; color: #555; margin-bottom: 8px;
+  white-space: pre-wrap;
+}
+.msg-edited {
+  width: 100%; min-height: 90px; padding: 12px;
+  border: 2px solid #b32a2a; border-radius: 4px;
+  font-family: inherit; font-size: 14px; line-height: 1.45;
+  background: #fff5e6; color: #0d1b2a; resize: vertical;
+}
+.msg-edited:focus { outline: none; border-color: #2a6fb3; }
+.controls {
+  position: sticky; bottom: 0; background: white;
+  border-top: 2px solid #2a6fb3; padding: 14px 32px;
+  display: flex; gap: 12px; align-items: center;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.1); flex-wrap: wrap;
+}
+button {
+  background: #2a6fb3; color: white; border: none;
+  padding: 10px 18px; border-radius: 4px; font-size: 14px;
+  cursor: pointer; font-weight: 600;
+}
+button:hover { background: #1a3a5c; }
+button.secondary { background: white; color: #2a6fb3; border: 2px solid #2a6fb3; }
+button.secondary:hover { background: #e8eff7; }
+.note { font-size: 12px; color: #666; margin-left: auto; }
+.disclaimer {
+  text-align: center; font-size: 11px; font-style: italic;
+  color: #888; padding: 18px;
+}
+.diff { color: #b32a2a; font-weight: 600; }
+
+ul { list-style: none; padding: 0; }
+ul li { padding: 14px 18px; background: white; margin-bottom: 8px;
+        border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+ul li a { color: #1a3a5c; font-weight: 600; text-decoration: none; font-size: 16px; }
+ul li a:hover { color: #2a6fb3; }
+.cta { margin-bottom: 18px; }
+.cta a { display: inline-block; background: #2a6fb3; color: white;
+        padding: 12px 22px; border-radius: 6px; text-decoration: none; font-weight: 600; }
+.cta a:hover { background: #1a3a5c; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>Pieza informativa · cortes disponibles</h1>
+    <div class="meta">Revisá un corte para editar textos y generar el PPT</div>
+  </div>
+</header>
+<div class="container">
+  <div class="card">
+    <h2>¿Cómo actualizar los datos?</h2>
+    <p>Click en el botón de abajo para disparar el workflow que descarga
+    los datos más recientes (FRED, EODHD, dot plot Fed) y regenera todas
+    las láminas con el corte de hoy.</p>
+    <div class="cta">
+      <a href="https://github.com/andresborrerom/credito_panama/actions/workflows/refresh-informativa.yml"
+         target="_blank">▶ Disparar refresh de datos (GitHub Actions)</a>
+    </div>
+    <p style="font-size:12px; color:#666; margin-top:6px;">
+      En GitHub: Actions → "Refresh informativa" → Run workflow. Tarda ~2 minutos.
+    </p>
+  </div>
+  <div class="card">
+    <h2>Cortes históricos</h2>
+    <ul><li><a href="outputs/2026-06-17/site.html">Corte 2026-06-17</a></li></ul>
+  </div>
+</div>
+<div class="disclaimer">Documento informativo con fines analíticos. No constituye recomendación de inversión.</div>
+</body>
+</html>

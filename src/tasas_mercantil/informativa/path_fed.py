@@ -90,8 +90,46 @@ def tlt_sentiment_snapshot(as_of: date, lookback_months: int = 24) -> dict:
 # ---------------------------------------------------------------------------
 # Plot
 # ---------------------------------------------------------------------------
+def _msg_l_usa_2(merc, sent) -> str:
+    """Construye el mensaje en castellano para L_USA_2."""
+    spot = merc.fed_funds_now
+    pa = merc.pieza_a; pb = merc.pieza_b
+    d12m = (merc.forecast_12m - spot) * 100
+    d_a = (pa.forecast_12m - spot) * 100
+    d_b = (pb.forecast_12m - spot) * 100
+    if d12m > 25:
+        dir_txt = "subir las tasas"
+    elif d12m < -25:
+        dir_txt = "bajar las tasas"
+    else:
+        dir_txt = "mantener las tasas prácticamente sin cambios"
+    sent_map = {
+        "Muy bullish bonos (>1σ)": "muy optimista sobre los bonos largos",
+        "Bullish bonos": "optimista sobre los bonos largos",
+        "Muy bearish bonos (<-1σ)": "muy pesimista sobre los bonos largos",
+        "Bearish bonos": "pesimista sobre los bonos largos",
+        "Neutral": "neutro sobre los bonos largos",
+    }
+    sent_txt = sent_map.get(sent.get("label", ""), "neutro")
+    return (
+        f"Nuestro modelo combinado proyecta que en los próximos 12 meses la Fed "
+        f"va a {dir_txt} ({d12m:+.0f} centésimas de punto desde el nivel actual "
+        f"de {spot:.2f}%). El mercado de futuros descuenta {d_a:+.0f} centésimas, "
+        f"la regla de Taylor sugiere {d_b:+.0f} centésimas. El sentimiento de "
+        f"noticias sobre bonos del Tesoro largo está {sent_txt}."
+    )
+
+
+def build_msg_l_usa_2(as_of: date) -> str:
+    store = load_master_store()
+    merc = compute_mercantil_aggregate(store, as_of)
+    sent = tlt_sentiment_snapshot(as_of)
+    return _msg_l_usa_2(merc, sent)
+
+
 def plot_path_fed(as_of: date, output_path: Path | str,
-                  figsize=(14, 7.5), dpi=130) -> Path:
+                  figsize=(14, 7.5), dpi=130,
+                  show_message_banner: bool = False) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -109,49 +147,30 @@ def plot_path_fed(as_of: date, output_path: Path | str,
 
     sent = tlt_sentiment_snapshot(as_of)
 
-    # Mensaje principal en castellano descriptivo
-    d12m = (merc.forecast_12m - spot) * 100
-    d_a = (pa.forecast_12m - spot) * 100
-    d_b = (pb.forecast_12m - spot) * 100
-    if d12m > 25:
-        dir_txt = "subir las tasas"
-    elif d12m < -25:
-        dir_txt = "bajar las tasas"
-    else:
-        dir_txt = "mantener las tasas prácticamente sin cambios"
-
-    # Sentiment legible
-    sent_map = {
-        "Muy bullish bonos (>1σ)": "muy optimista sobre los bonos largos",
-        "Bullish bonos": "optimista sobre los bonos largos",
-        "Muy bearish bonos (<-1σ)": "muy pesimista sobre los bonos largos",
-        "Bearish bonos": "pesimista sobre los bonos largos",
-        "Neutral": "neutro sobre los bonos largos",
-    }
-    sent_txt = sent_map.get(sent.get("label", ""), "neutro")
-
-    msg = (
-        f"Nuestro modelo combinado proyecta que en los próximos 12 meses la Fed "
-        f"va a {dir_txt} ({d12m:+.0f} centésimas de punto desde el nivel actual "
-        f"de {spot:.2f}%). El mercado de futuros descuenta {d_a:+.0f} centésimas, "
-        f"la regla de Taylor sugiere {d_b:+.0f} centésimas. El sentimiento de "
-        f"noticias sobre bonos del Tesoro largo está {sent_txt}."
-    )
-
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(3, 3, width_ratios=[2.2, 1.1, 1.1],
-                          height_ratios=[0.28, 3.0, 0.85],
-                          hspace=0.35, wspace=0.28)
-    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
-    ax_msg.text(0.5, 0.5, msg,
-                ha="center", va="center", fontsize=11.0,
-                color="#0d1b2a", wrap=True,
-                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
-                          edgecolor="#b32a2a", linewidth=1.6))
-    ax = fig.add_subplot(gs[1, 0])
-    ax_sent = fig.add_subplot(gs[1, 1])
-    ax_tbl = fig.add_subplot(gs[1, 2])
-    ax_foot = fig.add_subplot(gs[2, :])
+    if show_message_banner:
+        msg = _msg_l_usa_2(merc, sent)
+        gs = fig.add_gridspec(3, 3, width_ratios=[2.2, 1.1, 1.1],
+                              height_ratios=[0.28, 3.0, 0.85],
+                              hspace=0.35, wspace=0.28)
+        ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+        ax_msg.text(0.5, 0.5, msg,
+                    ha="center", va="center", fontsize=11.0,
+                    color="#0d1b2a", wrap=True,
+                    bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                              edgecolor="#b32a2a", linewidth=1.6))
+        ax = fig.add_subplot(gs[1, 0])
+        ax_sent = fig.add_subplot(gs[1, 1])
+        ax_tbl = fig.add_subplot(gs[1, 2])
+        ax_foot = fig.add_subplot(gs[2, :])
+    else:
+        gs = fig.add_gridspec(2, 3, width_ratios=[2.2, 1.1, 1.1],
+                              height_ratios=[3.0, 0.85],
+                              hspace=0.35, wspace=0.28)
+        ax = fig.add_subplot(gs[0, 0])
+        ax_sent = fig.add_subplot(gs[0, 1])
+        ax_tbl = fig.add_subplot(gs[0, 2])
+        ax_foot = fig.add_subplot(gs[1, :])
     ax_foot.axis("off")
 
     # Referencia: tasa Fed actual

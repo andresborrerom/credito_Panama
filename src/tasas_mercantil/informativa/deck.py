@@ -108,12 +108,40 @@ def _section(prs, title, subtitle=""):
         _text(s, 0.8, 4.0, SLIDE_W_IN - 1.6, 1.2, subtitle, 17, LIGHT)
 
 
-def _image(prs, png, header):
+def _image(prs, png, header, message: str | None = None):
     s = _blank(prs)
-    _text(s, 0.4, 0.12, SLIDE_W_IN - 0.8, 0.4, header, 14, DARKBLUE, bold=True)
-    s.shapes.add_picture(str(png), Inches(0.4), Inches(0.6),
-                         width=Inches(SLIDE_W_IN - 0.8))
-    _text(s, 0.4, 7.15, SLIDE_W_IN - 0.8, 0.3, DISCLAIMER, 8, GREY, italic=True)
+    _text(s, 0.4, 0.10, SLIDE_W_IN - 0.8, 0.36, header, 13, DARKBLUE, bold=True)
+    # Si hay mensaje, reservar espacio arriba para textbox editable
+    if message:
+        msg_top = 0.50
+        msg_h = 1.10
+        img_top = msg_top + msg_h + 0.10
+        img_h = SLIDE_H_IN - img_top - 0.45
+        # Textbox del mensaje (EDITABLE en PowerPoint)
+        from pptx.util import Emu
+        box = s.shapes.add_textbox(
+            Inches(0.4), Inches(msg_top),
+            Inches(SLIDE_W_IN - 0.8), Inches(msg_h))
+        tf = box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.text = message
+        r = p.runs[0]
+        r.font.size = Pt(11)
+        r.font.color.rgb = DARKBLUE
+        # Fondo crema editable
+        from pptx.dml.color import RGBColor as _RGB
+        box.fill.solid()
+        box.fill.fore_color.rgb = _RGB(0xFF, 0xF5, 0xE6)
+        box.line.color.rgb = _RGB(0xB3, 0x2A, 0x2A)
+        box.line.width = Pt(1.2)
+        s.shapes.add_picture(str(png), Inches(0.4), Inches(img_top),
+                             width=Inches(SLIDE_W_IN - 0.8),
+                             height=Inches(img_h))
+    else:
+        s.shapes.add_picture(str(png), Inches(0.4), Inches(0.55),
+                             width=Inches(SLIDE_W_IN - 0.8))
+    _text(s, 0.4, 7.18, SLIDE_W_IN - 0.8, 0.28, DISCLAIMER, 8, GREY, italic=True)
 
 
 def _placeholder(prs, header, subtitle):
@@ -131,13 +159,24 @@ def _placeholder(prs, header, subtitle):
     p.runs[0].font.italic = True
 
 
-def compile_informativa(as_of: date, output_path: Path | str | None = None
+def compile_informativa(as_of: date, output_path: Path | str | None = None,
+                        messages: dict[str, str] | None = None
                         ) -> tuple[Path, list[str], list[str]]:
+    """Compila el deck. Si `messages` (slug → texto editado) viene, esos
+    textos van como textbox EDITABLE en cada slide del PPT. Si no, intenta
+    leerlos de messages.json del corte (load_messages_json)."""
     if output_path is None:
         output_path = (Path(f"docs/informativa/outputs/{as_of.isoformat()}"
                             f"/deck_informativa_{as_of.isoformat()}.pptx"))
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if messages is None:
+        try:
+            from .messages import load_messages_json
+            messages = load_messages_json(as_of)
+        except Exception:
+            messages = {}
 
     prs = Presentation()
     prs.slide_width = Inches(SLIDE_W_IN)
@@ -153,7 +192,8 @@ def compile_informativa(as_of: date, output_path: Path | str | None = None
             png = base / f"{slug}.png"
             header = f"{title}  ·  corte {as_of}"
             if png.exists():
-                _image(prs, png, header)
+                msg = (messages or {}).get(slug)
+                _image(prs, png, header, message=msg)
                 included.append(slug)
             else:
                 _placeholder(prs, header, status)

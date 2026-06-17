@@ -1,0 +1,61 @@
+name: Build deck (con textos editados)
+
+on:
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: "Fecha del corte cuyos textos editados querés compilar"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/tasas-mercantil-report-Q8sFt
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install pandas numpy matplotlib python-pptx pyarrow
+
+      - name: Verify messages.json exists
+        run: |
+          test -f docs/informativa/outputs/${{ inputs.as_of }}/messages.json || {
+            echo "❌ Falta messages.json para corte ${{ inputs.as_of }}";
+            echo "Corré primero 'Refresh informativa' o subí el JSON editado.";
+            exit 1;
+          }
+          echo "✓ messages.json encontrado"
+          cat docs/informativa/outputs/${{ inputs.as_of }}/messages.json | head -50
+
+      - name: Compile deck with edited messages
+        run: |
+          PYTHONPATH=src python -m tasas_mercantil.informativa.deck ${{ inputs.as_of }}
+
+      - name: Upload PPT as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deck-${{ inputs.as_of }}-final
+          path: docs/informativa/outputs/${{ inputs.as_of }}/deck_informativa_${{ inputs.as_of }}.pptx
+
+      - name: Commit deck back to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/informativa/outputs/${{ inputs.as_of }}/deck_informativa_${{ inputs.as_of }}.pptx
+          if git diff --staged --quiet; then
+            echo "Sin cambios en el PPT."
+          else
+            git commit -m "Informativa: deck final ${{ inputs.as_of }} con textos editados"
+            git push origin claude/tasas-mercantil-report-Q8sFt
+          fi

@@ -177,26 +177,39 @@ def _build_message(sob_xs, sob_ys, ust_xs, ust_ys, fwd_xs, fwd_ys, as_of) -> str
 
 
 # ---------------------------------------------------------------------------
+def build_msg_l_pa_2(as_of: date) -> str:
+    return aggregate(as_of)["message"]
+
+
 def plot_l_pa_2(as_of: date, output_path: Path | str,
-                figsize=(15, 10), dpi=130) -> Path:
+                figsize=(15, 9), dpi=130,
+                show_message_banner: bool = False) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     a = aggregate(as_of)
 
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(3, 2, height_ratios=[0.22, 1.10, 1.10],
-                          width_ratios=[1.0, 1.0], hspace=0.45, wspace=0.22)
-    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
-    ax_sob = fig.add_subplot(gs[1, 0])
-    ax_fwd = fig.add_subplot(gs[1, 1])
-    ax_tier = fig.add_subplot(gs[2, 0])
-    ax_tbl = fig.add_subplot(gs[2, 1]); ax_tbl.axis("off")
-
-    ax_msg.text(0.5, 0.5, a["message"],
-                ha="center", va="center", fontsize=11.0,
-                color="#0d1b2a", wrap=True,
-                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
-                          edgecolor="#b32a2a", linewidth=1.6))
+    if show_message_banner:
+        gs = fig.add_gridspec(3, 2, height_ratios=[0.22, 1.10, 1.10],
+                              width_ratios=[1.0, 1.0], hspace=0.45, wspace=0.22)
+        ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+        ax_sob = fig.add_subplot(gs[1, 0])
+        ax_fwd = fig.add_subplot(gs[1, 1])
+        ax_tier = fig.add_subplot(gs[2, 0])
+        ax_tbl = fig.add_subplot(gs[2, 1])
+        ax_msg.text(0.5, 0.5, a["message"],
+                    ha="center", va="center", fontsize=11.0,
+                    color="#0d1b2a", wrap=True,
+                    bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                              edgecolor="#b32a2a", linewidth=1.6))
+    else:
+        gs = fig.add_gridspec(2, 2, height_ratios=[1.10, 1.10],
+                              width_ratios=[1.0, 1.0], hspace=0.45, wspace=0.22)
+        ax_sob = fig.add_subplot(gs[0, 0])
+        ax_fwd = fig.add_subplot(gs[0, 1])
+        ax_tier = fig.add_subplot(gs[1, 0])
+        ax_tbl = fig.add_subplot(gs[1, 1])
+    ax_tbl.axis("off")
 
     # Panel 1: Curva soberano Panamá vs UST
     ax_sob.plot(a["ust_xs"], a["ust_ys"], color="#888888", lw=2.2,

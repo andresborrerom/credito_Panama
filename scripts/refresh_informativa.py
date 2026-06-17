@@ -43,21 +43,24 @@ def main() -> None:
     else:
         print("\n[skip] EODHD_API_KEY no está en entorno — FX queda con cache")
 
-    # 3) Regenerar slides + deck
+    # 3) Regenerar slides (PNG sin banner), messages.json, site HTML, deck
     code = f"""
 from datetime import date
 from tasas_mercantil.informativa.modelo_combinado import plot_l_usa_0
-from tasas_mercantil.informativa.fed_dotplot   import plot_l_usa_1
-from tasas_mercantil.informativa.path_fed       import plot_path_fed
-from tasas_mercantil.informativa.curvas_usa     import plot_curvas_usa
-from tasas_mercantil.informativa.fx_g10         import plot_l_fx_1
-from tasas_mercantil.informativa.panama_corp    import plot_l_pa_1
-from tasas_mercantil.informativa.panama_soberano import plot_l_pa_2
-from tasas_mercantil.informativa.deck            import compile_informativa
+from tasas_mercantil.informativa.fed_dotplot      import plot_l_usa_1
+from tasas_mercantil.informativa.path_fed          import plot_path_fed
+from tasas_mercantil.informativa.curvas_usa        import plot_curvas_usa
+from tasas_mercantil.informativa.fx_g10            import plot_l_fx_1
+from tasas_mercantil.informativa.panama_corp       import plot_l_pa_1
+from tasas_mercantil.informativa.panama_soberano   import plot_l_pa_2
+from tasas_mercantil.informativa.deck              import compile_informativa
+from tasas_mercantil.informativa.messages          import save_messages_json
+from tasas_mercantil.informativa.site              import render_site, render_index
 import os
 as_of = date.fromisoformat('{as_of}')
 out_dir = f'docs/informativa/outputs/{{as_of}}'
 os.makedirs(out_dir, exist_ok=True)
+# 3.1 PNGs sin banner (el mensaje irá editable en el PPT y el site)
 plot_l_usa_0(as_of, f'{{out_dir}}/L_USA_0_modelo_combinado.png')
 plot_l_usa_1(as_of, f'{{out_dir}}/L_USA_1_dotplot.png')
 plot_path_fed(as_of, f'{{out_dir}}/L_USA_2_path_fed.png')
@@ -65,8 +68,15 @@ plot_curvas_usa(as_of, f'{{out_dir}}/L_USA_3_curvas_usa.png')
 plot_l_fx_1(as_of, f'{{out_dir}}/L_FX_1_g10.png')
 plot_l_pa_1(as_of, f'{{out_dir}}/L_PA_1_corp_sector_plazo.png')
 plot_l_pa_2(as_of, f'{{out_dir}}/L_PA_2_soberano.png')
+# 3.2 messages.json (propuesta autogenerada, conserva ediciones previas)
+mp = save_messages_json(as_of)
+print(f'messages.json → {{mp}}')
+# 3.3 site HTML por corte + index global
+sp = render_site(as_of); print(f'site → {{sp}}')
+ip = render_index();     print(f'index → {{ip}}')
+# 3.4 PPT con mensajes (toma edits de messages.json si existen)
 out, inc, pend = compile_informativa(as_of)
-print(f'\\nDECK: {{out}}'); print(f'Slides: {{len(inc)}}')
+print(f'DECK: {{out}}  ({{len(inc)}} slides)')
 """
     _run(["python", "-c", code], env=env)
 
