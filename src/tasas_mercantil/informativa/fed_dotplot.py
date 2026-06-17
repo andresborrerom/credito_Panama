@@ -240,13 +240,53 @@ def _dots_for_year(dots: pd.DataFrame, year_col: str) -> list[float]:
     return levels
 
 
+def _build_dotplot_message(sep: SEPParsed, implied: dict | None) -> str:
+    """Mensaje principal: gap Fed-mercado + revisión vs SEP previo."""
+    parts = []
+    # Gap mediano Fed-mercado (años con ambos)
+    if implied:
+        gaps = []
+        for y in sep.year_labels:
+            m = sep.median.get(y, float("nan"))
+            im = implied.get(y, float("nan"))
+            if np.isfinite(m) and np.isfinite(im):
+                gaps.append(((m - im) * 100, y))
+        if gaps:
+            max_gap = max(gaps, key=lambda x: abs(x[0]))
+            direction = "más DOVISH" if max_gap[0] > 0 else "más HAWKISH"
+            parts.append(f"Mercado descuenta Fed {direction} que el dot plot · "
+                         f"gap máx {max_gap[1]}: {max_gap[0]:+.0f} bps "
+                         f"(mediana {sep.median[max_gap[1]]:.2f}% vs mkt {implied[max_gap[1]]:.2f}%)")
+    # Revisión vs SEP previo
+    revisions = []
+    for y in sep.year_labels:
+        m = sep.median.get(y, float("nan"))
+        pm = sep.prev_median.get(y, float("nan"))
+        if np.isfinite(m) and np.isfinite(pm) and abs(m - pm) > 0.05:
+            revisions.append(f"{y} {(m-pm)*100:+.0f} bps")
+    if revisions:
+        parts.append("revisión vs SEP previo: " + ", ".join(revisions))
+    else:
+        parts.append("sin revisiones materiales vs SEP previo")
+    return " · ".join(parts)
+
+
 def plot_dotplot(sep: SEPParsed, output_path: Path | str,
                  as_of: date, implied: dict[str, float] | None = None,
-                 figsize=(14, 8), dpi=130) -> Path:
+                 figsize=(14, 9.2), dpi=130) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    msg = _build_dotplot_message(sep, implied)
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    gs = fig.add_gridspec(2, 1, height_ratios=[0.13, 1.0], hspace=0.02)
+    ax_msg = fig.add_subplot(gs[0, 0]); ax_msg.axis("off")
+    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
+                ha="center", va="center", fontsize=11.5, weight="bold",
+                color="#0d1b2a", wrap=True,
+                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                          edgecolor="#b32a2a", linewidth=1.6))
+    ax = fig.add_subplot(gs[1, 0])
 
     years = sep.year_labels
     x_pos = np.arange(len(years))

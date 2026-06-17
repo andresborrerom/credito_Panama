@@ -75,15 +75,34 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df = _load_backtest()
+    r = _rank_summary(df)
+
+    # Mensaje principal autogenerado
+    mae_a = df["abs_err_A_bps"].median()
+    mae_b = df["abs_err_B_bps"].median()
+    mae_m = df["abs_err_M_bps"].median()
+    msg = (f"Mercantil v0.3.0 (55% WIRP + 45% Taylor) es el peor en SOLO "
+           f"{r['M_worst_pct']:.0f}% de los cortes vs {r['A_worst_pct']:.0f}% A "
+           f"sola y {r['B_worst_pct']:.0f}% B sola · "
+           f"mejor que el peor de A,B en {r['M_better_than_worst']:.0f}% de los "
+           f"cortes · MAE mediana 6m: {mae_m:.0f} bps")
 
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(2, 3, height_ratios=[1.2, 1.0],
-                          width_ratios=[1.6, 1.1, 1.1], hspace=0.42, wspace=0.32)
-    ax_ts = fig.add_subplot(gs[0, :])
-    ax_reg = fig.add_subplot(gs[1, 0])
-    ax_hist = fig.add_subplot(gs[1, 1])
-    ax_tbl = fig.add_subplot(gs[1, 2])
+    gs = fig.add_gridspec(3, 3, height_ratios=[0.20, 1.10, 1.00],
+                          width_ratios=[1.6, 1.1, 1.1],
+                          hspace=0.45, wspace=0.32)
+    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+    ax_ts = fig.add_subplot(gs[1, :])
+    ax_reg = fig.add_subplot(gs[2, 0])
+    ax_hist = fig.add_subplot(gs[2, 1])
+    ax_tbl = fig.add_subplot(gs[2, 2])
     ax_tbl.axis("off")
+
+    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
+                ha="center", va="center", fontsize=11.5, weight="bold",
+                color="#0d1b2a", wrap=True,
+                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                          edgecolor="#b32a2a", linewidth=1.6))
 
     # (1) Serie temporal: predict A, B, M vs realized
     ax_ts.plot(df["as_of"], df["realized_pct"] * 100,
@@ -167,7 +186,6 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
     ax_hist.grid(True, axis="y", alpha=0.3); ax_hist.set_axisbelow(True)
 
     # (4) Tabla ranking
-    r = _rank_summary(df)
     rows = [
         ["Modelo",      "% mejor", "% peor", "MAE mediana (bps)"],
         ["A · WIRP",    f"{r['A_best_pct']:.0f}%", f"{r['A_worst_pct']:.0f}%",

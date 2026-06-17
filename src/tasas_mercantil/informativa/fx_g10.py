@@ -144,14 +144,42 @@ def _plot_panel(ax, df, feature, label, hint, as_of):
                       edgecolor=color, linewidth=1.4, alpha=0.92))
 
 
+def _build_fx_message(df: pd.DataFrame, as_of: date) -> str:
+    """Mensaje principal: pares en zona extrema (p<10 o p>90)."""
+    extremes = []
+    for feat, lab, _ in PAIRS:
+        s = fx_snapshot(df, feat, as_of)
+        if not np.isfinite(s["percentile_5y"]):
+            continue
+        p = s["percentile_5y"]
+        if p > 90:
+            extremes.append(f"{lab} en p{p:.0f}/5y ({s['value']:.3f}, {s['d12m_pct']:+.1f}% 12m)")
+        elif p < 10:
+            extremes.append(f"{lab} en p{p:.0f}/5y ({s['value']:.3f}, {s['d12m_pct']:+.1f}% 12m)")
+    if not extremes:
+        snap_dxy = fx_snapshot(df, "fx_dxy", as_of)
+        return f"FX G10 sin extremos vs 5 años · DXY {snap_dxy['value']:.1f} (p{snap_dxy['percentile_5y']:.0f})"
+    return "Zonas extremas vs 5 años: " + " · ".join(extremes)
+
+
 def plot_l_fx_1(as_of: date, output_path: Path | str,
-                figsize=(14, 8.5), dpi=130) -> Path:
+                figsize=(14, 9.5), dpi=130) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     df = _load()
 
-    # 3 × 2 grid, último celda vacía (5 paneles + leyenda)
-    fig, axes = plt.subplots(2, 3, figsize=figsize, dpi=dpi)
+    msg = _build_fx_message(df, as_of)
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    gs = fig.add_gridspec(3, 3, height_ratios=[0.18, 1.0, 1.0],
+                          hspace=0.42, wspace=0.30)
+    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
+                ha="center", va="center", fontsize=11.5, weight="bold",
+                color="#0d1b2a", wrap=True,
+                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                          edgecolor="#b32a2a", linewidth=1.6))
+    axes = np.array([[fig.add_subplot(gs[1, j]) for j in range(3)],
+                     [fig.add_subplot(gs[2, j]) for j in range(3)]])
     for ax, (feat, lab, hint) in zip(axes.flat[:5], PAIRS):
         _plot_panel(ax, df, feat, lab, hint, as_of)
     axes.flat[5].axis("off")

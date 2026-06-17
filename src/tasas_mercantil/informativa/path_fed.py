@@ -109,13 +109,28 @@ def plot_path_fed(as_of: date, output_path: Path | str,
 
     sent = tlt_sentiment_snapshot(as_of)
 
+    # Mensaje principal
+    d12m = (merc.forecast_12m - spot) * 100
+    direction = ("HIKES" if d12m > 25 else "CUTS" if d12m < -25 else "HOLD")
+    msg = (f"Mercantil v0.3.0 proyecta Fed {direction} "
+           f"({d12m:+.0f} bps a 12m) · Mercado (Pieza A) {(pa.forecast_12m-spot)*100:+.0f} bps · "
+           f"Taylor (Pieza B) {(pb.forecast_12m-spot)*100:+.0f} bps · "
+           f"Sentiment TLT: {sent['label']}")
+
     fig = plt.figure(figsize=figsize, dpi=dpi)
-    gs = fig.add_gridspec(2, 3, width_ratios=[2.2, 1.1, 1.1],
-                          height_ratios=[3.6, 1.0], hspace=0.32, wspace=0.28)
-    ax = fig.add_subplot(gs[0, 0])
-    ax_sent = fig.add_subplot(gs[0, 1])
-    ax_tbl = fig.add_subplot(gs[0, 2])
-    ax_foot = fig.add_subplot(gs[1, :])
+    gs = fig.add_gridspec(3, 3, width_ratios=[2.2, 1.1, 1.1],
+                          height_ratios=[0.22, 3.0, 0.95],
+                          hspace=0.35, wspace=0.28)
+    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
+                ha="center", va="center", fontsize=11.5, weight="bold",
+                color="#0d1b2a", wrap=True,
+                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                          edgecolor="#b32a2a", linewidth=1.6))
+    ax = fig.add_subplot(gs[1, 0])
+    ax_sent = fig.add_subplot(gs[1, 1])
+    ax_tbl = fig.add_subplot(gs[1, 2])
+    ax_foot = fig.add_subplot(gs[2, :])
     ax_foot.axis("off")
 
     # Spot reference

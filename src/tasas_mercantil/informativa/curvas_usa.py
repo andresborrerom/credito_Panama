@@ -286,16 +286,65 @@ def _plot_forwards(ax, df, as_of):
                                   alpha=0.95))
 
 
+def _build_curvas_message(df: pd.DataFrame, as_of: date) -> str:
+    """Mensaje principal de L_USA_3 basado en el corte."""
+    cut = pd.Timestamp(as_of)
+    ust_now = load_curve(df, UST_TENORS, as_of)
+    ust_1m = load_curve(df, UST_TENORS, (cut - pd.offsets.MonthEnd(1)).date())
+    parts = []
+    if ust_now and 2.0 in ust_now and 10.0 in ust_now:
+        s2s10 = (ust_now[10.0] - ust_now[2.0]) * 100
+        slope = "empinada" if s2s10 > 50 else "plana" if abs(s2s10) < 50 else "invertida"
+        parts.append(f"Curva UST {slope} (2s10s {s2s10:+.0f} bps)")
+    if ust_now and ust_1m:
+        common = set(ust_now) & set(ust_1m)
+        if common:
+            deltas = [(ust_now[t] - ust_1m[t]) * 100 for t in common]
+            avg_d = np.mean(deltas)
+            direction = "subió" if avg_d > 5 else "bajó" if avg_d < -5 else "estable"
+            parts.append(f"vs 1m: curva {direction} {avg_d:+.0f} bps promedio")
+    # Forwards: primer Q donde cae >25bps vs SOFR ON
+    sofr_on = _last_on_or_before(df, "SOFR_ON", cut)
+    fwd = forwards_quarterly(df, as_of, 20)
+    if sofr_on and np.isfinite(sofr_on):
+        cross_idx = np.where(np.isfinite(fwd) & (fwd < sofr_on - 0.25))[0]
+        if len(cross_idx) > 0:
+            q = cross_idx[0] + 1
+            yrs = (q + 1) / 4.0
+            parts.append(f"forwards descuentan primer cut significativo en Q{q} (~{yrs:.1f}y)")
+        else:
+            parts.append(f"forwards no descuentan cuts significativos en próximos 5y (mercado ve Fed on-hold)")
+    # Breakeven slope
+    be_now = load_curve(df, BE_TENORS, as_of)
+    if be_now and 2.0 in be_now and 30.0 in be_now:
+        be_slope = (be_now[30.0] - be_now[2.0]) * 100
+        if abs(be_slope) > 10:
+            shape = "invertida" if be_slope < 0 else "creciente"
+            parts.append(f"breakeven {shape} 2y→30y ({be_slope:+.0f} bps)")
+    return " · ".join(parts) if parts else "Estructura temporal USA al corte"
+
+
 def plot_curvas_usa(as_of: date, output_path: Path | str,
                     parquet_path: Path | None = None,
-                    figsize=(14, 8.5), dpi=130) -> Path:
-    """PNG con los 4 paneles. Único entry point para el deck."""
+                    figsize=(14, 9.5), dpi=130) -> Path:
+    """PNG con los 4 paneles + mensaje principal."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     df = _load_master(parquet_path)
+    msg = _build_curvas_message(df, as_of)
 
-    fig, axes = plt.subplots(2, 2, figsize=figsize, dpi=dpi)
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    gs = fig.add_gridspec(3, 2, height_ratios=[0.18, 1.0, 1.0],
+                          hspace=0.42, wspace=0.20)
+    ax_msg = fig.add_subplot(gs[0, :]); ax_msg.axis("off")
+    ax_msg.text(0.5, 0.5, "MENSAJE PRINCIPAL · " + msg,
+                ha="center", va="center", fontsize=11.5, weight="bold",
+                color="#0d1b2a", wrap=True,
+                bbox=dict(boxstyle="round,pad=0.7", facecolor="#fff5e6",
+                          edgecolor="#b32a2a", linewidth=1.6))
+    axes = np.array([[fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])],
+                     [fig.add_subplot(gs[2, 0]), fig.add_subplot(gs[2, 1])]])
     _plot_curve(axes[0, 0], df, UST_TENORS, as_of,
                 "Curva UST nominal", "Yield (%)")
     _plot_curve(axes[0, 1], df, TIPS_TENORS, as_of,
