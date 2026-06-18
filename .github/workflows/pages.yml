@@ -26,6 +26,7 @@ jobs:
     steps:
       # Siempre checkout de la rama donde vive el contenido completo
       # (docs/informativa/ no está en la rama default todavía).
+      # Bump: redeploy con la última versión del site (operación end-to-end).
       - uses: actions/checkout@v4
         with:
           ref: claude/tasas-mercantil-report-Q8sFt
