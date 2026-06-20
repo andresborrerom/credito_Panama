@@ -26,56 +26,58 @@ import pandas as pd
 
 BBG = Path("data/external/tasas_mercantil/bloomberg_historico.parquet")
 FRED = Path("data/external/tasas_mercantil/fred_curvas_usa.parquet")
+BBG_TEMPLATE = Path("data/external/tasas_mercantil/bloomberg_template_v03.parquet")
+
+
+_SOURCES = [
+    ("bbg_template", BBG_TEMPLATE),  # plantilla mensual v0.3 (más reciente para los 47 instrumentos nuevos)
+    ("fred",         FRED),          # daily, sin API key
+    ("bbg_historico", BBG),          # histórico cargado anteriormente
+]
 
 
 def load_master() -> pd.DataFrame:
-    """Concatena BBG + FRED. Para features comunes, conserva el dataset con
-    fecha máxima más reciente (no se mezclan filas de los dos en una misma
-    serie). Devuelve formato long: feature_name | ticker | obs_date | value
-    | source.
+    """Combina las 3 fuentes (BBG plantilla v0.3 + FRED + BBG histórico).
+
+    Para cada feature_name, toma el dataset con la fecha más reciente
+    (no mezcla filas de fuentes distintas dentro de una serie).
+    Devuelve formato long: feature_name | ticker | obs_date | value | source.
     """
-    parts = []
-    bbg = None
-    if BBG.exists():
-        bbg = pd.read_parquet(BBG)
-        bbg["obs_date"] = pd.to_datetime(bbg["obs_date"])
-        # bloomberg_historico tiene cols ['feature_name','ticker','obs_date',
-        # 'value','vintage_date','source','sheet']; normalizamos
-        keep = ["feature_name", "ticker", "obs_date", "value", "source"]
-        bbg = bbg[keep].copy()
-        parts.append(bbg)
+    keep = ["feature_name", "ticker", "obs_date", "value", "source"]
+    frames: dict[str, pd.DataFrame] = {}
+    for name, path in _SOURCES:
+        if not path.exists():
+            continue
+        df = pd.read_parquet(path)
+        df["obs_date"] = pd.to_datetime(df["obs_date"])
+        df = df[keep].copy()
+        frames[name] = df
 
-    fred = None
-    if FRED.exists():
-        fred = pd.read_parquet(FRED)
-        fred["obs_date"] = pd.to_datetime(fred["obs_date"])
-
-    if not parts and fred is None:
+    if not frames:
         raise RuntimeError("Ningún parquet de datos disponible.")
 
-    if fred is None:
-        return parts[0]
+    if len(frames) == 1:
+        return next(iter(frames.values()))
 
-    if not parts:
-        return fred
-
-    # Decidir por feature_name: cuál fuente está más al día
-    bbg_last = bbg.groupby("feature_name")["obs_date"].max()
-    fred_last = fred.groupby("feature_name")["obs_date"].max()
-    all_feats = set(bbg_last.index) | set(fred_last.index)
+    # Por feature_name, elegir la fuente con fecha máxima más reciente
+    last_dates = {name: df.groupby("feature_name")["obs_date"].max()
+                  for name, df in frames.items()}
+    all_feats: set = set()
+    for s in last_dates.values():
+        all_feats.update(s.index)
 
     chosen = []
     for f in all_feats:
-        b_last = bbg_last.get(f, pd.NaT)
-        f_last = fred_last.get(f, pd.NaT)
-        # Si FRED tiene la feature Y es más reciente (o BBG no la tiene), usar FRED
-        if pd.notna(f_last) and (pd.isna(b_last) or f_last >= b_last):
-            chosen.append(fred[fred["feature_name"] == f])
-        else:
-            chosen.append(bbg[bbg["feature_name"] == f])
+        best_name, best_date = None, pd.NaT
+        for name in frames:
+            d = last_dates[name].get(f, pd.NaT)
+            if pd.notna(d) and (pd.isna(best_date) or d > best_date):
+                best_name, best_date = name, d
+        if best_name:
+            chosen.append(frames[best_name][
+                frames[best_name]["feature_name"] == f])
 
-    out = pd.concat(chosen, ignore_index=True)
-    return out
+    return pd.concat(chosen, ignore_index=True)
 
 
 def freshness_summary() -> pd.DataFrame:

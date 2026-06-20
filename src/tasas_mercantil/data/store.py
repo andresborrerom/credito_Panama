@@ -27,6 +27,7 @@ DEFAULT_STORE_DIR = Path("data/external/tasas_mercantil")
 # lado pero no son features de mercado consultadas por el modelo.
 CANONICAL_PARQUETS = [
     "bloomberg_historico.parquet",
+    "bloomberg_template_v03.parquet",   # plantilla mensual v0.3 (Plan B Bloomberg)
     "fred_curvas_usa.parquet",
     "fred_non_vintage.parquet",
     "fred_vintage_macro.parquet",

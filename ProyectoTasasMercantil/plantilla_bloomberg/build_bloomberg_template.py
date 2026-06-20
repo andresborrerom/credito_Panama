@@ -133,6 +133,75 @@ INSTRUMENTOS = [
     # Fase 5 - Venezuela
     ("fx", "VE", "USDVES_OFICIAL", "SPOT", 0.0, "USDVES Curncy", "PX_LAST", "rate", "USD/VES oficial BCV — si BBG lo tiene"),
     # USDVES paralelo NO viene por Bloomberg — se llena por scraper aparte.
+
+    # ==========================================================================
+    # v0.3 (2026-06) — Plan B Informativa: forwards FX + CDS Panamá + extras
+    # ==========================================================================
+
+    # USA — Swap OIS 1Y y 3Y (mejoran bootstrap de forwards SOFR 5y)
+    ("swap_curve", "US", "SOFR_OIS", "1Y", 1.0, "USOSFR1 BGN Curncy", "PX_LAST", "percent", "USD SOFR OIS 1Y"),
+    ("swap_curve", "US", "SOFR_OIS", "3Y", 3.0, "USOSFR3 BGN Curncy", "PX_LAST", "percent", "USD SOFR OIS 3Y"),
+
+    # Forwards FX G10 — Plan B: necesitan estos 40 para construir L_FX_2
+    # Tenors: 1M, 3M, 6M, 1Y, 2Y, 3Y, 4Y, 5Y
+    # Tickers convención BBG: <PAIR><TENOR> BGN Curncy. Field PX_LAST = forward outright.
+    # EUR/USD forwards
+    ("fx_forward", "G10", "EURUSD_FWD", "1M",  0.083, "EUR1M BGN Curncy",  "PX_LAST", "rate", "EUR/USD forward 1M"),
+    ("fx_forward", "G10", "EURUSD_FWD", "3M",  0.25,  "EUR3M BGN Curncy",  "PX_LAST", "rate", "EUR/USD forward 3M"),
+    ("fx_forward", "G10", "EURUSD_FWD", "6M",  0.5,   "EUR6M BGN Curncy",  "PX_LAST", "rate", "EUR/USD forward 6M"),
+    ("fx_forward", "G10", "EURUSD_FWD", "1Y",  1.0,   "EUR12M BGN Curncy", "PX_LAST", "rate", "EUR/USD forward 1Y"),
+    ("fx_forward", "G10", "EURUSD_FWD", "2Y",  2.0,   "EUR2Y BGN Curncy",  "PX_LAST", "rate", "EUR/USD forward 2Y"),
+    ("fx_forward", "G10", "EURUSD_FWD", "3Y",  3.0,   "EUR3Y BGN Curncy",  "PX_LAST", "rate", "EUR/USD forward 3Y"),
+    ("fx_forward", "G10", "EURUSD_FWD", "4Y",  4.0,   "EUR4Y BGN Curncy",  "PX_LAST", "rate", "EUR/USD forward 4Y"),
+    ("fx_forward", "G10", "EURUSD_FWD", "5Y",  5.0,   "EUR5Y BGN Curncy",  "PX_LAST", "rate", "EUR/USD forward 5Y"),
+    # GBP/USD forwards
+    ("fx_forward", "G10", "GBPUSD_FWD", "1M",  0.083, "GBP1M BGN Curncy",  "PX_LAST", "rate", "GBP/USD forward 1M"),
+    ("fx_forward", "G10", "GBPUSD_FWD", "3M",  0.25,  "GBP3M BGN Curncy",  "PX_LAST", "rate", "GBP/USD forward 3M"),
+    ("fx_forward", "G10", "GBPUSD_FWD", "6M",  0.5,   "GBP6M BGN Curncy",  "PX_LAST", "rate", "GBP/USD forward 6M"),
+    ("fx_forward", "G10", "GBPUSD_FWD", "1Y",  1.0,   "GBP12M BGN Curncy", "PX_LAST", "rate", "GBP/USD forward 1Y"),
+    ("fx_forward", "G10", "GBPUSD_FWD", "2Y",  2.0,   "GBP2Y BGN Curncy",  "PX_LAST", "rate", "GBP/USD forward 2Y"),
+    ("fx_forward", "G10", "GBPUSD_FWD", "3Y",  3.0,   "GBP3Y BGN Curncy",  "PX_LAST", "rate", "GBP/USD forward 3Y"),
+    ("fx_forward", "G10", "GBPUSD_FWD", "4Y",  4.0,   "GBP4Y BGN Curncy",  "PX_LAST", "rate", "GBP/USD forward 4Y"),
+    ("fx_forward", "G10", "GBPUSD_FWD", "5Y",  5.0,   "GBP5Y BGN Curncy",  "PX_LAST", "rate", "GBP/USD forward 5Y"),
+    # USD/JPY forwards (yen por dólar)
+    ("fx_forward", "G10", "USDJPY_FWD", "1M",  0.083, "JPY1M BGN Curncy",  "PX_LAST", "rate", "USD/JPY forward 1M"),
+    ("fx_forward", "G10", "USDJPY_FWD", "3M",  0.25,  "JPY3M BGN Curncy",  "PX_LAST", "rate", "USD/JPY forward 3M"),
+    ("fx_forward", "G10", "USDJPY_FWD", "6M",  0.5,   "JPY6M BGN Curncy",  "PX_LAST", "rate", "USD/JPY forward 6M"),
+    ("fx_forward", "G10", "USDJPY_FWD", "1Y",  1.0,   "JPY12M BGN Curncy", "PX_LAST", "rate", "USD/JPY forward 1Y"),
+    ("fx_forward", "G10", "USDJPY_FWD", "2Y",  2.0,   "JPY2Y BGN Curncy",  "PX_LAST", "rate", "USD/JPY forward 2Y"),
+    ("fx_forward", "G10", "USDJPY_FWD", "3Y",  3.0,   "JPY3Y BGN Curncy",  "PX_LAST", "rate", "USD/JPY forward 3Y"),
+    ("fx_forward", "G10", "USDJPY_FWD", "4Y",  4.0,   "JPY4Y BGN Curncy",  "PX_LAST", "rate", "USD/JPY forward 4Y"),
+    ("fx_forward", "G10", "USDJPY_FWD", "5Y",  5.0,   "JPY5Y BGN Curncy",  "PX_LAST", "rate", "USD/JPY forward 5Y"),
+    # USD/CHF forwards (franco por dólar)
+    ("fx_forward", "G10", "USDCHF_FWD", "1M",  0.083, "CHF1M BGN Curncy",  "PX_LAST", "rate", "USD/CHF forward 1M"),
+    ("fx_forward", "G10", "USDCHF_FWD", "3M",  0.25,  "CHF3M BGN Curncy",  "PX_LAST", "rate", "USD/CHF forward 3M"),
+    ("fx_forward", "G10", "USDCHF_FWD", "6M",  0.5,   "CHF6M BGN Curncy",  "PX_LAST", "rate", "USD/CHF forward 6M"),
+    ("fx_forward", "G10", "USDCHF_FWD", "1Y",  1.0,   "CHF12M BGN Curncy", "PX_LAST", "rate", "USD/CHF forward 1Y"),
+    ("fx_forward", "G10", "USDCHF_FWD", "2Y",  2.0,   "CHF2Y BGN Curncy",  "PX_LAST", "rate", "USD/CHF forward 2Y"),
+    ("fx_forward", "G10", "USDCHF_FWD", "3Y",  3.0,   "CHF3Y BGN Curncy",  "PX_LAST", "rate", "USD/CHF forward 3Y"),
+    ("fx_forward", "G10", "USDCHF_FWD", "4Y",  4.0,   "CHF4Y BGN Curncy",  "PX_LAST", "rate", "USD/CHF forward 4Y"),
+    ("fx_forward", "G10", "USDCHF_FWD", "5Y",  5.0,   "CHF5Y BGN Curncy",  "PX_LAST", "rate", "USD/CHF forward 5Y"),
+    # AUD/USD forwards (bonus G10)
+    ("fx_forward", "G10", "AUDUSD_FWD", "1M",  0.083, "AUD1M BGN Curncy",  "PX_LAST", "rate", "AUD/USD forward 1M"),
+    ("fx_forward", "G10", "AUDUSD_FWD", "3M",  0.25,  "AUD3M BGN Curncy",  "PX_LAST", "rate", "AUD/USD forward 3M"),
+    ("fx_forward", "G10", "AUDUSD_FWD", "6M",  0.5,   "AUD6M BGN Curncy",  "PX_LAST", "rate", "AUD/USD forward 6M"),
+    ("fx_forward", "G10", "AUDUSD_FWD", "1Y",  1.0,   "AUD12M BGN Curncy", "PX_LAST", "rate", "AUD/USD forward 1Y"),
+    ("fx_forward", "G10", "AUDUSD_FWD", "2Y",  2.0,   "AUD2Y BGN Curncy",  "PX_LAST", "rate", "AUD/USD forward 2Y"),
+    ("fx_forward", "G10", "AUDUSD_FWD", "3Y",  3.0,   "AUD3Y BGN Curncy",  "PX_LAST", "rate", "AUD/USD forward 3Y"),
+    ("fx_forward", "G10", "AUDUSD_FWD", "4Y",  4.0,   "AUD4Y BGN Curncy",  "PX_LAST", "rate", "AUD/USD forward 4Y"),
+    ("fx_forward", "G10", "AUDUSD_FWD", "5Y",  5.0,   "AUD5Y BGN Curncy",  "PX_LAST", "rate", "AUD/USD forward 5Y"),
+
+    # Panamá — Crédito soberano (CDS + EMBI)
+    ("cds", "PA", "CDS_PANAMA", "5Y", 5.0, "CPAN CDS USD SR 5Y Corp", "PX_LAST", "bps", "CDS Panamá soberano 5Y — confirmar ticker"),
+    ("credit_index", "PA", "EMBI_PANAMA", "ALL", 0.0, "JPEIPANE Index", "PX_LAST", "bps", "EMBI Panamá spread strip"),
+
+    # Encuesta economistas Fed Funds (consensus Bloomberg)
+    # Nota: ECFC viene de la pantalla ECFC<GO> en BBG, no es un ticker BDP estándar.
+    # Se llena MANUAL en hoja '04_FedWatch' nueva o paste como WIRP. Marcado aquí
+    # para tracking, el analista lo pega aparte.
+    ("survey", "US", "ECFC_FF_NEXT_MEETING", "—", 0.0, "—", "PASTE", "percent", "Consensus economistas Fed Funds próxima reunión (de pantalla ECFC<GO>) — paste manual"),
+    ("survey", "US", "ECFC_FF_3M", "3M", 0.25, "—", "PASTE", "percent", "Consensus economistas Fed Funds a 3 meses — paste manual"),
+    ("survey", "US", "ECFC_FF_12M", "12M", 1.0, "—", "PASTE", "percent", "Consensus economistas Fed Funds a 12 meses — paste manual"),
 ]
 
 # Strip de SOFR futures: rolling continuous front 8 quarters
