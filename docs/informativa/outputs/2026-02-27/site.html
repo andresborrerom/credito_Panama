@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pieza informativa Mercantil</title>
+<title>Informativa · corte 2026-02-27</title>
 <style>
 * { box-sizing: border-box; }
 body {
@@ -131,8 +131,8 @@ ul.cortes li .meta { font-size: 12px; color: #888; }
 <body>
 <header class="topbar">
   <div>
-    <h1>Pieza informativa Mercantil</h1>
-    <div class="meta">Refresh de datos · revisión · edición · armado del PPT — todo desde acá</div>
+    <h1>Pieza informativa · corte 2026-02-27</h1>
+    <div class="meta">Revisá las 7 láminas · editá los textos · generá el PPT desde acá</div>
   </div>
   <div class="auth">
     <span id="auth-dot" class="dot no"></span>
@@ -142,46 +142,101 @@ ul.cortes li .meta { font-size: 12px; color: #888; }
 </header>
 <div class="container">
   <div id="status-banner" class="status-banner" style="display:none"></div>
-
-  <div class="card">
-    <h2>1 · Actualizar datos automáticos</h2>
-    <p style="font-size: 14px; color:#555;">
-    Descarga los últimos datos PÚBLICOS (FRED, EODHD, último SEP de la Fed)
-    y regenera todas las láminas, mensajes propuestos y el deck. Tarda ~2
-    minutos. También corre automáticamente el día 1° de cada mes a las 7 AM
-    Colombia.</p>
-    <button class="btn success" onclick="refreshData()">⚡ Actualizar datos ahora</button>
+  <div style="margin-bottom: 14px;">
+    <a href="../../" style="color:#2a6fb3; font-size:13px;">← Volver a cortes</a> &nbsp;|&nbsp;
+    <a href="deck_informativa_2026-02-27.pptx" style="color:#2a6fb3; font-size:13px;">⬇ Descargar PPT actual</a>
   </div>
-
-  <div class="card">
-    <h2>2 · Subir Excel Bloomberg (opcional)</h2>
-    <p style="font-size: 14px; color:#555;">
-    Para enriquecer las láminas con datos que <b>no están en FRED ni EODHD</b>
-    (forwards FX 5 años, CDS Panamá, swap OIS 1Y/3Y, encuesta economistas),
-    correr la plantilla
-    <a href="https://github.com/andresborrerom/credito_Panama/raw/claude/tasas-mercantil-report-Q8sFt/ProyectoTasasMercantil/plantilla_bloomberg/BloombergTemplate_TasasMercantil.xlsx"
-       target="_blank">BloombergTemplate_TasasMercantil.xlsx</a> en
-    Bloomberg, guardarla con valores, y subirla acá. Se procesa y dispara
-    refresh automático. <b>Operación 1 vez al mes</b>.</p>
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-      <input type="file" id="bbg-upload-input" accept=".xlsx"
-             style="font-size: 14px;">
-      <button class="btn" id="bbg-upload-btn" onclick="uploadBloomberg()" disabled>
-        📥 Subir y procesar
-      </button>
-    </div>
+  <section class="card" id="card-L_USA_0_modelo_combinado">
+  <h2>Por qué combinamos WIRP + Taylor</h2>
+  <div class="subtitle">L_USA_0_modelo_combinado</div>
+  <img src="L_USA_0_modelo_combinado.png" alt="L_USA_0_modelo_combinado" loading="lazy">
+  <div class="msg-block">
+    <label>Texto propuesto automáticamente (referencia):</label>
+    <div class="msg-proposed">Por qué combinamos: el mercado de futuros solo tiene error medio de 17 centésimas, casi igual al combinado (18). Pero la diferencia está en los SHOCKS. En los 10 peores desaciertos del mercado (todos en 2019-2022, cuando la Fed sorprendió), el combinado redujo el error en promedio 24 centésimas (ej: marzo 2022 mercado erró 102 bps, combinado solo 51). En 2022, año del shock de inflación, mercado erró 72 bps en promedio vs combinado 50 (30% menos). El combinado sacrifica precisión en años aburridos para reducir el daño cuando la Fed sorprende. Para una pieza informativa al comité, esa robustez vale más que ganarle al mercado en años planos.</div>
+    <label>Texto que irá en la presentación (editable):</label>
+    <textarea id="edit-L_USA_0_modelo_combinado" class="msg-edited"
+              placeholder="(vacío = se usa el propuesto)"></textarea>
+    
   </div>
-
-  <div class="card">
-    <h2>3 · Cortes disponibles para revisar y armar PPT</h2>
-    <ul class="cortes"><li><a href="outputs/2026-06-19/site.html">Corte 2026-06-19</a><span class="meta">→ revisar</span></li>
-<li><a href="outputs/2026-06-17/site.html">Corte 2026-06-17</a><span class="meta">→ revisar</span></li>
-<li><a href="outputs/2026-04-30/site.html">Corte 2026-04-30</a><span class="meta">→ revisar</span></li>
-<li><a href="outputs/2026-03-31/site.html">Corte 2026-03-31</a><span class="meta">→ revisar</span></li>
-<li><a href="outputs/2026-02-27/site.html">Corte 2026-02-27</a><span class="meta">→ revisar</span></li>
-<li><a href="outputs/2026-01-31/site.html">Corte 2026-01-31</a><span class="meta">→ revisar</span></li></ul>
+</section><section class="card" id="card-L_USA_1_dotplot">
+  <h2>Dot plot Fed — proyecciones SEP</h2>
+  <div class="subtitle">L_USA_1_dotplot</div>
+  <img src="L_USA_1_dotplot.png" alt="L_USA_1_dotplot" loading="lazy">
+  <div class="msg-block">
+    <label>Texto propuesto automáticamente (referencia):</label>
+    <div class="msg-proposed">El mercado espera que la Fed mantenga tasas más altas de lo que ella misma proyecta. Para 2026, los miembros de la Fed proyectan en promedio 3.40%, pero el mercado descuenta 3.60%.</div>
+    <label>Texto que irá en la presentación (editable):</label>
+    <textarea id="edit-L_USA_1_dotplot" class="msg-edited"
+              placeholder="(vacío = se usa el propuesto)"></textarea>
+    
   </div>
-
+</section><section class="card" id="card-L_USA_2_path_fed">
+  <h2>Fed Funds: mercado · analistas · sentiment</h2>
+  <div class="subtitle">L_USA_2_path_fed</div>
+  <img src="L_USA_2_path_fed.png" alt="L_USA_2_path_fed" loading="lazy">
+  <div class="msg-block">
+    <label>Texto propuesto automáticamente (referencia):</label>
+    <div class="msg-proposed">Nuestro modelo combinado proyecta que en los próximos 12 meses la Fed va a mantener las tasas prácticamente sin cambios (-12 centésimas de punto desde el nivel actual de 3.62%). El mercado de futuros descuenta -28 centésimas, la regla de Taylor sugiere +7 centésimas. El sentimiento de noticias sobre bonos del Tesoro largo está neutro sobre los bonos largos.</div>
+    <label>Texto que irá en la presentación (editable):</label>
+    <textarea id="edit-L_USA_2_path_fed" class="msg-edited"
+              placeholder="(vacío = se usa el propuesto)"></textarea>
+    
+  </div>
+</section><section class="card" id="card-L_USA_3_curvas_usa">
+  <h2>Estructura temporal de tasas USA</h2>
+  <div class="subtitle">L_USA_3_curvas_usa</div>
+  <img src="L_USA_3_curvas_usa.png" alt="L_USA_3_curvas_usa" loading="lazy">
+  <div class="msg-block">
+    <label>Texto propuesto automáticamente (referencia):</label>
+    <div class="msg-proposed">La curva de tasas del Tesoro USA está empinada: el bono a 10 años paga 0.59 puntos más que el de 2 años (3.97% vs 3.38%). el mercado descuenta que la Fed bajará tasas en cerca de 1.2 años desde hoy. la inflación esperada baja con el plazo: para los próximos 2 años el mercado descuenta 2.82% anual, pero para los próximos 30 años descuenta 2.19% (la Fed lograría su meta).</div>
+    <label>Texto que irá en la presentación (editable):</label>
+    <textarea id="edit-L_USA_3_curvas_usa" class="msg-edited"
+              placeholder="(vacío = se usa el propuesto)"></textarea>
+    
+  </div>
+</section><section class="card" id="card-L_FX_1_g10">
+  <h2>FX G10 + DXY: spots y evolución</h2>
+  <div class="subtitle">L_FX_1_g10</div>
+  <img src="L_FX_1_g10.png" alt="L_FX_1_g10" loading="lazy">
+  <div class="msg-block">
+    <label>Texto propuesto automáticamente (referencia):</label>
+    <div class="msg-proposed">Niveles extremos vs los últimos 5 años: el dólar vs yen está en niveles muy altos vs los últimos 5 años (más alto que el 91% de las observaciones recientes). el dólar vs franco suizo está en niveles muy bajos vs los últimos 5 años (más bajo que el 99% de las observaciones recientes).</div>
+    <label>Texto que irá en la presentación (editable):</label>
+    <textarea id="edit-L_FX_1_g10" class="msg-edited"
+              placeholder="(vacío = se usa el propuesto)"></textarea>
+    
+  </div>
+</section><section class="card" id="card-L_PA_1_corp_sector_plazo">
+  <h2>Panamá corp · crédito × sector × plazo</h2>
+  <div class="subtitle">L_PA_1_corp_sector_plazo</div>
+  <img src="L_PA_1_corp_sector_plazo.png" alt="L_PA_1_corp_sector_plazo" loading="lazy">
+  <div class="msg-block">
+    <label>Texto propuesto automáticamente (referencia):</label>
+    <div class="msg-proposed">Un emisor calificado A en Panamá paga aproximadamente 1.65 puntos porcentuales más que uno calificado AAA, sobre el bono del Tesoro USA del mismo plazo. el plazo más caro para emisores A es '1 a 3 años', donde pagan 2.50 puntos sobre el Tesoro USA. el sector Industriales paga 2.88 puntos porcentuales más que Financiero al mismo nivel de calificación.</div>
+    <label>Texto que irá en la presentación (editable):</label>
+    <textarea id="edit-L_PA_1_corp_sector_plazo" class="msg-edited"
+              placeholder="(vacío = se usa el propuesto)"></textarea>
+    
+  </div>
+</section><section class="card" id="card-L_PA_2_soberano">
+  <h2>Panamá soberano · curvas y forwards</h2>
+  <div class="subtitle">L_PA_2_soberano</div>
+  <img src="L_PA_2_soberano.png" alt="L_PA_2_soberano" loading="lazy">
+  <div class="msg-block">
+    <label>Texto propuesto automáticamente (referencia):</label>
+    <div class="msg-proposed">El bono soberano de Panamá paga en promedio 1.80 puntos porcentuales más que el bono del Tesoro USA del mismo plazo. la curva soberana panameña está creciente: del 4.68% en plazos cortos sube a 5.75% en los plazos más largos (+1.07 puntos). los forwards implícitos sugieren que las tasas panameñas suban de 4.69% en el primer año a 6.11% en el año 5.</div>
+    <label>Texto que irá en la presentación (editable):</label>
+    <textarea id="edit-L_PA_2_soberano" class="msg-edited"
+              placeholder="(vacío = se usa el propuesto)"></textarea>
+    
+  </div>
+</section>
+</div>
+<div class="controls">
+  <button class="btn" onclick="buildDeck()">⚡ Generar PPT con estos textos</button>
+  <button class="btn secondary" onclick="saveToGitHub()">💾 Solo guardar textos en GitHub</button>
+  <button class="btn secondary" onclick="resetEdits()">↺ Restaurar propuestos</button>
+  <div class="note">Tus cambios se guardan automáticamente en el navegador</div>
 </div>
 <div class="disclaimer">Documento informativo con fines analíticos. No constituye recomendación de inversión.</div>
 <div class="modal-bg" id="auth-modal" onclick="if(event.target===this)closeAuthModal()">
@@ -394,6 +449,17 @@ function _topbar(title, sub) {
 }
 
 
+const AS_OF = "2026-02-27";
+const SLUGS = ["L_USA_0_modelo_combinado", "L_USA_1_dotplot", "L_USA_2_path_fed", "L_USA_3_curvas_usa", "L_FX_1_g10", "L_PA_1_corp_sector_plazo", "L_PA_2_soberano"];
+const LSK = `informativa:${AS_OF}:edits`;
+const MSG_PATH = `docs/informativa/outputs/${AS_OF}/messages.json`;
+
+function loadEdits() {
+  try { return JSON.parse(localStorage.getItem(LSK) || "{}"); }
+  catch { return {}; }
+}
+function saveEdits(e) { localStorage.setItem(LSK, JSON.stringify(e)); }
+
 function setStatus(html, kind) {
   const b = document.getElementById("status-banner");
   if (!html) { b.style.display = "none"; return; }
@@ -404,97 +470,99 @@ function setStatus(html, kind) {
 
 document.addEventListener("DOMContentLoaded", () => {
   updateAuthUI();
-  const input = document.getElementById("bbg-upload-input");
-  const btn = document.getElementById("bbg-upload-btn");
-  if (input && btn) {
-    input.addEventListener("change", () => {
-      btn.disabled = !input.files || input.files.length === 0;
+  const edits = loadEdits();
+  SLUGS.forEach(slug => {
+    const ta = document.getElementById("edit-" + slug);
+    if (!ta) return;
+    if (edits[slug]) ta.value = edits[slug];
+    ta.addEventListener("input", () => {
+      const e = loadEdits(); e[slug] = ta.value; saveEdits(e);
+      setStatus(`Cambios guardados en este navegador a las ${new Date().toLocaleTimeString()}`, "");
     });
-  }
+  });
 });
 
-async function uploadBloomberg() {
+async function saveToGitHub() {
   if (!GH.token()) { openAuthModal(); return; }
-  const input = document.getElementById("bbg-upload-input");
-  if (!input || !input.files || input.files.length === 0) return;
-  const f = input.files[0];
-  if (!f.name.endsWith(".xlsx")) {
-    setStatus("El archivo debe ser .xlsx (la plantilla Bloomberg).", "error");
-    return;
-  }
-  const today = new Date().toISOString().slice(0, 10);
-  const path = `ProyectoTasasMercantil/cortes/${today}/BloombergTemplate.xlsx`;
-  setStatus(`Subiendo ${f.name} a ${path}…`, "in_progress");
+  setStatus("Guardando textos en GitHub…", "in_progress");
   try {
-    // Leer archivo como base64
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result;
-        // result es data URL: "data:...;base64,XXX..."
-        const b64 = result.split(",")[1];
-        resolve(b64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(f);
-    });
-    // Si existe ya, necesitamos el SHA
-    let sha = undefined;
-    try {
-      const cur = await GH.getFile(path);
-      if (cur) sha = cur.sha;
-    } catch {}
-    await GH.putFileBinary(path, base64,
-      `Bloomberg: subir Excel mensual del corte ${today}`, sha);
-    setStatus("Excel subido ✓ Disparando workflow refresh para procesarlo…",
-              "in_progress");
-    await GH.triggerWorkflow("refresh-informativa.yml", { as_of: today });
-    setStatus("Workflow disparado. Esperando ~2 minutos…", "in_progress");
-    pollRunIndex("refresh-informativa.yml");
+    // 1) Leer messages.json actual + SHA
+    const cur = await GH.getFile(MSG_PATH);
+    if (!cur) throw new Error("No se encontró messages.json en el repo");
+    const blobOld = JSON.parse(atob(cur.content.replace(/\s/g, "")));
+    const edits = loadEdits();
+    const newBlob = {
+      as_of: blobOld.as_of,
+      slides: blobOld.slides.map(s => ({
+        slug: s.slug, title: s.title, proposed: s.proposed,
+        edited: edits[s.slug] || s.edited || null,
+      })),
+    };
+    const newContent = btoa(unescape(encodeURIComponent(
+      JSON.stringify(newBlob, null, 2))));
+    // 2) Verificar si hubo cambios reales
+    if (newContent === cur.content.replace(/\s/g, "")) {
+      setStatus("No hay cambios para guardar.", "success");
+      return;
+    }
+    // 3) PUT
+    await GH.putFile(MSG_PATH, newContent,
+      `Informativa: editar textos del corte ${AS_OF}`, cur.sha);
+    setStatus(`Textos guardados en GitHub ✓`, "success");
   } catch (e) {
-    setStatus(`Error subiendo Excel: ${e.message}`, "error");
+    setStatus(`Error guardando: ${e.message}`, "error");
   }
 }
 
-async function refreshData() {
+async function buildDeck() {
   if (!GH.token()) { openAuthModal(); return; }
-  if (!confirm("Esto dispara el workflow que descarga datos frescos\n(FRED, EODHD, SEP Fed) y regenera todas las láminas.\nTarda ~2 minutos. ¿Seguir?")) return;
-  setStatus("Disparando workflow Refresh informativa…", "in_progress");
+  if (!confirm(`Esto va a:\n1) Guardar tus textos editados en GitHub.\n2) Disparar el workflow que regenera el PPT.\nTarda ~30s. ¿Seguir?`)) return;
+  setStatus("Guardando textos antes de compilar…", "in_progress");
   try {
-    await GH.triggerWorkflow("refresh-informativa.yml", { as_of: "" });
-    setStatus("Workflow disparado. Esperando ~2 minutos…", "in_progress");
-    pollRunIndex("refresh-informativa.yml");
+    await saveToGitHub();
+    setStatus("Disparando workflow Build deck…", "in_progress");
+    await GH.triggerWorkflow("build-deck.yml", { as_of: AS_OF });
+    setStatus("Workflow disparado. Esperando que termine…", "in_progress");
+    pollRun("build-deck.yml", "PPT regenerado", "Build falló");
   } catch (e) {
     setStatus(`Error: ${e.message}`, "error");
   }
 }
 
-async function pollRunIndex(workflow_id) {
-  let initial = await GH.getLatestRun(workflow_id);
-  const initialId = initial && initial.id;
+async function pollRun(workflow_id, okMsg, failMsg) {
+  let last = await GH.getLatestRun(workflow_id);
   const startedAt = Date.now();
+  const initialId = last && last.id;
   const tick = async () => {
     try {
       const r = await GH.getLatestRun(workflow_id);
-      if (!r || r.id === initialId) {
-        if (Date.now() - startedAt > 30000)
-          return setStatus("Esperando que el workflow arranque…", "in_progress");
+      if (!r) return setTimeout(tick, 4000);
+      // Esperar a que aparezca el run NUEVO (id distinto del inicial)
+      if (r.id === initialId && Date.now() - startedAt < 30000) {
         return setTimeout(tick, 3000);
       }
       if (r.status !== "completed") {
         setStatus(`${workflow_id} ${r.status}…`, "in_progress");
-        return setTimeout(tick, 6000);
+        return setTimeout(tick, 5000);
       }
       if (r.conclusion === "success") {
-        setStatus(`Refresh completado ✓ &nbsp; <a href="javascript:location.reload()" style="color:#16a34a; font-weight:bold;">Recargar página</a> para ver el nuevo corte`, "success");
+        const url = `${PAGES}/outputs/${AS_OF}/deck_informativa_${AS_OF}.pptx`;
+        setStatus(`${okMsg} ✓ &nbsp; <a href="${url}" target="_blank" style="color:#16a34a; font-weight:bold;">Descargar PPT ⬇</a>`,
+                  "success");
       } else {
-        setStatus(`Refresh falló: ${r.conclusion}. <a href="${r.html_url}" target="_blank">Ver logs</a>`, "error");
+        setStatus(`${failMsg}: ${r.conclusion}. <a href="${r.html_url}" target="_blank">Ver logs</a>`, "error");
       }
     } catch (e) {
       setStatus(`Error consultando estado: ${e.message}`, "error");
     }
   };
   setTimeout(tick, 5000);
+}
+
+function resetEdits() {
+  if (!confirm("¿Restaurar TODOS los textos propuestos y descartar tus ediciones locales?")) return;
+  localStorage.removeItem(LSK);
+  location.reload();
 }
 
 </script>

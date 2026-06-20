@@ -1,0 +1,47 @@
+{
+  "as_of": "2026-01-31",
+  "slides": [
+    {
+      "slug": "L_USA_0_modelo_combinado",
+      "title": "Por qué combinamos WIRP + Taylor",
+      "proposed": "Por qué combinamos: el mercado de futuros solo tiene error medio de 17 centésimas, casi igual al combinado (18). Pero la diferencia está en los SHOCKS. En los 10 peores desaciertos del mercado (todos en 2019-2022, cuando la Fed sorprendió), el combinado redujo el error en promedio 24 centésimas (ej: marzo 2022 mercado erró 102 bps, combinado solo 51). En 2022, año del shock de inflación, mercado erró 72 bps en promedio vs combinado 50 (30% menos). El combinado sacrifica precisión en años aburridos para reducir el daño cuando la Fed sorprende. Para una pieza informativa al comité, esa robustez vale más que ganarle al mercado en años planos.",
+      "edited": null
+    },
+    {
+      "slug": "L_USA_1_dotplot",
+      "title": "Dot plot Fed — proyecciones SEP",
+      "proposed": "El mercado espera que la Fed mantenga tasas más altas de lo que ella misma proyecta. Para 2026, los miembros de la Fed proyectan en promedio 3.40%, pero el mercado descuenta 3.58%.",
+      "edited": null
+    },
+    {
+      "slug": "L_USA_2_path_fed",
+      "title": "Fed Funds: mercado · analistas · sentiment",
+      "proposed": "Nuestro modelo combinado proyecta que en los próximos 12 meses la Fed va a mantener las tasas prácticamente sin cambios (-13 centésimas de punto desde el nivel actual de 3.62%). El mercado de futuros descuenta -29 centésimas, la regla de Taylor sugiere +6 centésimas. El sentimiento de noticias sobre bonos del Tesoro largo está neutro sobre los bonos largos.",
+      "edited": null
+    },
+    {
+      "slug": "L_USA_3_curvas_usa",
+      "title": "Estructura temporal de tasas USA",
+      "proposed": "La curva de tasas del Tesoro USA está empinada: el bono a 10 años paga 0.74 puntos más que el de 2 años (4.26% vs 3.52%). el mercado descuenta que la Fed bajará tasas en cerca de 1.0 años desde hoy. la inflación esperada baja con el plazo: para los próximos 2 años el mercado descuenta 2.84% anual, pero para los próximos 30 años descuenta 2.27% (la Fed lograría su meta).",
+      "edited": null
+    },
+    {
+      "slug": "L_FX_1_g10",
+      "title": "FX G10 + DXY: spots y evolución",
+      "proposed": "Niveles extremos vs los últimos 5 años: el euro vs dólar está en niveles muy altos vs los últimos 5 años (más alto que el 91% de las observaciones recientes). el dólar vs franco suizo está en niveles muy bajos vs los últimos 5 años (más bajo que el 100% de las observaciones recientes).",
+      "edited": null
+    },
+    {
+      "slug": "L_PA_1_corp_sector_plazo",
+      "title": "Panamá corp · crédito × sector × plazo",
+      "proposed": "Un emisor calificado A en Panamá paga aproximadamente 1.33 puntos porcentuales más que uno calificado AAA, sobre el bono del Tesoro USA del mismo plazo. el plazo más caro para emisores A es '1 a 3 años', donde pagan 2.39 puntos sobre el Tesoro USA. el sector Industriales paga 2.88 puntos porcentuales más que Financiero al mismo nivel de calificación.",
+      "edited": null
+    },
+    {
+      "slug": "L_PA_2_soberano",
+      "title": "Panamá soberano · curvas y forwards",
+      "proposed": "El bono soberano de Panamá paga en promedio 1.56 puntos porcentuales más que el bono del Tesoro USA del mismo plazo. la curva soberana panameña está creciente: del 4.68% en plazos cortos sube a 5.75% en los plazos más largos (+1.07 puntos). los forwards implícitos sugieren que las tasas panameñas suban de 4.69% en el primer año a 6.11% en el año 5.",
+      "edited": null
+    }
+  ]
+}
