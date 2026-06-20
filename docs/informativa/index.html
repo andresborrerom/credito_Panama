@@ -144,16 +144,36 @@ ul.cortes li .meta { font-size: 12px; color: #888; }
   <div id="status-banner" class="status-banner" style="display:none"></div>
 
   <div class="card">
-    <h2>1 · Actualizar datos</h2>
+    <h2>1 · Actualizar datos automáticos</h2>
     <p style="font-size: 14px; color:#555;">
-    Descarga los últimos datos (FRED, EODHD, último SEP de la Fed) y regenera
-    todas las láminas, mensajes propuestos y el deck. Tarda ~2 minutos. También
-    corre automáticamente el día 1° de cada mes a las 7 AM Colombia.</p>
+    Descarga los últimos datos PÚBLICOS (FRED, EODHD, último SEP de la Fed)
+    y regenera todas las láminas, mensajes propuestos y el deck. Tarda ~2
+    minutos. También corre automáticamente el día 1° de cada mes a las 7 AM
+    Colombia.</p>
     <button class="btn success" onclick="refreshData()">⚡ Actualizar datos ahora</button>
   </div>
 
   <div class="card">
-    <h2>2 · Cortes disponibles para revisar y armar PPT</h2>
+    <h2>2 · Subir Excel Bloomberg (opcional)</h2>
+    <p style="font-size: 14px; color:#555;">
+    Para enriquecer las láminas con datos que <b>no están en FRED ni EODHD</b>
+    (forwards FX 5 años, CDS Panamá, swap OIS 1Y/3Y, encuesta economistas),
+    correr la plantilla
+    <a href="https://github.com/andresborrerom/credito_Panama/raw/claude/tasas-mercantil-report-Q8sFt/ProyectoTasasMercantil/plantilla_bloomberg/BloombergTemplate_TasasMercantil.xlsx"
+       target="_blank">BloombergTemplate_TasasMercantil.xlsx</a> en
+    Bloomberg, guardarla con valores, y subirla acá. Se procesa y dispara
+    refresh automático. <b>Operación 1 vez al mes</b>.</p>
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+      <input type="file" id="bbg-upload-input" accept=".xlsx"
+             style="font-size: 14px;">
+      <button class="btn" id="bbg-upload-btn" onclick="uploadBloomberg()" disabled>
+        📥 Subir y procesar
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3 · Cortes disponibles para revisar y armar PPT</h2>
     <ul class="cortes"><li><a href="outputs/2026-06-19/site.html">Corte 2026-06-19</a><span class="meta">→ revisar</span></li>
 <li><a href="outputs/2026-06-17/site.html">Corte 2026-06-17</a><span class="meta">→ revisar</span></li></ul>
   </div>
@@ -254,6 +274,11 @@ const GH = {
   async putFile(path, content, message, sha) {
     return GH._req("PUT", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
       message, content, sha: sha || undefined, branch: BRANCH,
+    });
+  },
+  async putFileBinary(path, base64content, message, sha) {
+    return GH._req("PUT", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+      message, content: base64content, sha: sha || undefined, branch: BRANCH,
     });
   },
 };
@@ -373,7 +398,59 @@ function setStatus(html, kind) {
   b.innerHTML = (kind === "in_progress" ? '<div class="spinner"></div>' : "") + html;
 }
 
-document.addEventListener("DOMContentLoaded", updateAuthUI);
+document.addEventListener("DOMContentLoaded", () => {
+  updateAuthUI();
+  const input = document.getElementById("bbg-upload-input");
+  const btn = document.getElementById("bbg-upload-btn");
+  if (input && btn) {
+    input.addEventListener("change", () => {
+      btn.disabled = !input.files || input.files.length === 0;
+    });
+  }
+});
+
+async function uploadBloomberg() {
+  if (!GH.token()) { openAuthModal(); return; }
+  const input = document.getElementById("bbg-upload-input");
+  if (!input || !input.files || input.files.length === 0) return;
+  const f = input.files[0];
+  if (!f.name.endsWith(".xlsx")) {
+    setStatus("El archivo debe ser .xlsx (la plantilla Bloomberg).", "error");
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const path = `ProyectoTasasMercantil/cortes/${today}/BloombergTemplate.xlsx`;
+  setStatus(`Subiendo ${f.name} a ${path}…`, "in_progress");
+  try {
+    // Leer archivo como base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        // result es data URL: "data:...;base64,XXX..."
+        const b64 = result.split(",")[1];
+        resolve(b64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(f);
+    });
+    // Si existe ya, necesitamos el SHA
+    let sha = undefined;
+    try {
+      const cur = await GH.getFile(path);
+      if (cur) sha = cur.sha;
+    } catch {}
+    await GH.putFileBinary(path, base64,
+      `Bloomberg: subir Excel mensual del corte ${today}`, sha);
+    setStatus("Excel subido ✓ Disparando workflow refresh para procesarlo…",
+              "in_progress");
+    await GH.triggerWorkflow("refresh-informativa.yml", { as_of: today });
+    setStatus("Workflow disparado. Esperando ~2 minutos…", "in_progress");
+    pollRunIndex("refresh-informativa.yml");
+  } catch (e) {
+    setStatus(`Error subiendo Excel: ${e.message}`, "error");
+  }
+}
 
 async function refreshData() {
   if (!GH.token()) { openAuthModal(); return; }

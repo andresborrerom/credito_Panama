@@ -43,6 +43,16 @@ def main() -> None:
     else:
         print("\n[skip] EODHD_API_KEY no está en entorno — FX queda con cache")
 
+    # 2.5) Si hay Excel Bloomberg subido para el corte, procesarlo
+    bbg_xlsx = ROOT / "ProyectoTasasMercantil" / "cortes" / str(as_of) / "BloombergTemplate.xlsx"
+    if bbg_xlsx.exists():
+        print(f"\n[BBG] Excel encontrado: {bbg_xlsx}")
+        _run(["python", "scripts/ingest_bloomberg_template.py", str(bbg_xlsx)],
+             env=env)
+    else:
+        print(f"\n[skip] No hay {bbg_xlsx} — slides BBG-dependientes "
+              "(forwards FX, CDS Panamá, ECFC) usan último cargado o quedan sin dato")
+
     # 3) Regenerar slides (PNG sin banner), messages.json, site HTML, deck
     code = f"""
 from datetime import date
