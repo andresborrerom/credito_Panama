@@ -283,6 +283,10 @@ def plot_path_fed(as_of: date, output_path: Path | str,
     fig.suptitle("Qué dicen el mercado, la regla de Taylor y el sentimiento "
                  f"sobre las tasas de la Fed · cierre del {as_of}",
                  fontsize=12.5, weight="bold", y=0.995)
+    fig.text(0.5, 0.955,
+             "PROYECCIÓN: Fed Funds · horizontes 1, 3, 6, 12 y 24 meses · "
+             "3 fuentes: mercado de futuros + regla de Taylor + modelo Mercantil v0.3.0",
+             ha="center", fontsize=9, style="italic", color="#555")
     fig.text(0.5, 0.005, DISCLAIMER, ha="center", fontsize=7.5,
              style="italic", color="#666")
     fig.tight_layout(rect=(0, 0.015, 1, 0.97))

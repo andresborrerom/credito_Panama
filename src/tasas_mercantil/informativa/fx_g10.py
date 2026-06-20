@@ -257,6 +257,10 @@ def plot_l_fx_1(as_of: date, output_path: Path | str,
     fig.suptitle(f"Principales tipos de cambio: dónde están hoy "
                  f"vs los últimos 5 años · cierre del {as_of}",
                  fontsize=12.5, weight="bold", y=0.995)
+    fig.text(0.5, 0.955,
+             "Solo niveles spot vs últimos 5 años · NO contiene proyección · "
+             "(forwards FX 5 años pendientes hasta cargar plantilla Bloomberg con esos 40 instrumentos)",
+             ha="center", fontsize=9, style="italic", color="#555")
     fig.text(0.5, 0.005, DISCLAIMER, ha="center", fontsize=7.5,
              style="italic", color="#666")
     fig.tight_layout(rect=(0, 0.015, 1, 0.97))

@@ -312,6 +312,10 @@ def plot_l_pa_2(as_of: date, output_path: Path | str,
     fig.suptitle(f"Bono soberano de Panamá y curvas por calificación bancaria"
                  f" · cierre del {as_of}",
                  fontsize=12.5, weight="bold", y=0.995)
+    fig.text(0.5, 0.955,
+             "Niveles spot de la curva soberana Panamá y bancaria por rating · "
+             "PROYECCIÓN solo en el panel 2: forwards implícitos de tasa soberana Panamá a 5 años (de la curva spot)",
+             ha="center", fontsize=9, style="italic", color="#555")
     fig.text(0.5, 0.005, DISCLAIMER, ha="center", fontsize=7.5,
              style="italic", color="#666")
     fig.tight_layout(rect=(0, 0.015, 1, 0.97))

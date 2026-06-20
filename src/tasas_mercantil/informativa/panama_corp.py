@@ -361,6 +361,10 @@ def plot_l_pa_1(as_of: date, output_path: Path | str,
     fig.suptitle(f"Bonos corporativos de Panamá: cuánto se paga por cada "
                  f"calificación, sector y plazo · cierre del {as_of}",
                  fontsize=12.5, weight="bold", y=0.995)
+    fig.text(0.5, 0.955,
+             "Solo niveles spot por crédito × sector × plazo · NO contiene proyección · "
+             "spreads de trades observados los últimos 6 meses",
+             ha="center", fontsize=9, style="italic", color="#555")
     fig.text(0.5, 0.005,
              "100 centésimas = 1 punto porcentual. Calificación: estimación "
              "interna (escala local de Panamá); se actualizará cuando "

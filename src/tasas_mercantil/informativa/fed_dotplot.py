@@ -418,6 +418,11 @@ def plot_dotplot(sep: SEPParsed, output_path: Path | str,
         f"Dónde proyecta la Fed sus tasas a futuro y qué descuenta "
         f"el mercado sobre ellas (proyección de la Fed del {sep.sep_date})",
         fontsize=11.5, weight="bold")
+    ax.text(0.5, 1.04,
+            "PROYECCIÓN: Fed Funds · horizontes: fin de año 2026, 2027, 2028 "
+            "y largo plazo · 2 fuentes: Fed (mediana FOMC) + mercado de futuros (WIRP/SR3)",
+            transform=ax.transAxes, ha="center", fontsize=8.5,
+            style="italic", color="#555")
     ax.grid(True, axis="y", alpha=0.3)
     ax.set_axisbelow(True)
 

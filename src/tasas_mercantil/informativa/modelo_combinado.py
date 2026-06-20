@@ -73,16 +73,19 @@ def _rank_summary(df: pd.DataFrame) -> dict:
 def build_msg_l_usa_0(as_of: date | None = None) -> str:
     df = _load_backtest()
     r = _rank_summary(df)
+    mae_a = df["abs_err_A_bps"].median()
+    mae_m = df["abs_err_M_bps"].median()
     return (
-        f"Por qué usamos un modelo combinado en vez de elegir una sola fuente: "
-        f"al juntar lo que dice el mercado de futuros con la regla de la tasa "
-        f"de equilibrio (Taylor), el modelo combinado acierta más. En los "
-        f"últimos 15 años solo {r['M_worst_pct']:.0f} de cada 100 meses fue "
-        f"la peor predicción, mientras que el mercado solo lo fue "
-        f"{r['A_worst_pct']:.0f} veces y la regla de Taylor sola "
-        f"{r['B_worst_pct']:.0f}. En la mayoría de los meses "
-        f"({r['M_better_than_worst']:.0f}%) el modelo combinado fue mejor que "
-        f"la peor de las dos fuentes por separado."
+        f"Por qué combinamos: el mercado de futuros solo es la predicción "
+        f"más certera en el {r['A_best_pct']:.0f}% de los meses, con error "
+        f"típico de {mae_a:.0f} centésimas. Pero cuando se equivoca tiende a "
+        f"hacerlo fuerte: es la peor el {r['A_worst_pct']:.0f}% del tiempo. "
+        f"La regla de Taylor sola es aún más volátil ({r['B_worst_pct']:.0f}% "
+        f"peor). El modelo combinado sacrifica algo de frecuencia de acierto "
+        f"(gana solo el {r['M_best_pct']:.0f}%, error típico {mae_m:.0f}) a "
+        f"cambio de robustez: casi nunca es catastrófico, solo el "
+        f"{r['M_worst_pct']:.0f}% es la peor. En decisiones de inversión, "
+        f"esta robustez importa más que ganarle al mercado cada mes."
     )
 
 
@@ -249,6 +252,10 @@ def plot_l_usa_0(as_of: date, output_path: Path | str,
         "Por qué el modelo combina dos fuentes: no siempre es la mejor "
         "predicción, pero casi nunca es la peor",
         fontsize=13.5, weight="bold", y=0.995)
+    fig.text(0.5, 0.955,
+             "Validación histórica · 180 cortes mensuales 2010-2024 · "
+             "horizonte 6 meses · NO contiene proyección, solo backtest",
+             ha="center", fontsize=9, style="italic", color="#555")
     fig.text(0.5, 0.005, DISCLAIMER, ha="center", fontsize=7.5,
              style="italic", color="#666")
     fig.tight_layout(rect=(0, 0.015, 1, 0.96))

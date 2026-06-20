@@ -392,6 +392,10 @@ def plot_curvas_usa(as_of: date, output_path: Path | str,
     fig.suptitle(
         f"Cómo está la curva de tasas USA · cierre del {as_of}",
         fontsize=14, weight="bold", y=0.995)
+    fig.text(0.5, 0.955,
+             "Niveles spot del Tesoro USA (nominal, real, breakeven) HOY vs hace 1m y 12m · "
+             "PROYECCIÓN solo en el panel 4: tasa corta SOFR trimestral 5 años (del mercado de futuros)",
+             ha="center", fontsize=9, style="italic", color="#555")
     fig.text(0.5, 0.005, DISCLAIMER, ha="center", fontsize=7.5,
              style="italic", color="#666")
     fig.tight_layout(rect=(0, 0.015, 1, 0.97))
