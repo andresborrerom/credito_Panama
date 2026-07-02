@@ -105,6 +105,12 @@ class TestGetRiskWeight:
         with pytest.raises(ValueError):
             get_risk_weight("T3", "BANK", rw_override=15.0)
 
+    def test_sovereign_pan_falls_back_to_t1_regardless_of_tier(self):
+        """Soberano Panamá siempre RW 0% independientemente del tier del trade."""
+        for t in ("T1", "T2", "T3", "T4", "T5"):
+            rw, src = get_risk_weight(t, "SOVEREIGN_PAN")
+            assert rw == 0.0, f"Soberano Panamá con tier {t} debería tener RW 0%, tuvo {rw}"
+
 
 class TestRwaAndCapitalReq:
     def test_rwa_reference(self):

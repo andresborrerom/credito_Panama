@@ -20,6 +20,26 @@ sin instalación, con todos los filtros cruzados (rating, sector, plazo, emisor,
 - `data/processed/*.parquet` — formato analítico
 - `src/app/streamlit_app.py` — herramienta interactiva con filtros completos (local)
 
+**🧮 Calculadora (nueva pestaña Streamlit):**
+Para un instrumento hipotético (rating, plazo, monto, instrumento, sector), muestra en paralelo:
+1. **Diferencial de yield** (spread mediano observado en trades del mismo bucket).
+2. **Diferencial de crédito por rating** (curva de spread por tier en el bucket).
+3. **Adecuación de capital** (RWA, capital requerido, con RW por Acuerdo 3-2016 SBP).
+4. **Provisión esperada** (EL = PD × LGD × EAD, con horizonte al plazo elegido).
+
+Incluye resumen integrado (margen neto = yield − provisión − costo de capital),
+procedencia expandible de PD/LGD/RW, y sub-vista de sensibilidad con sliders
+para PD/LGD/RW y heatmap de EL sobre grid.
+
+Motores nuevos:
+- `src/analytics/provisiones.py` — tablas PD_BY_TIER, LGD_BY_INSTRUMENT ancladas
+  en Basilea III Foundation IRB con procedencia explícita; función `expected_loss`.
+- `src/analytics/capital.py` — tabla RISK_WEIGHTS_SBP (Acuerdo 3-2016 + BCBS 2017)
+  para SOVEREIGN_PAN / BANK / CORPORATE / MORTGAGE_BACKED / SUBORDINATED / AT1
+  por tier; funciones `rwa`, `capital_requirement`, `capital_for_position`.
+- Tests: `tests/test_provisiones.py` (40), `tests/test_capital.py` (52),
+  `tests/test_calculadora_integration.py` (11). **103 tests nuevos, todos verdes.**
+
 ---
 
 ## 1. Lo que la base de datos cubre
