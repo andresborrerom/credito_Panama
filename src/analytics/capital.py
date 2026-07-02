@@ -290,6 +290,10 @@ def get_risk_weight(
 
     Si `rw_override` se pasa, se usa en lugar del default. Retorna source
     "override" en ese caso.
+
+    Regla especial: SOVEREIGN_PAN se colapsa a T1 (soberano Panamá tiene RW 0%
+    en el enfoque estándar SBP independientemente del tier que el analista
+    asigne al trade — un bono del Tesoro es siempre soberano Panamá).
     """
     if rw_override is not None:
         if rw_override < 0 or rw_override > 12.5:  # 12.5 = deducción total (1/8%)
@@ -298,7 +302,9 @@ def get_risk_weight(
             )
         return rw_override, "override manual (usuario)"
 
-    key = (asset_class, tier)
+    # Fallback: soberano Panamá siempre usa la entrada T1 (RW 0%)
+    effective_tier = "T1" if asset_class == "SOVEREIGN_PAN" else tier
+    key = (asset_class, effective_tier)
     if key not in RISK_WEIGHTS_SBP:
         raise ValueError(
             f"No hay risk weight definido para asset_class={asset_class}, tier={tier}. "
