@@ -37,8 +37,26 @@ Motores nuevos:
 - `src/analytics/capital.py` — tabla RISK_WEIGHTS_SBP (Acuerdo 3-2016 + BCBS 2017)
   para SOVEREIGN_PAN / BANK / CORPORATE / MORTGAGE_BACKED / SUBORDINATED / AT1
   por tier; funciones `rwa`, `capital_requirement`, `capital_for_position`.
-- Tests: `tests/test_provisiones.py` (40), `tests/test_capital.py` (52),
-  `tests/test_calculadora_integration.py` (11). **103 tests nuevos, todos verdes.**
+- `src/analytics/credit_adjustments.py` — ajuste de LGD por garantías (corp
+  auditada / personal / cash collateral) siguiendo BCBS CRE22, y multiplicador
+  de PD por señales cualitativas del rating report (FCO cover, D/EBITDA,
+  concentración ingresos, opacidad EEFF, SPV rollover, exposición spot).
+- `src/analytics/concentration.py` — recargo Pillar 2 SBP por concentración
+  individual, de grupo económico y sectorial (composición multiplicativa).
+- Tests: 131 nuevos, todos verdes.
+
+**Caso trabajado: MASPV Serie B (BBB-.pa, 10.25% × 18m).**
+Aparece como preset en la Calculadora. Veredicto con la herramienta:
+- Escenario base (rating externo tal cual): margen neto anualizado **8.84%**.
+- Escenario con ajustes completos (5 señales cualitativas + garantías
+  inadmisibles + concentración): margen neto **7.07%** anualizado.
+- **Supera el yield risk-free (Tesoro Panamá 1.5y ~5%) por 200 bp incluso ajustado.**
+- Si Tesorería rechaza SOLO por adecuación de capital + provisión regulatoria,
+  probablemente exagera: el spread positivo compensa todos los ajustes cuantificables.
+- Razones LEGÍTIMAS que Tesorería podría estar considerando y que NO son
+  puramente "capital/provisión": conflicto de interés (Mercantil IB es
+  structurer + Mercantil Tesorería compra el mismo bono), limites internos
+  no expuestos, apetito estratégico por energía renovable LatAm.
 
 ---
 

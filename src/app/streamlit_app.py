@@ -33,6 +33,11 @@ from src.analytics.provisiones import (  # noqa: E402
     provision_for_position,
     sensitivity_table,
 )
+from src.analytics.credit_adjustments import (  # noqa: E402
+    PD_QUALITATIVE_SIGNALS,
+    compute_adjusted_credit,
+)
+from src.analytics.concentration import concentration_charge  # noqa: E402
 
 st.set_page_config(page_title="Renta Fija Panamá", layout="wide", page_icon="📊")
 
@@ -395,20 +400,43 @@ with tab_calc:
         "es visible; nada está inventado."
     )
 
+    # ---------- Preset ----------
+    preset_col1, preset_col2 = st.columns([1, 3])
+    with preset_col1:
+        preset_choice = st.selectbox(
+            "Preset (opcional)",
+            ["(sin preset)", "MASPV Serie B — BBB-.pa"],
+            help="Carga inputs verificados de un caso real."
+        )
+    with preset_col2:
+        if preset_choice.startswith("MASPV"):
+            st.info(
+                "**MASPV Serie B (Teaser mayo 2026, rating Moody's Local BBB-.pa):** "
+                "SPV SB-6 Project Inc., bono corporativo con garantía SAMDRO + personal CEO, "
+                "10.25% cupón fijo trimestral, 18 meses bullet, $12.5MM. "
+                "Uso: $10MM pre-construcción Project Estanzuela + $2.5MM garantía pre-op. "
+                "Estructurado por Mercantil IB."
+            )
+    _preset_active = preset_choice.startswith("MASPV")
+    _preset_tier_idx = TIER_ORDER.index("T4") if _preset_active else 2
+    _preset_plazo = 1.5 if _preset_active else 5.0
+    _preset_ead = 2_000_000.0 if _preset_active else 10_000_000.0
+    _preset_sector_idx = 3 if _preset_active else 1  # 3 = Industriales (no financiero)
+
     # ---------- Inputs ----------
     ci1, ci2, ci3, ci4 = st.columns([1, 1, 1.2, 1.4])
     with ci1:
         calc_tier = st.selectbox(
             "Rating tier",
             TIER_ORDER,
-            index=2,
+            index=_preset_tier_idx,
             format_func=lambda t: f"{t} · {TIER_DESC[t].split(' — ')[0]}",
-            help="Escala nacional Panamá (T1=AAA(pan) → T5=BB(pan)/NR).",
+            help="Escala nacional Panamá (T1=AAA(pan) → T5=BB(pan)/NR). MASPV BBB-.pa → T4.",
         )
     with ci2:
         calc_plazo = st.number_input(
             "Plazo residual (años)",
-            min_value=0.25, max_value=30.0, value=5.0, step=0.25,
+            min_value=0.25, max_value=30.0, value=_preset_plazo, step=0.25,
             help="Horizonte para PD acumulada y para bucket de plazo.",
         )
     with ci3:
@@ -425,17 +453,19 @@ with tab_calc:
     with ci4:
         calc_ead = st.number_input(
             "EAD (USD)",
-            min_value=1_000.0, max_value=1_000_000_000.0, value=10_000_000.0,
+            min_value=1_000.0, max_value=1_000_000_000.0, value=_preset_ead,
             step=100_000.0, format="%.0f",
             help="Exposición al default. Para bono bullet ≈ face value.",
         )
+    sector_options = ["(sin sector — usar default)", "Financiero", "Gobierno", "Industriales",
+         "Comunicaciones", "Energía", "Utilidades", "Bienes Raíces", "Consumo Básico",
+         "Consumo Discresional", "Materiales", "Salud", "Tecnología", "Servicios"]
+    _energia_idx = sector_options.index("Energía") if _preset_active else _preset_sector_idx
     calc_sector = st.selectbox(
         "Sector emisor (afecta asset class regulatoria)",
-        ["(sin sector — usar default)", "Financiero", "Gobierno", "Industriales",
-         "Comunicaciones", "Energía", "Utilidades", "Bienes Raíces", "Consumo Básico",
-         "Consumo Discresional", "Materiales", "Salud", "Tecnología", "Servicios"],
-        index=1,
-        help="Si es 'Financiero', bonos senior se clasifican como BANK (RW puede diferir).",
+        sector_options,
+        index=_energia_idx,
+        help="Si es 'Financiero', bonos senior se clasifican como BANK (RW puede diferir). MASPV → Energía.",
     )
     sector_arg = None if calc_sector.startswith("(") else calc_sector
 
@@ -738,6 +768,236 @@ Fuente: {cap_res.rw_source if cap_res else '—'}
         margin=dict(l=10, r=10, t=50, b=10),
     )
     st.plotly_chart(fig_heat, use_container_width=True)
+
+    # ==========================================================================
+    # SUB-VISTA: AJUSTES POR CASO ESPECÍFICO
+    # Garantías, señales cualitativas del rating report, concentración
+    # ==========================================================================
+    st.markdown("---")
+    st.markdown("### 🔧 Ajustes por caso específico")
+    st.caption(
+        "El rating externo promedia señales que pueden desviar la PD real. Y las garantías, "
+        "cuando son admisibles (Basilea/SBP), reducen la LGD. Este bloque aplica esos ajustes "
+        "y muestra cómo se mueve el margen neto. Ideal para diligencia de un deal concreto."
+    )
+
+    # Presets para las señales
+    if _preset_active:
+        default_signals = [
+            "fco_cover_below_1x",
+            "d_ebitda_above_6x",
+            "no_consolidated_audited_financials",
+            "spv_rollover_dependent",
+            "spot_price_exposure",
+        ]
+        default_corp_guarantee_amt = 12_500_000.0
+        default_corp_tier_idx = TIER_ORDER.index("T5")
+        default_audited = False
+        default_personal = True
+    else:
+        default_signals = []
+        default_corp_guarantee_amt = 0.0
+        default_corp_tier_idx = TIER_ORDER.index("T3")
+        default_audited = True
+        default_personal = False
+
+    aj1, aj2 = st.columns(2)
+
+    with aj1:
+        st.markdown("**Garantías**")
+        corp_guarantee_amt = st.number_input(
+            "Corporate guarantee (USD)", min_value=0.0,
+            value=default_corp_guarantee_amt, step=100_000.0,
+            help="Monto de la corporate guarantee que respalda el bono.",
+        )
+        corp_guarantee_tier = st.selectbox(
+            "Tier del garantor", TIER_ORDER, index=default_corp_tier_idx,
+            format_func=lambda t: f"{t} · {TIER_DESC[t].split(' — ')[0]}",
+            help="Rating del garantor (define el haircut Basilea).",
+        )
+        corp_guarantee_audited = st.checkbox(
+            "Garantor con EEFF consolidados AUDITADOS", value=default_audited,
+            help="Sin auditoría, la garantía NO se descuenta (BCBS 2017).",
+        )
+        personal_guarantee = st.checkbox(
+            "Personal guarantee (persona física)", value=default_personal,
+            help="Se registra pero NO reduce LGD regulatoria.",
+        )
+        cash_coll = st.number_input(
+            "Cash collateral (USD)", min_value=0.0, value=0.0, step=10_000.0,
+            help="Efectivo pledged: reduce LGD 1:1.",
+        )
+
+    with aj2:
+        st.markdown("**Señales cualitativas del rating report**")
+        signal_labels = {
+            k: v["trigger"] for k, v in PD_QUALITATIVE_SIGNALS.items()
+        }
+        active_signals = st.multiselect(
+            "Marca las señales aplicables al deal",
+            list(PD_QUALITATIVE_SIGNALS.keys()),
+            default=default_signals,
+            format_func=lambda k: f"{signal_labels[k]} (×{PD_QUALITATIVE_SIGNALS[k]['multiplier']:.1f})",
+            help=(
+                "Estas señales aparecen en el rating report como debilidades / "
+                "riesgos. La calculadora las traduce a un multiplicador de PD."
+            ),
+        )
+
+    # ---------- Aplicar ajustes ----------
+    pd_base_calc = PD_BY_TIER[calc_tier]["pd_1y"]
+    lgd_base_calc = LGD_BY_INSTRUMENT.get(
+        calc_instrumento, LGD_BY_INSTRUMENT["DEFAULT"]
+    )["lgd"]
+
+    adj = compute_adjusted_credit(
+        pd_base=pd_base_calc,
+        lgd_base=lgd_base_calc,
+        ead=calc_ead,
+        horizon_years=calc_plazo,
+        active_signals=active_signals,
+        corporate_guarantee_amount=corp_guarantee_amt,
+        corporate_guarantee_tier=corp_guarantee_tier,
+        corporate_guarantee_audited=corp_guarantee_audited,
+        personal_guarantee=personal_guarantee,
+        cash_collateral_amount=cash_coll,
+    )
+
+    # ---------- Concentración ----------
+    st.markdown("**Concentración**")
+    cc1, cc2, cc3 = st.columns(3)
+    with cc1:
+        capital_reg_banco = st.number_input(
+            "Capital regulatorio del banco (USD MM)",
+            min_value=1.0, value=450.0, step=10.0,
+            help="Capital regulatorio total (Tier 1 + Tier 2).",
+        ) * 1_000_000
+    with cc2:
+        exposure_group = st.number_input(
+            "Exposición TOTAL al grupo económico (USD MM)",
+            min_value=0.0, value=float(calc_ead / 1_000_000), step=1.0,
+            help="Incluye esta posición + otras al mismo grupo.",
+        ) * 1_000_000
+    with cc3:
+        exposure_sector_pct = st.slider(
+            "Exposición al sector (% portafolio)",
+            min_value=0.0, max_value=50.0, value=5.0, step=1.0,
+            help="Ninguna concentración si es < 15%.",
+        )
+    conc = concentration_charge(
+        exposure_individual=calc_ead,
+        capital_base=cap_res.capital_required if cap_res else 0.0,
+        capital_regulatorio_banco=capital_reg_banco,
+        exposure_group_total=exposure_group,
+        portafolio_total_banco=100.0,  # normalizado; pct define
+        exposure_sector=exposure_sector_pct,
+    )
+
+    # ---------- Resumen ajustado ----------
+    st.markdown("---")
+    st.markdown("### 💡 Margen neto AJUSTADO")
+
+    if not pd.isna(yield_obs):
+        yield_market_adj = yield_obs
+    else:
+        yield_market_adj = None
+    # Permitir override manual del yield (para casos con teaser sin trades en base)
+    yield_override_pct = st.number_input(
+        "Yield del deal (%) — override manual si no hay data en la base",
+        min_value=0.0, max_value=30.0,
+        value=10.25 if _preset_active else float((yield_market_adj or 0.07) * 100),
+        step=0.05,
+    )
+    yield_deal = yield_override_pct / 100
+
+    ingreso_bruto_horizon = calc_ead * yield_deal * calc_plazo
+    provision_ajustada_horizon = adj.el_ajustada
+    capital_ajustado = conc.capital_with_concentration
+    costo_capital_horizon_adj = capital_ajustado * 0.12 * calc_plazo  # 12% ROE
+    margen_ajustado = ingreso_bruto_horizon - provision_ajustada_horizon - costo_capital_horizon_adj
+    margen_pct_anual_adj = (margen_ajustado / calc_ead / calc_plazo) * 100
+
+    # Base comparison
+    provision_base_horizon = adj.el_base
+    capital_base_val = cap_res.capital_required if cap_res else 0.0
+    costo_capital_base_horizon = capital_base_val * 0.12 * calc_plazo
+    margen_base = ingreso_bruto_horizon - provision_base_horizon - costo_capital_base_horizon
+    margen_pct_anual_base = (margen_base / calc_ead / calc_plazo) * 100
+
+    rc1, rc2 = st.columns(2)
+    with rc1:
+        st.markdown("**Base (rating externo tal cual)**")
+        st.markdown(
+            f"""
+| Componente | 1.5y horizonte |
+|---|---:|
+| Ingreso bruto | ${ingreso_bruto_horizon:,.0f} |
+| Provisión base (PD {adj.pd_base*100:.2f}% × LGD {adj.lgd_base*100:.0f}%) | −${provision_base_horizon:,.0f} |
+| Costo capital ({cap_res.capital_required if cap_res else 0:,.0f} × 12% × plazo) | −${costo_capital_base_horizon:,.0f} |
+| **Margen** | **${margen_base:,.0f}** |
+| **Anualizado** | **{margen_pct_anual_base:.2f}%** |
+"""
+        )
+    with rc2:
+        st.markdown("**Ajustado (señales + garantías + concentración)**")
+        color = "🟢" if margen_ajustado > 0 else "🔴"
+        st.markdown(
+            f"""
+| Componente | 1.5y horizonte |
+|---|---:|
+| Ingreso bruto | ${ingreso_bruto_horizon:,.0f} |
+| Provisión ajust. (PD {adj.pd_ajustada*100:.2f}% × LGD {adj.lgd_ajustada*100:.0f}%) | −${provision_ajustada_horizon:,.0f} |
+| Costo capital ajust. (${capital_ajustado:,.0f} × 12%) | −${costo_capital_horizon_adj:,.0f} |
+| **Margen** | **{color} ${margen_ajustado:,.0f}** |
+| **Anualizado** | **{margen_pct_anual_adj:.2f}%** |
+"""
+        )
+
+    # Delta de margen
+    delta_margen_pp = margen_pct_anual_adj - margen_pct_anual_base
+    if delta_margen_pp < 0:
+        st.error(
+            f"⚠️  Los ajustes **reducen el margen anualizado en {abs(delta_margen_pp):.2f} pp** "
+            f"(de {margen_pct_anual_base:.2f}% a {margen_pct_anual_adj:.2f}%). "
+            f"Los factores idiosincráticos del deal absorben spread."
+        )
+    else:
+        st.success(
+            f"Los ajustes suman **+{delta_margen_pp:.2f} pp** al margen "
+            f"(de {margen_pct_anual_base:.2f}% a {margen_pct_anual_adj:.2f}%)."
+        )
+
+    # Detalles con expander
+    with st.expander("🔍 Detalle de los ajustes aplicados", expanded=_preset_active):
+        col_pd, col_lgd, col_conc = st.columns(3)
+        with col_pd:
+            st.markdown("**Ajuste PD**")
+            st.markdown(f"PD base: {adj.pd_base*100:.3f}%")
+            st.markdown(f"PD ajustada: **{adj.pd_ajustada*100:.3f}%**")
+            if adj.active_signals:
+                total_mult = adj.pd_ajustada / adj.pd_base if adj.pd_base > 0 else 1
+                st.markdown(f"Multiplicador total: **×{total_mult:.2f}**")
+                st.markdown("**Señales activas:**")
+                for s in adj.active_signals:
+                    m = PD_QUALITATIVE_SIGNALS[s]["multiplier"]
+                    st.markdown(f"- {PD_QUALITATIVE_SIGNALS[s]['trigger']} (×{m:.1f})")
+            else:
+                st.markdown("_Sin ajuste (0 señales activas)_")
+
+        with col_lgd:
+            st.markdown("**Ajuste LGD**")
+            st.markdown(f"LGD base: {adj.lgd_base*100:.0f}%")
+            st.markdown(f"LGD ajustada: **{adj.lgd_ajustada*100:.1f}%**")
+            for n in adj.guarantee_notes:
+                st.markdown(f"- {n}")
+
+        with col_conc:
+            st.markdown("**Recargo concentración**")
+            st.markdown(f"Capital base (Pillar 1): ${conc.capital_base:,.0f}")
+            st.markdown(f"Recargo total: **+{conc.charge_total*100:.1f}%**")
+            st.markdown(f"Capital con recargo: **${conc.capital_with_concentration:,.0f}**")
+            for n in conc.notes:
+                st.markdown(f"- {n}")
 
 with tab2:
     df_m = df.copy()
