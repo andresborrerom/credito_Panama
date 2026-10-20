@@ -225,6 +225,37 @@ RISK_WEIGHTS_SBP: dict[tuple[str, str], dict] = {
 
 
 # --------------------------------------------------------------------- #
+# Overrides de RW en ESCALA INTERNACIONAL
+# --------------------------------------------------------------------- #
+# Si el banco traduce la calificación nacional a su equivalente global
+# (p.ej. BBB-.pa ≡ B+) ANTES de ponderar, la tabla estándar de Basilea
+# (BCBS 2017 CRE20, que sigue el Acuerdo 3-2016) asigna:
+#   corporativos AAA–AA-: 20% | A+–A-: 50% | BBB+–BB-: 100% | < BB-: 150%
+#   bancos: igual estructura (opción por rating externo).
+# Equivalencias internacionales por tier (ver provisiones.PD_BY_TIER_INTL):
+#   T1 ≈ BBB-/BB+ → 100% | T2 ≈ BB → 100% | T3 ≈ BB- → 100%
+#   T4 ≈ B+ → 150% | T5 ≈ B/B- → 150%
+# PUNTO ABIERTO: confirmar con Riesgos/SBP si el Acuerdo 3-2016 admite el
+# rating de escala nacional directamente (entonces aplica RISK_WEIGHTS_SBP)
+# o exige la equivalencia internacional (entonces aplican estos overrides).
+# Soberano Panamá en USD sigue en 0% en ambas escalas.
+RISK_WEIGHTS_INTL_OVERRIDE: dict[tuple[str, str], dict] = {
+    ("CORPORATE", "T1"): {"rw": 1.00, "source": "BCBS CRE20 — corp BBB-/BB+ (equiv. intl T1)"},
+    ("CORPORATE", "T2"): {"rw": 1.00, "source": "BCBS CRE20 — corp BB (equiv. intl T2)"},
+    ("CORPORATE", "T3"): {"rw": 1.00, "source": "BCBS CRE20 — corp BB- (equiv. intl T3)"},
+    ("CORPORATE", "T4"): {"rw": 1.50, "source": "BCBS CRE20 — corp < BB- (B+, equiv. intl T4)"},
+    ("CORPORATE", "T5"): {"rw": 1.50, "source": "BCBS CRE20 — corp < BB- (B/B-, equiv. intl T5)"},
+    ("BANK", "T1"): {"rw": 0.50, "source": "BCBS CRE20 — banco BBB-/BB+ (equiv. intl T1)"},
+    ("BANK", "T2"): {"rw": 1.00, "source": "BCBS CRE20 — banco BB (equiv. intl T2)"},
+    ("BANK", "T3"): {"rw": 1.00, "source": "BCBS CRE20 — banco BB- (equiv. intl T3)"},
+    ("BANK", "T4"): {"rw": 1.50, "source": "BCBS CRE20 — banco < BB- (equiv. intl T4)"},
+    ("BANK", "T5"): {"rw": 1.50, "source": "BCBS CRE20 — banco < BB- (equiv. intl T5)"},
+}
+
+ESCALAS = ("nacional", "internacional")
+
+
+# --------------------------------------------------------------------- #
 # Mapeo instrumento Latinex → asset_class regulatoria
 # --------------------------------------------------------------------- #
 INSTRUMENT_TO_ASSET_CLASS: dict[str, str] = {
@@ -285,16 +316,23 @@ def get_risk_weight(
     tier: str,
     asset_class: str,
     rw_override: Optional[float] = None,
+    escala: str = "nacional",
 ) -> tuple[float, str]:
     """Devuelve (risk_weight, source) para (tier, asset_class).
 
     Si `rw_override` se pasa, se usa en lugar del default. Retorna source
     "override" en ese caso.
 
+    `escala`: "nacional" usa RISK_WEIGHTS_SBP con el rating (pan) tal cual;
+    "internacional" aplica RISK_WEIGHTS_INTL_OVERRIDE donde exista (corp y
+    banco), traduciendo el tier a su equivalente global antes de ponderar.
+
     Regla especial: SOVEREIGN_PAN se colapsa a T1 (soberano Panamá tiene RW 0%
     en el enfoque estándar SBP independientemente del tier que el analista
     asigne al trade — un bono del Tesoro es siempre soberano Panamá).
     """
+    if escala not in ESCALAS:
+        raise ValueError(f"escala debe ser una de {ESCALAS}, recibido '{escala}'")
     if rw_override is not None:
         if rw_override < 0 or rw_override > 12.5:  # 12.5 = deducción total (1/8%)
             raise ValueError(
@@ -305,6 +343,9 @@ def get_risk_weight(
     # Fallback: soberano Panamá siempre usa la entrada T1 (RW 0%)
     effective_tier = "T1" if asset_class == "SOVEREIGN_PAN" else tier
     key = (asset_class, effective_tier)
+    if escala == "internacional" and key in RISK_WEIGHTS_INTL_OVERRIDE:
+        row = RISK_WEIGHTS_INTL_OVERRIDE[key]
+        return row["rw"], row["source"]
     if key not in RISK_WEIGHTS_SBP:
         raise ValueError(
             f"No hay risk weight definido para asset_class={asset_class}, tier={tier}. "
@@ -340,6 +381,7 @@ def capital_for_position(
     car_min: float = CAR_MIN_TOTAL,
     rw_override: Optional[float] = None,
     asset_class_override: Optional[str] = None,
+    escala: str = "nacional",
 ) -> CapitalResult:
     """Calcula RWA y capital requerido para una posición individual.
 
@@ -351,9 +393,11 @@ def capital_for_position(
         car_min: coeficiente mínimo (default 8% SBP)
         rw_override: fuerza un RW manual (para calibración interna del banco)
         asset_class_override: fuerza asset_class específica
+        escala: "nacional" (rating (pan) tal cual) o "internacional"
+                (equivalencia global antes de ponderar; ver RISK_WEIGHTS_INTL_OVERRIDE)
     """
     asset_class = asset_class_override or resolve_asset_class(instrumento, sector)
-    rw, source = get_risk_weight(tier, asset_class, rw_override=rw_override)
+    rw, source = get_risk_weight(tier, asset_class, rw_override=rw_override, escala=escala)
     rwa_val = rwa(ead, rw)
     cap = capital_requirement(rwa_val, car_min=car_min)
     return CapitalResult(

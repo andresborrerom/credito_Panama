@@ -84,6 +84,63 @@ PD_BY_TIER: dict[str, dict] = {
 
 
 # --------------------------------------------------------------------- #
+# Tabla PD por tier — ESCALA INTERNACIONAL
+# --------------------------------------------------------------------- #
+# Las calificaciones con sufijo (pan)/.pa son de escala NACIONAL: comparan
+# riesgo solo dentro de Panamá y topean en el soberano. Para usar PDs
+# históricas globales (S&P / Moody's default studies) hay que traducir cada
+# tier a su equivalente internacional. Panamá soberano ~BBB-/Baa3 (S&P y
+# Moody's) / BB+ (Fitch) en 2024-2026, así que AAA.pa ≈ BBB-/BB+ global y
+# cada tier nacional baja varios notches.
+#
+# Fuente del ancla: tabla interna de Riesgos Mercantil — BBB-.pa ≡ B+ global,
+# PD 1y 1.86% (S&P Global Ratings Annual Default Study, B+ histórico 1.5-2.5%).
+# Los demás tiers se interpolan alrededor de ese ancla y se marcan como
+# estimados: ajustar con la tabla de equivalencias oficial del banco.
+PD_BY_TIER_INTL: dict[str, dict] = {
+    "T1": {
+        "pd_1y": 0.0030,  # ≈ BBB-/BB+ global (techo soberano Panamá)
+        "equiv_intl": "BBB-/BB+",
+        "source": "Techo soberano Panamá (S&P BBB-, Fitch BB+) — S&P default study BBB-/BB+ 1y ~0.2-0.4%",
+        "confidence": "media",
+    },
+    "T2": {
+        "pd_1y": 0.0070,  # ≈ BB global
+        "equiv_intl": "BB",
+        "source": "Interpolado — S&P default study BB 1y ~0.6-0.8%",
+        "confidence": "baja (estimado)",
+    },
+    "T3": {
+        "pd_1y": 0.0120,  # ≈ BB-/B+ global
+        "equiv_intl": "BB-",
+        "source": "Interpolado — S&P default study BB- 1y ~1.0-1.3%",
+        "confidence": "baja (estimado)",
+    },
+    "T4": {
+        "pd_1y": 0.0186,  # ≡ B+ global — ANCLA
+        "equiv_intl": "B+",
+        "source": "Tabla interna Riesgos Mercantil: BBB-.pa ≡ B+ global, PD 1y 1.86% (S&P B+ histórico)",
+        "confidence": "alta (dato del banco)",
+    },
+    "T5": {
+        "pd_1y": 0.0450,  # ≈ B/B- global
+        "equiv_intl": "B/B-",
+        "source": "Interpolado — S&P default study B 1y ~3.5-4.5%, B- ~6-8%",
+        "confidence": "baja (estimado; NR puede ser peor)",
+    },
+}
+
+ESCALAS = ("nacional", "internacional")
+
+
+def pd_table(escala: str = "nacional") -> dict[str, dict]:
+    """Devuelve la tabla PD según la escala de calificación."""
+    if escala not in ESCALAS:
+        raise ValueError(f"escala debe ser una de {ESCALAS}, recibido '{escala}'")
+    return PD_BY_TIER if escala == "nacional" else PD_BY_TIER_INTL
+
+
+# --------------------------------------------------------------------- #
 # Tabla LGD por tipo de instrumento — con procedencia
 # --------------------------------------------------------------------- #
 # Referencias:
@@ -233,17 +290,22 @@ def provision_for_position(
     horizon_years: float = 1.0,
     pd_override: Optional[float] = None,
     lgd_override: Optional[float] = None,
+    escala: str = "nacional",
 ) -> ProvisionResult:
     """Calcula la provisión esperada de una posición dado tier, EAD, instrumento
     y horizonte.
 
+    `escala`: "nacional" usa PD_BY_TIER (rating (pan) tal cual);
+    "internacional" usa PD_BY_TIER_INTL (tier traducido a equivalente global).
+
     Los overrides permiten al usuario ingresar PD/LGD custom (para sensibilidad
     o para posiciones con calificación específica no cubierta por el proxy).
     """
-    if tier not in PD_BY_TIER:
-        raise ValueError(f"tier '{tier}' no reconocido. Válidos: {list(PD_BY_TIER)}")
+    table = pd_table(escala)
+    if tier not in table:
+        raise ValueError(f"tier '{tier}' no reconocido. Válidos: {list(table)}")
 
-    pd_1y = pd_override if pd_override is not None else PD_BY_TIER[tier]["pd_1y"]
+    pd_1y = pd_override if pd_override is not None else table[tier]["pd_1y"]
     lgd_row = LGD_BY_INSTRUMENT.get(instrumento, LGD_BY_INSTRUMENT["DEFAULT"])
     lgd = lgd_override if lgd_override is not None else lgd_row["lgd"]
 
@@ -327,12 +389,13 @@ def sensitivity_table(
     horizon_years: float = 1.0,
     pd_grid: Optional[list[float]] = None,
     lgd_grid: Optional[list[float]] = None,
+    escala: str = "nacional",
 ) -> pd.DataFrame:
     """Matriz de sensibilidad de EL sobre grids de PD y LGD.
 
     Útil para la vista de sensibilidad de la calculadora.
     """
-    base_pd = PD_BY_TIER[tier]["pd_1y"]
+    base_pd = pd_table(escala)[tier]["pd_1y"]
     base_lgd = LGD_BY_INSTRUMENT.get(instrumento, LGD_BY_INSTRUMENT["DEFAULT"])["lgd"]
 
     if pd_grid is None:

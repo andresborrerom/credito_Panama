@@ -30,6 +30,7 @@ from src.analytics.capital import (  # noqa: E402
 from src.analytics.provisiones import (  # noqa: E402
     LGD_BY_INSTRUMENT,
     PD_BY_TIER,
+    pd_table,
     provision_for_position,
     sensitivity_table,
 )
@@ -423,6 +424,37 @@ with tab_calc:
     _preset_ead = 2_000_000.0 if _preset_active else 10_000_000.0
     _preset_sector_idx = 3 if _preset_active else 1  # 3 = Industriales (no financiero)
 
+    # ---------- Escala de calificación + hurdle ----------
+    esc1, esc2 = st.columns([1.4, 1])
+    with esc1:
+        escala_label = st.radio(
+            "Escala de calificación",
+            ["Nacional (pan) — rating tal cual", "Internacional — equivalencia global"],
+            index=1 if _preset_active else 0,
+            horizontal=True,
+            help=(
+                "Las calificaciones .pa/(pan) comparan solo dentro de Panamá y topean en el "
+                "soberano. 'Internacional' traduce el tier a su equivalente global "
+                "(T4 BBB-.pa ≡ B+, PD 1.86% — tabla Riesgos Mercantil) y, para corporativos "
+                "y bancos, aplica la ponderación Basilea del rating global (B+ → 150%)."
+            ),
+        )
+        calc_escala = "internacional" if escala_label.startswith("Internacional") else "nacional"
+        if calc_escala == "internacional":
+            st.caption(
+                "⚠️ Punto abierto: confirmar con Riesgos/SBP si el Acuerdo 3-2016 admite el "
+                "rating nacional directo para ponderar (RW 100%) o exige la equivalencia "
+                "global (RW 150%). Esta vista aplica la global."
+            )
+    with esc2:
+        hurdle_roe = st.slider(
+            "Hurdle de capital (ROE exigido, %)",
+            min_value=6.0, max_value=25.0, value=12.0, step=0.5,
+            help="Retorno anual que los accionistas exigen sobre el capital congelado. "
+                 "Supuesto interno del banco; banca panameña 11-15%.",
+        ) / 100
+    _pd_tbl = pd_table(calc_escala)
+
     # ---------- Inputs ----------
     ci1, ci2, ci3, ci4 = st.columns([1, 1, 1.2, 1.4])
     with ci1:
@@ -500,7 +532,7 @@ with tab_calc:
     try:
         cap_res = capital_for_position(
             tier=calc_tier, ead=calc_ead,
-            instrumento=calc_instrumento, sector=sector_arg,
+            instrumento=calc_instrumento, sector=sector_arg, escala=calc_escala,
         )
     except Exception as exc:
         cap_res = None
@@ -508,7 +540,7 @@ with tab_calc:
     # (D) Provisión
     prov_res = provision_for_position(
         tier=calc_tier, ead=calc_ead,
-        instrumento=calc_instrumento, horizon_years=calc_plazo,
+        instrumento=calc_instrumento, horizon_years=calc_plazo, escala=calc_escala,
     )
 
     st.markdown("---")
@@ -606,7 +638,7 @@ with tab_calc:
     with pd_:
         st.markdown("#### D. Provisión esperada por calificación")
         st.metric("PD (1 año)", f"{prov_res.pd_1y*100:.3f}%",
-                   help=PD_BY_TIER[calc_tier]["source"])
+                   help=_pd_tbl[calc_tier]["source"])
         st.metric(f"PD acumulada ({calc_plazo:.2f}y)",
                    f"{prov_res.pd_cumulative*100:.3f}%")
         st.metric("LGD aplicada", f"{prov_res.lgd*100:.1f}%",
@@ -627,7 +659,7 @@ with tab_calc:
     # yield observado - LO EL "amortizado por año" (aproximación)
     if not pd.isna(yield_obs) and cap_res is not None:
         # Costo de capital anual asumiendo return on capital 12%
-        rendimiento_capital_esperado = 0.12
+        rendimiento_capital_esperado = hurdle_roe
         costo_capital_anual = cap_res.capital_required * rendimiento_capital_esperado
         el_anual_aprox = prov_res.el_1y  # aproximación año 1
         ingreso_bruto_anual = calc_ead * yield_obs
@@ -658,10 +690,11 @@ with tab_calc:
     with st.expander("🔎 Procedencia de los supuestos", expanded=False):
         st.markdown(
             f"""
-**PD (T{calc_tier[1:]}, 1y): {PD_BY_TIER[calc_tier]['pd_1y']*100:.3f}%**
-Fuente: {PD_BY_TIER[calc_tier]['source']}
-Confianza: {PD_BY_TIER[calc_tier]['confidence']}
-Nota: {PD_BY_TIER[calc_tier]['note']}
+**PD (T{calc_tier[1:]}, 1y): {_pd_tbl[calc_tier]['pd_1y']*100:.3f}%**
+Fuente: {_pd_tbl[calc_tier]['source']}
+Confianza: {_pd_tbl[calc_tier]['confidence']}
+Nota: {_pd_tbl[calc_tier].get('note', 'Equivalente global: ' + _pd_tbl[calc_tier].get('equiv_intl', '—'))}
+Escala: {calc_escala}
 
 **LGD ({calc_instrumento}): {LGD_BY_INSTRUMENT.get(calc_instrumento, LGD_BY_INSTRUMENT['DEFAULT'])['lgd']*100:.0f}%**
 Fuente: {LGD_BY_INSTRUMENT.get(calc_instrumento, LGD_BY_INSTRUMENT['DEFAULT'])['source']}
@@ -687,7 +720,7 @@ Fuente: {cap_res.rw_source if cap_res else '—'}
 
     sc1, sc2, sc3 = st.columns(3)
     with sc1:
-        pd_base = PD_BY_TIER[calc_tier]["pd_1y"]
+        pd_base = _pd_tbl[calc_tier]["pd_1y"]
         pd_mult = st.slider(
             "Multiplicador PD (× base)",
             min_value=0.1, max_value=5.0, value=1.0, step=0.1,
@@ -716,10 +749,11 @@ Fuente: {cap_res.rw_source if cap_res else '—'}
     prov_sens = provision_for_position(
         tier=calc_tier, ead=calc_ead, instrumento=calc_instrumento,
         horizon_years=calc_plazo, pd_override=pd_custom, lgd_override=lgd_custom,
+        escala=calc_escala,
     )
     cap_sens = capital_for_position(
         tier=calc_tier, ead=calc_ead, instrumento=calc_instrumento,
-        sector=sector_arg, rw_override=rw_custom,
+        sector=sector_arg, rw_override=rw_custom, escala=calc_escala,
     )
 
     ss1, ss2, ss3 = st.columns(3)
@@ -748,7 +782,7 @@ Fuente: {cap_res.rw_source if cap_res else '—'}
     st.markdown("**Heatmap: EL sobre grid de PD × LGD**")
     sens_df = sensitivity_table(
         tier=calc_tier, ead=calc_ead, instrumento=calc_instrumento,
-        horizon_years=calc_plazo,
+        horizon_years=calc_plazo, escala=calc_escala,
     )
     pivot = sens_df.pivot(index="lgd", columns="pd_1y", values="el_pct_ead")
     fig_heat = go.Figure(data=go.Heatmap(
@@ -845,7 +879,7 @@ Fuente: {cap_res.rw_source if cap_res else '—'}
         )
 
     # ---------- Aplicar ajustes ----------
-    pd_base_calc = PD_BY_TIER[calc_tier]["pd_1y"]
+    pd_base_calc = _pd_tbl[calc_tier]["pd_1y"]
     lgd_base_calc = LGD_BY_INSTRUMENT.get(
         calc_instrumento, LGD_BY_INSTRUMENT["DEFAULT"]
     )["lgd"]
@@ -913,14 +947,14 @@ Fuente: {cap_res.rw_source if cap_res else '—'}
     ingreso_bruto_horizon = calc_ead * yield_deal * calc_plazo
     provision_ajustada_horizon = adj.el_ajustada
     capital_ajustado = conc.capital_with_concentration
-    costo_capital_horizon_adj = capital_ajustado * 0.12 * calc_plazo  # 12% ROE
+    costo_capital_horizon_adj = capital_ajustado * hurdle_roe * calc_plazo
     margen_ajustado = ingreso_bruto_horizon - provision_ajustada_horizon - costo_capital_horizon_adj
     margen_pct_anual_adj = (margen_ajustado / calc_ead / calc_plazo) * 100
 
     # Base comparison
     provision_base_horizon = adj.el_base
     capital_base_val = cap_res.capital_required if cap_res else 0.0
-    costo_capital_base_horizon = capital_base_val * 0.12 * calc_plazo
+    costo_capital_base_horizon = capital_base_val * hurdle_roe * calc_plazo
     margen_base = ingreso_bruto_horizon - provision_base_horizon - costo_capital_base_horizon
     margen_pct_anual_base = (margen_base / calc_ead / calc_plazo) * 100
 
