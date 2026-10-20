@@ -46,13 +46,28 @@ Motores nuevos:
 - Tests: 131 nuevos, todos verdes.
 
 **Caso trabajado: MASPV Serie B (BBB-.pa, 10.25% × 18m).**
-Aparece como preset en la Calculadora. Veredicto con la herramienta:
-- Escenario base (rating externo tal cual): margen neto anualizado **8.84%**.
-- Escenario con ajustes completos (5 señales cualitativas + garantías
-  inadmisibles + concentración): margen neto **7.07%** anualizado.
-- **Supera el yield risk-free (Tesoro Panamá 1.5y ~5%) por 200 bp incluso ajustado.**
-- Si Tesorería rechaza SOLO por adecuación de capital + provisión regulatoria,
-  probablemente exagera: el spread positivo compensa todos los ajustes cuantificables.
+Aparece como preset en la Calculadora (arranca en escala internacional).
+Veredicto actualizado (base al 2026-10-20, benchmark Tesoro ~1.5y 5.16%,
+ticket $2MM, hurdle 12%):
+
+| Escala | Caso | PD 1y | RW | Margen anual | vs Tesoro |
+|---|---|---:|---:|---:|---:|
+| Nacional (BBB-.pa) | base | 1.00% | 100% | 8.84% | +3.68 pp |
+| Nacional | estresado (5 señales, cap ×5) | 5.00% | 100% | 7.07% | +1.91 pp |
+| **Internacional (B+)** | base | 1.86% | 150% | 7.98% | +2.82 pp |
+| **Internacional (B+)** | estresado | 9.30% | 150% | **4.72%** | **−0.43 pp** |
+
+- En escala nacional, y en escala internacional sin estrés, el spread paga
+  capital + provisión + hurdle con holgura: el rechazo "por capital y
+  provisión" no se sostiene.
+- Con la equivalencia internacional aplicada de forma consistente (PD B+ y
+  RW 150%) y las cinco debilidades del rating report cristalizadas, el
+  margen cae por debajo del Tesoro: en ese escenario la prudencia de
+  Tesorería tiene fundamento. La decisión depende de cuánto peso se da a
+  esas señales.
+- Punto abierto para Riesgos: si el Acuerdo 3-2016 admite el rating
+  nacional directo para ponderar (RW 100%) o exige la equivalencia global
+  (RW 150%). Cambia el estresado de 5.76% a 4.72%.
 - Razones LEGÍTIMAS que Tesorería podría estar considerando y que NO son
   puramente "capital/provisión": conflicto de interés (Mercantil IB es
   structurer + Mercantil Tesorería compra el mismo bono), limites internos
