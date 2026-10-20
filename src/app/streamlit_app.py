@@ -434,18 +434,22 @@ with tab_calc:
             horizontal=True,
             help=(
                 "Las calificaciones .pa/(pan) comparan solo dentro de Panamá y topean en el "
-                "soberano. 'Internacional' traduce el tier a su equivalente global "
-                "(T4 BBB-.pa ≡ B+, PD 1.86% — tabla Riesgos Mercantil) y, para corporativos "
-                "y bancos, aplica la ponderación Basilea del rating global (B+ → 150%)."
+                "soberano. 'Internacional' traduce el tier a su equivalente global para la PD "
+                "(T4 BBB-.pa ≡ B+, PD 1.86% — tabla Riesgos Mercantil; sin mapa oficial "
+                "publicado por Moody's Local). La ponderación REGULATORIA no cambia: el "
+                "Acuerdo 3-2016 (6.8) pondera al 100% los instrumentos con calificación local."
             ),
         )
         calc_escala = "internacional" if escala_label.startswith("Internacional") else "nacional"
-        if calc_escala == "internacional":
-            st.caption(
-                "⚠️ Punto abierto: confirmar con Riesgos/SBP si el Acuerdo 3-2016 admite el "
-                "rating nacional directo para ponderar (RW 100%) o exige la equivalencia "
-                "global (RW 150%). Esta vista aplica la global."
-            )
+        econ_rw = st.checkbox(
+            "Vista de capital económico interno (RW por equivalencia global: B+ → 150%)",
+            value=False,
+            help=(
+                "NO es el requerimiento regulatorio. Acuerdo 3-2016: 6.8 → calificación local "
+                "pondera 100%; 8.4 → 150% solo con calificación INTERNACIONAL < BB-. Actívalo "
+                "si la política interna de Riesgos pondera con la equivalencia global."
+            ),
+        )
     with esc2:
         hurdle_roe = st.slider(
             "Hurdle de capital (ROE exigido, %)",
@@ -533,6 +537,7 @@ with tab_calc:
         cap_res = capital_for_position(
             tier=calc_tier, ead=calc_ead,
             instrumento=calc_instrumento, sector=sector_arg, escala=calc_escala,
+            rw_economico_intl=econ_rw,
         )
     except Exception as exc:
         cap_res = None
@@ -754,6 +759,7 @@ Fuente: {cap_res.rw_source if cap_res else '—'}
     cap_sens = capital_for_position(
         tier=calc_tier, ead=calc_ead, instrumento=calc_instrumento,
         sector=sector_arg, rw_override=rw_custom, escala=calc_escala,
+        rw_economico_intl=econ_rw,
     )
 
     ss1, ss2, ss3 = st.columns(3)

@@ -75,10 +75,18 @@ class TestPDIntl:
 
 
 class TestRWIntl:
-    def test_corporate_t4_intl_is_150(self):
-        rw, src = get_risk_weight("T4", "CORPORATE", escala="internacional")
+    def test_escala_internacional_does_not_change_regulatory_rw(self):
+        """Acuerdo 3-2016 (6.8): calificación LOCAL pondera 100%; la escala de
+        la PD no cambia el RW regulatorio."""
+        rw_n, _ = get_risk_weight("T4", "CORPORATE", escala="nacional")
+        rw_i, _ = get_risk_weight("T4", "CORPORATE", escala="internacional")
+        assert rw_n == rw_i == 1.00
+
+    def test_corporate_t4_economic_view_is_150(self):
+        """Vista de capital económico interno: B+ (< BB-) → 150% (BCBS CRE20 / 8.4)."""
+        rw, src = get_risk_weight("T4", "CORPORATE", rw_economico_intl=True)
         assert rw == 1.50
-        assert "CRE20" in src
+        assert "CRE20" in src and "no regulatorio" in src
 
     def test_corporate_t4_national_stays_100(self):
         rw, _ = get_risk_weight("T4", "CORPORATE", escala="nacional")
@@ -107,22 +115,30 @@ class TestRWIntl:
         rw, src = get_risk_weight("T4", "CORPORATE", rw_override=0.75, escala="internacional")
         assert rw == 0.75 and "override" in src
 
-    def test_maspv_capital_intl_reference(self):
-        """MASPV $2MM corp B+ intl → RW 150% → RWA $3MM → capital $240k."""
+    def test_maspv_capital_regulatory_is_100_even_in_intl(self):
+        """MASPV solo tiene rating local → regulatorio 100% → capital $160k (6.8)."""
         r = capital_for_position("T4", 2_000_000, "BONOS", sector="Energía",
                                  escala="internacional")
+        assert r.risk_weight == 1.00
+        assert r.capital_required == 160_000
+
+    def test_maspv_capital_economic_view(self):
+        """Vista económica B+ → RW 150% → RWA $3MM → capital $240k."""
+        r = capital_for_position("T4", 2_000_000, "BONOS", sector="Energía",
+                                 escala="internacional", rw_economico_intl=True)
         assert r.risk_weight == 1.50
         assert r.rwa == 3_000_000
         assert r.capital_required == 240_000
 
 
-class TestMASPVFourScenarios:
-    """Los cuatro escenarios del estudio actualizado, con margen anualizado."""
+class TestMASPVScenarios:
+    """Escenarios del estudio actualizado (base 2026-10-20, Tesoro ~1.5y 5.16%)."""
 
-    EAD, PLAZO, YIELD, ROE = 2_000_000, 1.5, 0.1025, 0.12
+    EAD, PLAZO, YIELD, ROE, TESORO = 2_000_000, 1.5, 0.1025, 0.12, 0.0516
 
-    def _margen(self, escala: str, pd_override=None) -> float:
-        cap = capital_for_position("T4", self.EAD, "BONOS", sector="Energía", escala=escala)
+    def _margen(self, escala: str, pd_override=None, econ=False) -> float:
+        cap = capital_for_position("T4", self.EAD, "BONOS", sector="Energía",
+                                   escala=escala, rw_economico_intl=econ)
         prov = provision_for_position("T4", self.EAD, "BONOS", horizon_years=self.PLAZO,
                                       escala=escala, pd_override=pd_override)
         ingreso = self.EAD * self.YIELD * self.PLAZO
@@ -132,12 +148,25 @@ class TestMASPVFourScenarios:
     def test_nacional_base(self):
         assert self._margen("nacional") == pytest.approx(0.0884, abs=0.0005)
 
-    def test_intl_base(self):
-        """B+ con RW 150%: 7.98%."""
-        assert self._margen("internacional") == pytest.approx(0.0798, abs=0.0005)
+    def test_nacional_stress(self):
+        assert self._margen("nacional", pd_override=0.01 * 5) == pytest.approx(0.0707, abs=0.0005)
 
-    def test_intl_stress_falls_below_tesoro(self):
-        """B+ × señales (cap 5× → PD 9.30%) con RW 150%: 4.72% < Tesoro ~5.03%."""
+    def test_intl_base_regulatory(self):
+        """PD B+ 1.86%, RW regulatorio 100%: 8.46%."""
+        assert self._margen("internacional") == pytest.approx(0.0846, abs=0.0005)
+
+    def test_intl_stress_regulatory_ties_tesoro(self):
+        """PD 9.30% (cap 5×), RW 100%: 5.20% — prácticamente empata al Tesoro 5.16%."""
         m = self._margen("internacional", pd_override=0.0186 * 5)
+        assert m == pytest.approx(0.0520, abs=0.0005)
+        assert abs(m - self.TESORO) < 0.001
+
+    def test_intl_economic_base(self):
+        """Vista económica (RW 150%): 7.98%."""
+        assert self._margen("internacional", econ=True) == pytest.approx(0.0798, abs=0.0005)
+
+    def test_intl_economic_stress_below_tesoro(self):
+        """Vista económica estresada: 4.72% < Tesoro."""
+        m = self._margen("internacional", pd_override=0.0186 * 5, econ=True)
         assert m == pytest.approx(0.0472, abs=0.0005)
-        assert m < 0.0503
+        assert m < self.TESORO

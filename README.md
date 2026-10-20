@@ -54,20 +54,27 @@ ticket $2MM, hurdle 12%):
 |---|---|---:|---:|---:|---:|
 | Nacional (BBB-.pa) | base | 1.00% | 100% | 8.84% | +3.68 pp |
 | Nacional | estresado (5 señales, cap ×5) | 5.00% | 100% | 7.07% | +1.91 pp |
-| **Internacional (B+)** | base | 1.86% | 150% | 7.98% | +2.82 pp |
-| **Internacional (B+)** | estresado | 9.30% | 150% | **4.72%** | **−0.43 pp** |
+| **Internacional (B+)** | base | 1.86% | 100% | 8.46% | +3.30 pp |
+| **Internacional (B+)** | estresado | 9.30% | 100% | **5.20%** | **+0.04 pp** |
+| Internacional, vista económica | base | 1.86% | 150% | 7.98% | +2.82 pp |
+| Internacional, vista económica | estresado | 9.30% | 150% | 4.72% | −0.43 pp |
 
-- En escala nacional, y en escala internacional sin estrés, el spread paga
-  capital + provisión + hurdle con holgura: el rechazo "por capital y
-  provisión" no se sostiene.
-- Con la equivalencia internacional aplicada de forma consistente (PD B+ y
-  RW 150%) y las cinco debilidades del rating report cristalizadas, el
-  margen cae por debajo del Tesoro: en ese escenario la prudencia de
-  Tesorería tiene fundamento. La decisión depende de cuánto peso se da a
-  esas señales.
-- Punto abierto para Riesgos: si el Acuerdo 3-2016 admite el rating
-  nacional directo para ponderar (RW 100%) o exige la equivalencia global
-  (RW 150%). Cambia el estresado de 5.76% a 4.72%.
+- **Ponderación regulatoria resuelta** (Acuerdo 3-2016 compilado, mod. hasta
+  Acuerdo 2-2026, Art. 2): 6.8 "instrumentos emitidos por empresas privadas
+  con calificación local, ponderarán en [Categoría 6, 100%]"; 8.4 → 150% solo
+  con calificación *internacional* inferior a BB-. MASPV solo tiene rating
+  local → **RW regulatorio 100%**. La vista 150% es capital económico interno
+  (checkbox en la app), no requerimiento.
+- En base (ambas escalas) el spread paga capital + provisión + hurdle con
+  holgura: el rechazo "por capital y provisión" no se sostiene.
+- En el estresado con PD internacional (B+ × 5 señales del rating report) el
+  margen **empata al Tesoro** (5.20% vs 5.16%): ahí la prudencia de Tesorería
+  es defendible, pero el argumento es el riesgo idiosincrático del emisor, no
+  la carga de capital.
+- Supuestos no verificados contra fuente primaria: la equivalencia BBB-.pa ≡
+  B+ (convención interna Mercantil; Moody's Local no publica mapa a escala
+  global) y los multiplicadores de las señales cualitativas (juicio del
+  analista, ver `credit_adjustments.PD_QUALITATIVE_SIGNALS`).
 - Razones LEGÍTIMAS que Tesorería podría estar considerando y que NO son
   puramente "capital/provisión": conflicto de interés (Mercantil IB es
   structurer + Mercantil Tesorería compra el mismo bono), limites internos
